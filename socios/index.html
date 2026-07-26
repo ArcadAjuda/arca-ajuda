@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ARCA d'Ajuda — Controlo Financeiro</title>
+<title>ARCA d'Ajuda — Sócios</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -503,26 +503,18 @@ tbody tr:hover td{background:var(--bg2)}
   </div>
 </div>
 
-<!-- ATL ARCAKIDS -->
+<!-- CONFIGURAÇÕES -->
 <div class="page" id="page-gestao-config">
   <div class="page-header">
-    <div><div class="page-title">⚙️ Configurações</div><div class="page-sub">Gere categorias, tipos de receita, despesa, movimentos e eventos</div></div>
+    <div><div class="page-title">⚙️ Configurações</div><div class="page-sub">Gere tipos de sócio, valores de quotas, direção e acessos</div></div>
   </div>
   <div class="inner-tabs">
-    <button class="inner-tab active" onclick="showInner('config','receitas',this)">Categorias Receita</button>
-    <button class="inner-tab" onclick="showInner('config','despesas',this)">Categorias Despesa</button>
-    <button class="inner-tab" onclick="showInner('config','movimentos',this)">Tipos de Movimento</button>
-    <button class="inner-tab" onclick="showInner('config','eventos',this)">Eventos</button>
-    <button class="inner-tab" onclick="showInner('config','quotas',this)">💶 Quotas</button>
+    <button class="inner-tab active" onclick="showInner('config','quotas',this)">💶 Quotas</button>
     <button class="inner-tab" onclick="showInner('config','direccao',this)">👥 Direção</button>
     <button class="inner-tab" onclick="showInner('config','acessos',this)">🔐 Acessos</button>
     <button class="inner-tab" onclick="showInner('config','dados',this)">Dados</button>
   </div>
-  <div class="inner-panel active" id="config-inner-receitas"><div id="config-receitas-content"></div></div>
-  <div class="inner-panel" id="config-inner-despesas"><div id="config-despesas-content"></div></div>
-  <div class="inner-panel" id="config-inner-movimentos"><div id="config-movimentos-content"></div></div>
-  <div class="inner-panel" id="config-inner-eventos"><div id="config-eventos-content"></div></div>
-  <div class="inner-panel" id="config-inner-quotas"><div id="config-quotas-content"></div></div>
+  <div class="inner-panel active" id="config-inner-quotas"><div id="config-quotas-content"></div></div>
   <div class="inner-panel" id="config-inner-direccao"><div id="config-direccao-content"></div></div>
   <div class="inner-panel" id="config-inner-acessos"><div id="config-acessos-content"></div></div>
   <div class="inner-panel" id="config-inner-dados">
@@ -554,14 +546,24 @@ tbody tr:hover td{background:var(--bg2)}
       </div>
       <div id="config-drive-msg" style="font-size:11px;margin-top:6px;min-height:14px"></div>
     </div>
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-title">📥 Importar sócios do sistema antigo (CSV)</div>
+      <p style="font-size:12px;color:var(--text-2);margin-bottom:12px;line-height:1.6">
+        No sistema antigo, na aba Sócios, clica em <strong>"⬇ CSV"</strong> para descarregar a lista.
+        Depois carrega esse ficheiro aqui — os sócios são adicionados diretamente na cloud (Supabase).
+      </p>
+      <button class="btn-secondary" onclick="document.getElementById('import-csv-socios').click()">⬆ Escolher ficheiro CSV</button>
+      <input type="file" id="import-csv-socios" accept=".csv" style="display:none" onchange="importarSociosCSVAntigo(this)">
+      <div id="import-csv-msg" style="font-size:12px;margin-top:10px;min-height:16px"></div>
+    </div>
     <div class="card">
       <div class="card-title">Exportar / Importar dados</div>
       <div style="display:flex;flex-direction:column;gap:10px;max-width:400px">
-        <button class="btn-secondary" onclick="exportJSON()">⬇ Exportar todos os dados (JSON)</button>
-        <button class="btn-secondary" onclick="document.getElementById('import-file').click()">⬆ Importar dados (JSON)</button>
+        <button class="btn-secondary" onclick="exportJSON()">⬇ Exportar sócios (backup JSON)</button>
+        <button class="btn-secondary" onclick="document.getElementById('import-file').click()">⬆ Restaurar backup (JSON)</button>
         <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(this)">
         <hr style="border:none;border-top:var(--border)">
-        <button class="btn-danger" onclick="if(confirm('Apagar TODOS os dados? Esta ação é irreversível!'))clearAll()">🗑 Apagar todos os dados</button>
+        <button class="btn-danger" onclick="if(confirm('Apagar a cópia local de Sócios neste dispositivo? Os dados na cloud (Supabase) não são afetados.'))clearAll()">🗑 Apagar cópia local (Sócios)</button>
       </div>
     </div>
   </div>
@@ -1032,7 +1034,7 @@ function showInner(group,id,btn){
 }
 
 function renderPage(id){
-  const map={dashboard:renderDashboard,lancamentos:renderLancamentos,fluxo:renderFluxo,'conta-bancaria':renderContaBancaria,cartao:renderCartao,cofre:renderCofre,'atl-arcakids':renderAtlArcakids,socios:renderSocios,modalidades:renderModalidades,eventos:renderEventos,funcionarios:renderFuncionarios,viaturas:renderViaturas,analise:renderAnalise,relatorio:renderRelatorio,agenda:renderAgenda,oficios:renderOficios,'gestao-config':()=>renderConfig('receitas')};
+  const map={socios:renderSocios,'gestao-config':()=>renderConfig('quotas')};
   if(map[id]) map[id]();
 }
 
@@ -1629,8 +1631,8 @@ if(rcValorEl) rcValorEl.addEventListener('input',updateRecargaSaldoPreview);
 function updateTopbarSaldo(){
   const {saldo}=getSaldoCartaoGlobal();
   const {saldo: saldoConta}=getSaldoContaBancaria();
-  document.getElementById('topbar-saldo-cartao').textContent=fmt(saldo);
-  document.getElementById('topbar-saldo-conta').textContent=fmt(saldoConta);
+  const elCartao=document.getElementById('topbar-saldo-cartao'); if(elCartao) elCartao.textContent=fmt(saldo);
+  const elConta=document.getElementById('topbar-saldo-conta'); if(elConta) elConta.textContent=fmt(saldoConta);
 }
 
 function renderContaBancaria(){
@@ -2387,27 +2389,19 @@ async function arcaChatSend(textoFixo){
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 1000,
-        system: `És o assistente de utilização da aplicação ARCA Financeiro, uma app de gestão financeira da Associação Recreativa e Cultural da Ajuda (ARCA d'Ajuda), sediada no Funchal, Madeira.
+        system: `És o assistente de utilização da aplicação de Sócios da Associação Recreativa e Cultural da Ajuda (ARCA d'Ajuda), sediada no Funchal, Madeira.
 
-A app tem os seguintes módulos:
-- **Dashboard**: resumo financeiro com gráficos de receitas, despesas e fluxo de caixa
-- **Lançamentos**: registo de receitas e despesas gerais, com campos de fatura (nº, data, upload de PDF/imagem)
-- **Fluxo de Caixa**: visão mensal de entradas e saídas
-- **Cofre / Numerário**: gestão do dinheiro em caixa — entradas, saídas e depósito no banco (cria 2 registos: saída do cofre + entrada bancária)
-- **Cartão Pré-Pago**: controlo do saldo e movimentos do cartão
-- **Modalidades**: receitas das atividades de sala (Capoeira, Ballet, Judo, Atletismo, etc.)
-- **Eventos**: gestão financeira de eventos (Arraial, Semana Cultural, Motocross, etc.)
-- **Funcionários**: pagamentos de salários e gratificações
-- **Viaturas**: despesas com combustível, seguros e reparações
-- **Sócios**: gestão de sócios com edição inline, inativar/reativar, cartão de sócio com QR code, verificação de quotas
-- **ATL ARCAKIDS**: programa de atividades para crianças (6-12 anos), com inscrições, cronograma diário, pagamentos, despesas, equipa e alertas de pagamento em falta
-- **Agenda**: lembretes e eventos da associação
-- **Ofícios**: criação e impressão de documentos formais com papel timbrado (Câmara, Junta, Parceiros, etc.)
-- **Análise Financeira**: gráficos e tabela consolidada de todas as fontes (geral + cofre + cartão)
-- **Relatório**: impressão e exportação de relatórios
-- **Configurações**: dados da associação, acessos por PIN, Google Drive, logo
+Esta app trata apenas da gestão de sócios, com os seguintes módulos:
+- **Sócios**: lista de sócios com pesquisa e filtros, criar/editar/eliminar, inativar/reativar (ou marcar como falecido), estado da quota (em dia / a terminar / vencida) calculado automaticamente a partir da data de pagamento e período escolhido
+- **Cartão de Sócio**: cartão digital com QR code (para verificação), impressão com linha de corte, e download em imagem PNG
+- **Configurações → Quotas**: criar, remover e renomear tipos de sócio (ex: Fundador, Efetivo, Atleta, Honorário...) e definir o preço da quota para cada tipo e cada período (1 mês, 3 meses, 6 meses, 9 meses, 1 ano)
+- **Configurações → Direção**: nomes e cargos dos membros da direção (usado nas mensagens motivacionais)
+- **Configurações → Acessos**: códigos de PIN por nível de acesso (Administrador, Edição, etc.)
+- **Configurações → Dados**: logo da associação, código de bloqueio da app, exportar/importar dados, apagar tudo
 
-Responde sempre em português de Portugal, de forma clara, concisa e amigável. Quando explicas como fazer algo, usa passos numerados. Não uses markdown complexo — texto simples com emojis quando útil.`,
+Os dados de sócios são guardados no Supabase (na cloud), partilhados entre dispositivos.
+
+Responde sempre em português de Portugal, de forma clara, concisa e amigável. Quando explicas como fazer algo, usa passos numerados. Não uses markdown complexo — texto simples com emojis quando útil. Se perguntarem sobre Financeiro ou ATL Arcakids, explica que são aplicações separadas, acessíveis a partir do Menu Geral.`,
         messages: arcaChatHistory
       })
     });
@@ -2817,43 +2811,116 @@ function exportCSV(){
   const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);a.download=`ARCA_${ano}${mes?'_'+MESES[mes-1]:''}.csv`;a.click();
 }
 function exportJSON(){
-  const data={movimentos,recargas,config,exportedAt:new Date().toISOString()};
-  const a=document.createElement('a');a.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(data,null,2));a.download='ARCA_backup.json';a.click();
+  const data={socios,tiposSocio:getTiposSocio(),quotas:getQuotasConfig(),exportedAt:new Date().toISOString()};
+  const a=document.createElement('a');a.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(data,null,2));a.download='ARCA_Socios_backup.json';a.click();
 }
 function importJSON(input){
   const f=input.files[0];if(!f) return;
   const r=new FileReader();r.onload=e=>{
     try{
       const d=JSON.parse(e.target.result);
-      if(d.movimentos) movimentos=d.movimentos;
-      if(d.recargas) recargas=d.recargas;
-      if(d.config) config=d.config;
-      saveAll();updateYearSelector();updateTopbarSaldo();renderAll();toast('Dados importados!');
+      if(d.tiposSocio) saveTiposSocio(d.tiposSocio);
+      if(d.quotas) saveQuotasConfig(d.quotas);
+      if(d.socios) { socios=d.socios; saveSocios(); }
+      populateTipoSocioSelects(); renderSocios(); toast('Backup restaurado localmente (não enviado à cloud).');
     }catch(err){toast('Ficheiro inválido.',false);}
   };r.readAsText(f);
 }
-function clearAll(){
-  // Limpar variáveis
-  movimentos=[];recargas=[];socios=[];atlEdicoes=[];atlEdicaoAtiva=null;
-  currentLogoData='';
-  
-  // Remover do localStorage
-  const keysToRemove = [];
-  for(let i=0; i<localStorage.length; i++){
-    const key = localStorage.key(i);
-    if(key && (key.startsWith('arca_') || key.startsWith('arca_atl_'))){
-      keysToRemove.push(key);
+
+// Parser simples de CSV com separador ";" e campos entre aspas (formato do sistema antigo)
+function parseCSVSocios(texto){
+  const linhas = texto.replace(/^\uFEFF/,'').split(/\r?\n/).filter(l=>l.trim().length);
+  const parseLinha = (linha) => {
+    const campos=[]; let atual=''; let dentroAspas=false;
+    for(let i=0;i<linha.length;i++){
+      const c=linha[i];
+      if(c==='"'){
+        if(dentroAspas && linha[i+1]==='"'){ atual+='"'; i++; }
+        else dentroAspas=!dentroAspas;
+      } else if(c===';' && !dentroAspas){ campos.push(atual); atual=''; }
+      else atual+=c;
     }
-  }
-  keysToRemove.forEach(k => localStorage.removeItem(k));
-  
-  // Reinicializar
-  config=getDefaultConfig();
-  saveAll();
-  updateYearSelector();
-  updateTopbarSaldo();
-  renderAll();
-  toast('Dados apagados.');
+    campos.push(atual);
+    return campos;
+  };
+  const header = parseLinha(linhas[0]).map(h=>h.trim());
+  return linhas.slice(1).map(l=>{
+    const vals = parseLinha(l);
+    const obj = {};
+    header.forEach((h,i)=> obj[h]=vals[i]||'');
+    return obj;
+  });
+}
+
+async function importarSociosCSVAntigo(input){
+  const f=input.files[0]; if(!f) return;
+  const msgEl=document.getElementById('import-csv-msg');
+  msgEl.style.color='var(--text-2)'; msgEl.textContent='A ler ficheiro...';
+  const r=new FileReader();
+  r.onload = async (e) => {
+    let linhas;
+    try{ linhas = parseCSVSocios(e.target.result); }
+    catch(err){ msgEl.style.color='var(--coral-d)'; msgEl.textContent='Não consegui ler o CSV. Confirma que é o ficheiro certo.'; return; }
+    if(!linhas.length){ msgEl.style.color='var(--coral-d)'; msgEl.textContent='O ficheiro está vazio.'; return; }
+
+    msgEl.textContent = `A importar ${linhas.length} sócio(s) para o Supabase...`;
+    let ok=0, falhou=0;
+    const tiposNovos = new Set(getTiposSocio());
+
+    for(const l of linhas){
+      const registo = {
+        num: parseInt(l['Nº'])||null,
+        nome: l['Nome']||'',
+        sexo: l['Sexo']||'',
+        nif: l['NIF']||'',
+        tipo: l['Tipo']||'EFETIVO',
+        dataInscricao: l['DataInscrição']||'',
+        estado: l['Estado']||'ATIVO',
+        tel: l['Telemóvel']||'',
+        morada: l['Morada']||'',
+        cp: l['CPostal']||'',
+        email: l['Email']||'',
+        quota: l['Quota']||'',
+        obs: l['Obs']||'',
+        situacao: l['Situação']||'EM DIA',
+        validadeQuota: l['ValidadeQuota']||'',
+        dataPagamento: l['DataPagamento']||'',
+        periodoQuota: '1ano'
+      };
+      if(!registo.nome){ falhou++; continue; }
+      if(registo.tipo) tiposNovos.add(registo.tipo);
+      try{
+        const row = await supaFetch('socios', 'POST', socioToRow(registo));
+        socios.push(rowToSocio(row[0]));
+        ok++;
+      }catch(err){
+        console.error('Falha ao importar', registo.nome, err);
+        falhou++;
+      }
+    }
+    saveTiposSocio([...tiposNovos]);
+    saveSocios();
+    populateTipoSocioSelects();
+    renderSocios();
+    msgEl.style.color = falhou ? 'var(--amber)' : 'var(--teal)';
+    msgEl.textContent = `✓ ${ok} sócio(s) importado(s) com sucesso.` + (falhou?` ⚠ ${falhou} falharam (verifica números duplicados ou nomes em falta).`:'');
+    input.value='';
+  };
+  r.readAsText(f, 'UTF-8');
+}
+function clearAll(){
+  // Limpar apenas o que pertence à app de Sócios — NUNCA tocar em chaves
+  // do Financeiro ou do ATL, pois partilham o mesmo domínio (localStorage
+  // é por origem, não por pasta), e apagar aqui não deve afetar as outras apps.
+  const CHAVES_SOCIOS = [
+    'arca_socios','arca_tipos_socio','arca_quotas','arca_socios_versao',
+    'arca_supa_session'
+  ];
+  socios=[];
+  CHAVES_SOCIOS.forEach(k => localStorage.removeItem(k));
+
+  renderSocios();
+  toast('Dados de Sócios apagados neste dispositivo. (Os dados na cloud/Supabase mantêm-se — apaga-os diretamente no Supabase se for essa a intenção.)');
 }
 
 // ============================================================
