@@ -231,6 +231,15 @@ tbody tr:hover td{background:var(--bg2)}
   .form-row{grid-template-columns:1fr}
   .metrics-grid{grid-template-columns:1fr 1fr}
   .topbar{height:auto;padding:10px 14px;flex-wrap:wrap}
+
+  /* Tabelas -> cartões empilhados em ecrãs pequenos */
+  .table-wrap table thead{display:none}
+  .table-wrap table, .table-wrap tbody, .table-wrap tr{display:block;width:100%}
+  .table-wrap tr{margin-bottom:12px;border:1px solid var(--border-color,#e2d5bc);border-radius:10px;padding:6px 4px;background:var(--bg)}
+  .table-wrap td{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 10px;border:none!important;text-align:right;max-width:none!important;white-space:normal!important;overflow:visible!important}
+  .table-wrap td[data-label]:not([data-label=""])::before{content:attr(data-label);font-weight:600;color:var(--text-3);font-size:11px;text-align:left;flex-shrink:0}
+  .table-wrap td:last-child{justify-content:flex-end}
+  .table-wrap .td-actions{justify-content:flex-end;width:100%}
 }
 </style>
 </head>
@@ -8593,12 +8602,12 @@ function renderSociosList(){
       ? `<button class="btn-secondary" style="padding:4px 7px;font-size:11px;color:var(--amber-d);border-color:var(--amber)" onclick="toggleInativarSocio('${s.id}')" title="Marcar como inativo">⏸</button>`
       : `<button class="btn-secondary" style="padding:4px 7px;font-size:11px;color:var(--teal-d);border-color:var(--teal-m)" onclick="toggleInativarSocio('${s.id}')" title="Reativar sócio">▶</button>`;
     return `<tr style="${rowStyle}">
-    <td style="font-weight:600;color:${inativo?'var(--text-3)':'var(--teal)'}">${s.num}</td>
-    <td style="font-weight:500${inativo?';color:var(--text-3)':''}">${s.nome}${inativo?` <span style="font-size:10px;background:var(--bg3);color:var(--text-3);padding:1px 5px;border-radius:10px">${s.estado}</span>`:''}</td>
-    <td><span class="badge badge-mov">${s.tipo||'—'}</span></td><td>${eB(s.estado)}</td><td>${inativo?'<span style="font-size:11px;color:var(--text-3)">—</span>':sB(s.situacao)}</td>
-    <td style="font-size:12px;color:var(--text-2)">${s.tel||'—'}</td><td style="font-size:11px;color:var(--text-2)">${s.email||'—'}</td>
-    <td style="font-size:11px;color:var(--text-2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.obs||'—'}</td>
-    <td><div class="td-actions">
+    <td data-label="Nº" style="font-weight:600;color:${inativo?'var(--text-3)':'var(--teal)'}">${s.num}</td>
+    <td data-label="Nome" style="font-weight:500${inativo?';color:var(--text-3)':''}">${s.nome}${inativo?` <span style="font-size:10px;background:var(--bg3);color:var(--text-3);padding:1px 5px;border-radius:10px">${s.estado}</span>`:''}</td>
+    <td data-label="Tipo"><span class="badge badge-mov">${s.tipo||'—'}</span></td><td data-label="Estado">${eB(s.estado)}</td><td data-label="Situação">${inativo?'<span style="font-size:11px;color:var(--text-3)">—</span>':sB(s.situacao)}</td>
+    <td data-label="Telemóvel" style="font-size:12px;color:var(--text-2)">${s.tel||'—'}</td><td data-label="Email" style="font-size:11px;color:var(--text-2)">${s.email||'—'}</td>
+    <td data-label="Obs." style="font-size:11px;color:var(--text-2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.obs||'—'}</td>
+    <td data-label=""><div class="td-actions">
       <button class="btn-edit" onclick="editSocio('${s.id}')" title="Editar">✏</button>
       ${btnInativar}
       <button class="btn-print" onclick="abrirCartaoSocio('${s.id}')" title="Cartão">🪪</button>
