@@ -8607,7 +8607,7 @@ function renderSociosList(){
   ms.sort((a,b)=>a.num-b.num);
   const el=document.getElementById('tabela-socios');
   if(!ms.length){el.innerHTML='<div class="empty-state"><p>Nenhum sócio encontrado.</p></div>';return;}
-  const sB=s=>{const c={'EM DIA':'#085041','VENCIDO':'#712B13','A TERMINAR':'#633806','ISENTO':'#1B4570'}[s]||'var(--text-2)';const bg={'EM DIA':'#E1F5EE','VENCIDO':'#FAECE7','A TERMINAR':'#FAEEDA','ISENTO':'#DCE7F0'}[s]||'var(--bg2)';return `<span style="background:${bg};color:${c};padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600">${s==='ISENTO'?'🎗️ ISENTO':(s||'—')}</span>`;};
+  const sB=s=>{const c={'EM DIA':'#085041','VENCIDO':'#712B13','A TERMINAR':'#633806','ISENTO':'#1B4570'}[s]||'var(--text-2)';const bg={'EM DIA':'#E1F5EE','VENCIDO':'#FAECE7','A TERMINAR':'#FAEEDA','ISENTO':'#DCE7F0'}[s]||'var(--bg2)';return `<span style="background:${bg};color:${c};padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;display:inline-flex;align-items:center;gap:4px">${s==='ISENTO'?'🎗️ ISENTO':(s||'—')}</span>`;};
   const eB=e=>{const c={'ATIVO':'var(--teal-d)','INATIVO':'var(--text-3)','ATENÇÃO':'var(--amber)','FALECEU':'var(--coral-d)'}[e]||'var(--text-2)';return `<span style="color:${c};font-weight:500;font-size:12px">${e||'—'}</span>`;};
   el.innerHTML=`<table><thead><tr><th>Nº</th><th>Nome</th><th>Tipo</th><th>Estado</th><th>Situação</th><th>Telemóvel</th><th>Email</th><th>Obs.</th><th></th></tr></thead><tbody>${ms.map(s=>{
     const inativo = s.estado==='INATIVO'||s.estado==='FALECEU';
