@@ -2253,10 +2253,10 @@ function getTiposSocio(){
 function saveTiposSocio(lista){ LS.set('arca_tipos_socio', lista); }
 function populateTipoSocioSelects(){
   const tipos = getTiposSocio();
-  document.querySelectorAll('#s-tipo, #f-tipo-socio').forEach(sel=>{
+  document.querySelectorAll('#s-tipo, #sf-tipo').forEach(sel=>{
     if(!sel) return;
     const atual = sel.value;
-    const comTodos = sel.id==='f-tipo-socio';
+    const comTodos = sel.id==='sf-tipo';
     sel.innerHTML = (comTodos?'<option value="">Todos os tipos</option>':'') +
       tipos.map(t=>`<option value="${t}">${t}</option>`).join('');
     if(tipos.includes(atual)) sel.value = atual;
