@@ -420,8 +420,7 @@ tbody tr:hover td{background:var(--bg2)}
     <div class="card" style="max-width:560px">
       <div class="card-title">Importar sócios do Excel / CSV</div>
       <div style="font-size:13px;color:var(--text-2);margin-bottom:16px;line-height:1.6">
-        Os dados dos sócios já estão carregados da lista fornecida. Podes adicionar mais sócios manualmente ou importar um CSV com as colunas:<br>
-        <code style="font-size:11px;background:var(--bg2);padding:2px 6px;border-radius:4px">Nº;Nome;Sexo;NIF;Tipo;DataInscrição;Estado;Telemóvel;Morada;CPostal;Email;ValorQuota;Situação</code>
+        Importa diretamente o ficheiro Excel da associação (mesmo com as colunas originais tipo "NOME COMPLETO", "TIPO SÓCIO", etc.), ou um CSV com separador ";". A app deteta as colunas automaticamente.
       </div>
       <div class="logo-drop" onclick="document.getElementById('socios-csv-input').click()">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
@@ -8960,7 +8959,206 @@ function exportSociosCSV(){
   const csv=[h,...rows].map(r=>r.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(';')). join('\n');
   const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);a.download='ARCA_Socios.csv';a.click();
 }
-function importSociosCSV(){toast('Importação disponível. Use o formato CSV com separador ";".');}
+function loadXLSXLib(cb){
+  if(window.XLSX){cb();return;}
+  const s=document.createElement('script');
+  s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  s.onload=cb;
+  s.onerror=()=>toast('Não foi possível carregar o leitor de Excel. Verifica a ligação à internet.',false);
+  document.head.appendChild(s);
+}
+
+// Sinónimos de cabeçalhos — cobre tanto o CSV "limpo" como o Excel original da associação
+const SINONIMOS_COLUNAS = {
+  num: ['Nº SÓCIO','Nº','NUM','NUMERO'],
+  nome: ['NOME COMPLETO','NOME','NOME COMPLETO(A)'],
+  sexo: ['SEXO M OU F','SEXO'],
+  nif: ['NIF'],
+  tipo: ['TIPO SÓCIO','TIPO'],
+  dataInscricao: ['DATA INSCRIÇÃO','DATAINSCRIÇÃO'],
+  estado: ['ESTADO SÓCIO','ESTADO'],
+  tel: ['TELEMÓVEL','TELEFONE'],
+  morada: ['MORADA'],
+  cp: ['C-POSTAL','CPOSTAL'],
+  email: ['E-MAIL','EMAIL'],
+  quota: ['VALOR QUOTAS','VALORQUOTA','QUOTA'],
+  doacao: ['DOAÇÃO'],
+  dataDoacao: ['DATA DOAÇÃO'],
+  obs: ['OBSERVAÇÕES','OBS'],
+  situacao: ['SITUAÇÃO'],
+  validadeQuota: ['TERMINA','VALIDADEQUOTA'],
+  dataPagamento: ['DATA PAGAMENTO','DATAPAGAMENTO'],
+};
+function encontrarColunaIdx(headerRow, chave){
+  const normalizados = headerRow.map(h => (h===null||h===undefined?'':String(h)).trim().toUpperCase());
+  for(const cand of SINONIMOS_COLUNAS[chave]){
+    const idx = normalizados.findIndex(h => h.includes(cand));
+    if(idx>-1) return idx;
+  }
+  return -1;
+}
+function encontrarLinhaCabecalho(linhas){
+  const candidatas = [];
+  for(let i=0;i<Math.min(linhas.length,15);i++){
+    const linha = linhas[i]||[];
+    if(linha.some(c => String(c||'').toUpperCase().includes('NOME'))) candidatas.push(i);
+  }
+  if(!candidatas.length) return 0;
+  // preferir a linha cuja primeira célula não é puramente numérica
+  // (evita linhas "fantasma" duplicadas que por vezes aparecem em exports de Excel)
+  for(const i of candidatas){
+    const primeira = String(linhas[i][0]||'').trim();
+    if(primeira && isNaN(Number(primeira))) return i;
+  }
+  return candidatas[candidatas.length-1];
+}
+function excelSerialParaISO(v){
+  const d = new Date(Math.round((v-25569)*86400*1000));
+  return isNaN(d) ? '' : d.toISOString().slice(0,10);
+}
+function parseDataFlexivel(v){
+  if(v===null||v===undefined||v==='') return '';
+  if(v instanceof Date) return v.toISOString().slice(0,10);
+  if(typeof v==='number') return excelSerialParaISO(v);
+  const s=String(v).trim(); if(!s) return '';
+  if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+  let m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if(m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2})$/);
+  if(m) return `20${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  return '';
+}
+function parseNumComoTexto(v){
+  if(v===null||v===undefined||v==='') return '';
+  if(typeof v==='number') return String(Math.round(v));
+  return String(v).trim();
+}
+function parseValorMonetario(v){
+  if(v===null||v===undefined||v==='') return '';
+  if(typeof v==='number') return v.toFixed(2);
+  const s=String(v).replace('€','').replace(',','.').trim();
+  const n=parseFloat(s);
+  return isNaN(n) ? '' : n.toFixed(2);
+}
+const ESTADOS_VALIDOS_IMP = new Set(['ATIVO','INATIVO','ATENÇÃO','FALECEU']);
+const SITUACOES_VALIDAS_IMP = new Set(['EM DIA','VENCIDO','A TERMINAR']);
+
+async function processarLinhasSocios(linhas, msgEl){
+  if(!linhas.length){ msgEl.style.color='var(--coral-d)'; msgEl.textContent='O ficheiro está vazio.'; return; }
+  const iCab = encontrarLinhaCabecalho(linhas);
+  const header = linhas[iCab];
+  const col = {};
+  Object.keys(SINONIMOS_COLUNAS).forEach(k=> col[k]=encontrarColunaIdx(header, k));
+  if(col.nome===-1){ msgEl.style.color='var(--coral-d)'; msgEl.textContent='Não encontrei a coluna do Nome. Confirma o ficheiro.'; return; }
+
+  const dados = linhas.slice(iCab+1).filter(l => l && l[col.nome] && String(l[col.nome]).trim());
+  msgEl.style.color='var(--text-2)'; msgEl.textContent=`A importar ${dados.length} sócio(s) para o Supabase...`;
+
+  let ok=0, falhou=0;
+  const tiposNovos = new Set(getTiposSocio());
+  let numAuto = (socios.length ? Math.max(...socios.map(s=>s.num||0)) : 0) + 1;
+
+  for(const l of dados){
+    const g = (chave) => col[chave]>-1 ? l[col[chave]] : '';
+    const nome = String(g('nome')||'').trim();
+    if(!nome){ falhou++; continue; }
+    let estado = String(g('estado')||'ATIVO').trim().toUpperCase();
+    if(!ESTADOS_VALIDOS_IMP.has(estado)) estado='ATIVO';
+    let tipo = String(g('tipo')||'EFETIVO').trim().toUpperCase() || 'EFETIVO';
+    let situacao = String(g('situacao')||'').trim().toUpperCase();
+    if(!SITUACOES_VALIDAS_IMP.has(situacao)) situacao='';
+    let numV = parseInt(g('num'));
+    if(!numV || isNaN(numV)) numV = numAuto;
+    numAuto = Math.max(numAuto, numV+1);
+
+    let obs = String(g('obs')||'').trim();
+    const doacao = parseValorMonetario(g('doacao'));
+    if(doacao){ obs = obs ? `${obs} | Doação: ${doacao}€` : `Doação: ${doacao}€`; }
+
+    const isento = tipoEIsento(tipo);
+    if(isento) situacao='ISENTO';
+
+    const registo = {
+      num:numV, nome, sexo:String(g('sexo')||'').trim().toUpperCase(), nif:parseNumComoTexto(g('nif')),
+      tipo, dataInscricao:parseDataFlexivel(g('dataInscricao')), estado,
+      tel:parseNumComoTexto(g('tel')), morada:String(g('morada')||'').trim(), cp:String(g('cp')||'').trim(),
+      email:String(g('email')||'').trim(), quota:parseValorMonetario(g('quota')), obs,
+      situacao, validadeQuota:parseDataFlexivel(g('validadeQuota')), dataPagamento:parseDataFlexivel(g('dataPagamento')),
+      isento
+    };
+    tiposNovos.add(tipo);
+    try{
+      const row = await supaFetch('socios', 'POST', socioToRow(registo));
+      socios.push(rowToSocio(row[0]));
+      ok++;
+    }catch(err){ console.error('Falha ao importar', nome, err); falhou++; }
+  }
+  saveTiposSocio([...tiposNovos]);
+  saveSocios();
+  renderSocios();
+  msgEl.style.color = falhou ? 'var(--amber)' : 'var(--teal)';
+  msgEl.textContent = `✓ ${ok} sócio(s) importado(s).` + (falhou?` ⚠ ${falhou} falharam (verifica nomes/números duplicados).`:'');
+}
+
+function importSociosCSV(input){
+  const f=input.files[0]; if(!f) return;
+  let msgEl=document.getElementById('importar-socios-msg');
+  if(!msgEl){
+    msgEl=document.createElement('div');
+    msgEl.id='importar-socios-msg';
+    msgEl.style.cssText='font-size:12px;margin-top:10px;min-height:16px';
+    input.parentElement.appendChild(msgEl);
+  }
+  const nomeFich = f.name.toLowerCase();
+  if(nomeFich.endsWith('.csv')){
+    msgEl.style.color='var(--text-2)'; msgEl.textContent='A ler ficheiro CSV...';
+    const r=new FileReader();
+    r.onload=(e)=>{
+      let linhas;
+      try{ linhas = parseCSVParaLinhas(e.target.result); }
+      catch(err){ msgEl.style.color='var(--coral-d)'; msgEl.textContent='Não consegui ler o CSV.'; return; }
+      processarLinhasSocios(linhas, msgEl);
+    };
+    r.readAsText(f, 'UTF-8');
+  } else {
+    msgEl.style.color='var(--text-2)'; msgEl.textContent='A carregar leitor de Excel...';
+    loadXLSXLib(()=>{
+      msgEl.textContent='A ler ficheiro Excel...';
+      const r=new FileReader();
+      r.onload=(e)=>{
+        try{
+          const wb = window.XLSX.read(e.target.result, {type:'array', cellDates:true});
+          const primeiraFolha = wb.SheetNames[0];
+          const linhas = window.XLSX.utils.sheet_to_json(wb.Sheets[primeiraFolha], {header:1, raw:true, defval:''});
+          processarLinhasSocios(linhas, msgEl);
+        }catch(err){
+          console.error(err);
+          msgEl.style.color='var(--coral-d)'; msgEl.textContent='Não consegui ler o ficheiro Excel.';
+        }
+      };
+      r.readAsArrayBuffer(f);
+    });
+  }
+  input.value='';
+}
+
+// Variante do parser de CSV que devolve linhas em array (em vez de objetos),
+// para poder ser processada pelo mesmo motor de sinónimos usado no Excel
+function parseCSVParaLinhas(texto){
+  const linhas = texto.replace(/^\uFEFF/,'').split(/\r?\n/).filter(l=>l.trim().length);
+  const parseLinha=(linha)=>{
+    const campos=[]; let atual=''; let dentroAspas=false;
+    for(let i=0;i<linha.length;i++){
+      const c=linha[i];
+      if(c==='"'){ if(dentroAspas && linha[i+1]==='"'){atual+='"';i++;} else dentroAspas=!dentroAspas; }
+      else if(c===';' && !dentroAspas){ campos.push(atual); atual=''; }
+      else atual+=c;
+    }
+    campos.push(atual);
+    return campos;
+  };
+  return linhas.map(parseLinha);
+}
 function clearSocios(){socios=[];saveSocios();renderSocios();toast('Sócios eliminados.');}
 function abrirCartaoSocio(id){
   showPage('socios',document.querySelector('.nav-item[onclick*="socios"]'));
