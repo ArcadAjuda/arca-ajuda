@@ -374,7 +374,7 @@ tbody tr:hover td{background:var(--bg2)}
       </div>
     </div>
     <div id="cartao-preview-area" style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start">
-      <div id="cartao-digital" style="width:340px;height:214px;border-radius:16px;padding:20px 22px;color:#fff;font-family:Arial,sans-serif;position:relative;overflow:hidden;box-shadow:0 10px 32px rgba(18,49,79,.35);display:flex;flex-direction:column;justify-content:space-between;background:linear-gradient(135deg,#0F2A46 0%,#1B4570 55%,#2E6199 100%)">
+      <div id="cartao-digital" style="width:340px;height:214px;border-radius:16px;padding:20px 22px;color:#fff;font-family:Arial,sans-serif;position:relative;overflow:hidden;box-shadow:0 10px 32px rgba(18,49,79,.35);display:flex;flex-direction:column;justify-content:space-between;background:linear-gradient(135deg,#1B4570 0%,#2E6199 55%,#4A85BE 100%)">
         <div style="position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(255,255,255,.045) 0 2px,transparent 2px 22px);pointer-events:none"></div>
         <div style="position:absolute;top:-40px;right:-40px;width:150px;height:150px;border-radius:50%;background:rgba(184,134,59,.16)"></div>
         <div style="position:absolute;bottom:-50px;left:-30px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.05)"></div>
@@ -773,6 +773,51 @@ const LS = {
   get: k => { try{const v=localStorage.getItem(k); return v?JSON.parse(v):null;}catch(e){return null;} },
   set: (k,v) => { try{localStorage.setItem(k,JSON.stringify(v));}catch(e){} }
 };
+
+// ============================================================
+// IndexedDB — usado só para o logo (imagens podem ser grandes
+// demais para o localStorage, que tem um limite baixo ~5MB
+// partilhado com TODOS os dados da app)
+// ============================================================
+function idbOpen(){
+  return new Promise((resolve,reject)=>{
+    const req = indexedDB.open('arca_db', 1);
+    req.onupgradeneeded = () => { if(!req.result.objectStoreNames.contains('ficheiros')) req.result.createObjectStore('ficheiros'); };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function idbSaveLogo(dataUrl){
+  const db = await idbOpen();
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction('ficheiros','readwrite');
+    tx.objectStore('ficheiros').put(dataUrl, 'arca_logo');
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error);
+  });
+}
+async function idbLoadLogo(){
+  try{
+    const db = await idbOpen();
+    return new Promise((resolve)=>{
+      const tx = db.transaction('ficheiros','readonly');
+      const req = tx.objectStore('ficheiros').get('arca_logo');
+      req.onsuccess = () => resolve(req.result || '');
+      req.onerror = () => resolve('');
+    });
+  }catch(e){ return ''; }
+}
+async function idbRemoveLogo(){
+  try{
+    const db = await idbOpen();
+    return new Promise((resolve)=>{
+      const tx = db.transaction('ficheiros','readwrite');
+      tx.objectStore('ficheiros').delete('arca_logo');
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => resolve(false);
+    });
+  }catch(e){ return false; }
+}
 
 // ============================================================
 // SUPABASE — ligação à cloud (Sócios)
@@ -3077,7 +3122,7 @@ function previewBgRemoval(){
     rc.getContext('2d').putImageData(idata,0,0);
   };img.src=logoImageData;
 }
-function applyLogo(){
+async function applyLogo(){
   const rc=document.getElementById('bg-result');
   let final=logoImageData;
   if(rc.width>0){final=rc.toDataURL('image/png');}
@@ -3086,21 +3131,30 @@ function applyLogo(){
   document.getElementById('logo-badge').style.display='none';
   currentLogoData = final;
   try{
-    localStorage.setItem('arca_logo', JSON.stringify(final));
+    await idbSaveLogo(final);
+    localStorage.removeItem('arca_logo'); // já não é preciso a cópia antiga em localStorage
     closeModal('modal-logo');toast('Logo aplicado e guardado!');
   }catch(e){
     console.error('Falha ao guardar logo:', e);
     closeModal('modal-logo');
-    toast('⚠ Logo aplicado agora, mas não foi possível guardar (espaço insuficiente). Tenta uma imagem mais pequena.', false);
+    toast('⚠ Logo aplicado agora, mas não foi possível guardar permanentemente. Tenta uma imagem mais pequena, ou recarrega e tenta de novo.', false);
   }
 }
-(function(){
-  const l=LS.get('arca_logo') || '';
+(async function(){
+  let l = await idbLoadLogo();
+  if(!l){
+    // Migração: quem tinha logo guardado do jeito antigo (localStorage), passa a usar IndexedDB
+    const antigo = LS.get('arca_logo');
+    if(antigo){ l = antigo; try{ await idbSaveLogo(antigo); localStorage.removeItem('arca_logo'); }catch(e){} }
+  }
   if(l){
     const i=document.getElementById('logo-img');
-    i.src=l;i.style.display='block';
-    document.getElementById('logo-badge').style.display='none';
+    if(i){ i.src=l;i.style.display='block'; }
+    const b=document.getElementById('logo-badge');
+    if(b) b.style.display='none';
     currentLogoData = l;
+    const loginArea=document.getElementById('login-logo-area');
+    if(loginArea) loginArea.innerHTML=`<img src="${l}" style="height:64px;max-width:160px;object-fit:contain;border-radius:8px">`;
   }
 })();
 
@@ -8722,7 +8776,8 @@ function renderCartaoSocio(){
     </table>`;
 }
 
-function removeLogo(){
+async function removeLogo(){
+  await idbRemoveLogo();
   LS.set('arca_logo', null);
   currentLogoData = '';
   const img = document.getElementById('logo-img');
@@ -8753,7 +8808,7 @@ function imprimirCartao(){
   .noprint{display:flex;gap:8px}.noprint button{padding:9px 20px;border:none;border-radius:6px;font-size:13px;cursor:pointer}.p{background:#2E75B5;color:#fff}.s{background:#555;color:#fff}
   @media print{.noprint{display:none}body{background:#fff;min-height:auto}}
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important}
-  .cartao{width:340px;height:214px;background:linear-gradient(135deg,#0F2A46 0%,#1B4570 55%,#2E6199 100%);border-radius:16px;padding:20px 22px;color:#fff;position:relative;overflow:hidden;box-shadow:0 10px 32px rgba(18,49,79,.35);display:flex;flex-direction:column}
+  .cartao{width:340px;height:214px;background:linear-gradient(135deg,#1B4570 0%,#2E6199 55%,#4A85BE 100%);border-radius:16px;padding:20px 22px;color:#fff;position:relative;overflow:hidden;box-shadow:0 10px 32px rgba(18,49,79,.35);display:flex;flex-direction:column}
   .cartao::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(255,255,255,.045) 0 2px,transparent 2px 22px);pointer-events:none}
   .c1{position:absolute;top:-40px;right:-40px;width:150px;height:150px;border-radius:50%;background:rgba(184,134,59,.16)}
   .c2{position:absolute;bottom:-50px;left:-30px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.05)}
@@ -8794,7 +8849,7 @@ function downloadCartaoPNG(){
     if(s.validadeQuota){const v=new Date(s.validadeQuota+'T12:00:00');validStr=v.toLocaleDateString('pt-PT');}
     const qrData=`ARCA:${s.num}:${s.validadeQuota||'0'}`;
     const wrap=document.createElement('div');
-    wrap.style.cssText='position:fixed;left:-9999px;top:0;width:680px;height:428px;border-radius:28px;background:linear-gradient(135deg,#0F2A46 0%,#1B4570 55%,#2E6199 100%);padding:40px 44px;color:#fff;font-family:Arial,sans-serif;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden';
+    wrap.style.cssText='position:fixed;left:-9999px;top:0;width:680px;height:428px;border-radius:28px;background:linear-gradient(135deg,#1B4570 0%,#2E6199 55%,#4A85BE 100%);padding:40px 44px;color:#fff;font-family:Arial,sans-serif;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden';
     wrap.innerHTML=`
       <div style="position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(255,255,255,.045) 0 3px,transparent 3px 34px);pointer-events:none;border-radius:28px"></div>
       <div style="position:absolute;top:-60px;right:-60px;width:240px;height:240px;border-radius:50%;background:rgba(184,134,59,.16)"></div>
@@ -8925,9 +8980,8 @@ async function iniciarAppSocios(){
   try{ startMotivacional(); }catch(e){ console.warn('init:',e); }
   try{ checkRoleLogin(); }catch(e){ console.warn('init:',e); }
   (function(){
-    const logo=LS.get('arca_logo');
     const el=document.getElementById('login-logo-area');
-    if(el&&logo) el.innerHTML=`<img src="${logo}" style="height:64px;max-width:160px;object-fit:contain;border-radius:8px">`;
+    if(el&&currentLogoData) el.innerHTML=`<img src="${currentLogoData}" style="height:64px;max-width:160px;object-fit:contain;border-radius:8px">`;
     try{ renderConfigDados(); }catch(e){ console.warn('init:',e); }
   })();
 }
