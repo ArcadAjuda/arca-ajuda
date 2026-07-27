@@ -3915,7 +3915,7 @@ function renderConfigAcessos(){
   <div class="card" style="margin-bottom:14px">
     <div class="card-title">🔐 Códigos de acesso por nível</div>
     <p style="font-size:12px;color:var(--text-2);margin-bottom:16px;line-height:1.6">
-      Define um código para cada nível. Formato obrigatório: mínimo 7 caracteres com <strong>2 números, 2 maiúsculas, 2 minúsculas e 1 símbolo</strong> (ex: <code>Ab2@x9!</code>).<br>
+      Define um código para cada nível. Formato obrigatório: <strong>4 números e 1 letra</strong> (maiúscula ou minúscula, em qualquer posição) — ex: <code>4x281</code>.<br>
       Quem não tiver código de nível superior usa o nível mais baixo disponível.
     </p>
     <div style="display:flex;flex-direction:column;gap:12px">
@@ -3931,7 +3931,7 @@ function renderConfigAcessos(){
           </span>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
-          <input type="password" id="code-input-${role}" placeholder="Novo código (mín. 7 car.)"
+          <input type="password" id="code-input-${role}" placeholder="Novo código (4 números + 1 letra)"
             style="flex:1;padding:8px 10px;border:var(--border);border-radius:var(--radius);font-size:13px;background:var(--bg)">
           <button class="btn-primary" style="padding:7px 14px;font-size:12px" onclick="saveRoleCode('${role}')">Definir</button>
           ${codes[role]?`<button class="btn-danger" style="padding:7px 10px;font-size:12px" onclick="clearRoleCode('${role}')">Remover</button>`:''}
@@ -3952,11 +3952,10 @@ function renderConfigAcessos(){
 }
 
 function validateCodeFormat(code){
-  if(code.length < 7) return 'Mínimo 7 caracteres.';
-  if(!/[0-9].*[0-9]|[0-9][^0-9]*[0-9]/.test(code)) return 'Precisa de pelo menos 2 números.';
-  if(!/[A-Z].*[A-Z]|[A-Z][^A-Z]*[A-Z]/.test(code)) return 'Precisa de pelo menos 2 maiúsculas.';
-  if(!/[a-z].*[a-z]|[a-z][^a-z]*[a-z]/.test(code)) return 'Precisa de pelo menos 2 minúsculas.';
-  if(!/[^A-Za-z0-9]/.test(code)) return 'Precisa de pelo menos 1 símbolo (ex: @, !, #).';
+  if(code.length !== 5) return 'O código deve ter exatamente 5 caracteres: 4 números e 1 letra.';
+  const digitos = (code.match(/[0-9]/g)||[]).length;
+  const letras = (code.match(/[A-Za-z]/g)||[]).length;
+  if(digitos !== 4 || letras !== 1) return 'O código deve ter exatamente 4 números e 1 letra — ex: 4x281.';
   return null;
 }
 
