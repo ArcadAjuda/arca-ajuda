@@ -374,22 +374,23 @@ tbody tr:hover td{background:var(--bg2)}
       </div>
     </div>
     <div id="cartao-preview-area" style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start">
-      <div id="cartao-digital" style="width:340px;height:214px;background:linear-gradient(135deg,#e8f4f8 0%,#dbeafe 40%,#ede9fe 100%);border-radius:12px;padding:18px 20px;color:#1e3a5f;font-family:Arial,sans-serif;position:relative;overflow:hidden;box-shadow:0 8px 28px rgba(100,130,200,.25);display:flex;flex-direction:column;justify-content:space-between">
-        <div style="position:absolute;top:-30px;right:-30px;width:130px;height:130px;border-radius:50%;background:rgba(100,150,255,.12)"></div>
-        <div style="position:absolute;bottom:-40px;left:-20px;width:150px;height:150px;border-radius:50%;background:rgba(150,100,255,.08)"></div>
+      <div id="cartao-digital" style="width:340px;height:214px;border-radius:16px;padding:20px 22px;color:#fff;font-family:Arial,sans-serif;position:relative;overflow:hidden;box-shadow:0 10px 32px rgba(18,49,79,.35);display:flex;flex-direction:column;justify-content:space-between;background:linear-gradient(135deg,#0F2A46 0%,#1B4570 55%,#2E6199 100%)">
+        <div style="position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(255,255,255,.045) 0 2px,transparent 2px 22px);pointer-events:none"></div>
+        <div style="position:absolute;top:-40px;right:-40px;width:150px;height:150px;border-radius:50%;background:rgba(184,134,59,.16)"></div>
+        <div style="position:absolute;bottom:-50px;left:-30px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.05)"></div>
         <!-- TOPO: logo + nome associação em destaque -->
-        <div id="cartao-logo-area"></div>
+        <div id="cartao-logo-area" style="position:relative;z-index:1"></div>
         <!-- RODAPÉ: nome sócio + validade + QR -->
-        <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:auto;padding-top:18px;gap:16px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:auto;padding-top:18px;gap:16px;position:relative;z-index:1">
           <div style="flex:1;min-width:0">
-            <div style="font-size:14px;font-weight:700;margin-bottom:4px;color:#1e3a5f" id="cartao-nome">Nome do Sócio</div>
-            <div style="font-size:11px;color:#5b7fa6;margin-bottom:0" id="cartao-tipo-num">Tipo · Nº 000</div>
+            <div style="width:26px;height:3px;background:#B8863B;border-radius:2px;margin-bottom:7px"></div>
+            <div style="font-size:15px;font-weight:700;margin-bottom:3px;color:#fff" id="cartao-nome">Nome do Sócio</div>
+            <div style="font-size:11px;color:#B8C4D4" id="cartao-tipo-num">Tipo · Nº 000</div>
           </div>
           <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0">
-            <div id="cartao-qr-area" style="background:transparent;padding:5px;border-radius:8px;width:76px;height:76px;display:flex;align-items:center;justify-content:center">
+            <div id="cartao-qr-area" style="background:#fff;padding:6px;border-radius:8px;width:74px;height:74px;display:flex;align-items:center;justify-content:center">
               <div style="font-size:9px;color:#333;text-align:center">QR</div>
             </div>
-            <div style="font-size:16px;text-align:center;opacity:.5">📷</div>
           </div>
         </div>
       </div>
@@ -445,7 +446,7 @@ tbody tr:hover td{background:var(--bg2)}
       <div class="form-row">
         <div class="form-group"><label>Nº Sócio</label><input type="number" id="s-num" placeholder="Auto"></div>
         <div class="form-group"><label>Tipo</label>
-          <select id="s-tipo"></select>
+          <select id="s-tipo" onchange="const chk=document.getElementById('s-isento'); if(chk) chk.checked=tipoEIsento(this.value);"></select>
         </div>
       </div>
       <div class="form-row">
@@ -483,10 +484,16 @@ tbody tr:hover td{background:var(--bg2)}
       </div>
       <div class="form-row">
         <div class="form-group"><label>Situação Quota</label>
-          <select id="s-situacao"><option>EM DIA</option><option>VENCIDO</option><option>A TERMINAR</option></select>
+          <select id="s-situacao"><option>EM DIA</option><option>VENCIDO</option><option>A TERMINAR</option><option>ISENTO</option></select>
         </div>
         <div class="form-group"><label>Válido até</label>
           <input type="date" id="s-validade" placeholder="Auto — calculado do pagamento">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="display:flex;align-items:center;gap:8px;padding-top:22px">
+          <input type="checkbox" id="s-isento" style="width:16px;height:16px;cursor:pointer" onchange="toast(this.checked?'Marcado como isento — não vai aparecer como vencido.':'Isenção removida — a quota passa a ser calculada normalmente.')">
+          <label for="s-isento" style="margin:0;cursor:pointer;font-weight:500;color:var(--text)">🎗️ Isento de quota (não paga — ex: Direção)</label>
         </div>
       </div>
       <div class="form-row">
@@ -815,7 +822,7 @@ function socioToRow(s){
     periodo_quota: s.periodoQuota||null, validade_quota: s.validadeQuota||null,
     estado: s.estado||'ATIVO', tel: s.tel||null, morada: s.morada||null, cp: s.cp||null,
     email: s.email||null, quota: s.quota?parseFloat(s.quota):null,
-    situacao: s.situacao||'EM DIA', obs: s.obs||null
+    situacao: s.situacao||'EM DIA', obs: s.obs||null, isento: !!s.isento
   };
 }
 function rowToSocio(r){
@@ -824,7 +831,7 @@ function rowToSocio(r){
     dataInscricao:r.data_inscricao||'', dataPagamento:r.data_pagamento||'',
     periodoQuota:r.periodo_quota||'1ano', validadeQuota:r.validade_quota||'',
     estado:r.estado, tel:r.tel||'', morada:r.morada||'', cp:r.cp||'', email:r.email||'',
-    quota:r.quota||'', situacao:r.situacao, obs:r.obs||'', diasRestantes:0
+    quota:r.quota||'', situacao:r.situacao, obs:r.obs||'', diasRestantes:0, isento: !!r.isento
   };
 }
 async function carregarSociosSupabase(){
@@ -2154,6 +2161,12 @@ function renderConfig(tab){
 // ============================================================
 // QUOTAS CONFIG
 // ============================================================
+function getTiposIsentos(){
+  return LS.get('arca_tipos_isentos') || ['FUNDADOR','HONORÁRIO'];
+}
+function saveTiposIsentos(lista){ LS.set('arca_tipos_isentos', lista); }
+function tipoEIsento(tipo){ return getTiposIsentos().includes(tipo); }
+
 function getTiposSocio(){
   return LS.get('arca_tipos_socio') || ['FUNDADOR','EFETIVO','ATLETA','HONORÁRIO','BENEMÉRITO','PARCEIRO/EMPRESA'];
 }
@@ -2242,6 +2255,29 @@ function renderConfigQuotas(){
   </div>
 
   <div class="card" style="margin-bottom:14px">
+    <div class="card-title">🎗️ Isenção de Quotas</div>
+    <p style="font-size:12px;color:var(--text-2);margin-bottom:14px;line-height:1.6">
+      Sócios destes tipos <strong>nunca aparecem como "vencido"</strong> — mostram sempre "🎗️ Isento", independentemente da data de pagamento.
+      Útil para Fundadores, Sócios Honorários, ou outros que a Direção decida isentar. Esta regra pode ser mudada aqui a qualquer momento, sem precisares de editar a aplicação.
+    </p>
+    <div style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:14px">
+      ${TIPOS_SOCIO_QUOTA.map(t=>`
+        <label style="display:flex;align-items:center;gap:7px;font-size:13px;font-weight:500;cursor:pointer;background:var(--bg2);border:var(--border);border-radius:var(--radius);padding:8px 14px">
+          <input type="checkbox" class="chk-isento-tipo" value="${t.replace(/"/g,'&quot;')}" ${tipoEIsento(t)?'checked':''} style="width:15px;height:15px;cursor:pointer">
+          ${t}
+        </label>`).join('')}
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="btn-primary" onclick="salvarIsencaoTipos()">💾 Guardar regra de isenção</button>
+      <button class="btn-secondary" onclick="reaplicarIsencaoExistentes()">🔁 Aplicar a sócios já existentes</button>
+      <span id="isento-save-msg" style="font-size:12px;color:var(--teal);display:none">✓ Guardado!</span>
+    </div>
+    <p style="font-size:11px;color:var(--text-3);margin-top:10px;line-height:1.5">
+      💡 Também podes marcar "Isento" individualmente em qualquer sócio (ex: alguém da Direção que não seja Fundador/Honorário), na ficha desse sócio.
+    </p>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
     <div class="card-title">💶 Tabela de preços de quotas por tipo de sócio e período</div>
     <p style="font-size:12px;color:var(--text-2);margin-bottom:16px;line-height:1.6">
       Define o valor da quota para cada tipo de sócio e cada período de pagamento.<br>
@@ -2297,6 +2333,33 @@ function renderConfigQuotas(){
   el.innerHTML = html;
 }
 
+function salvarIsencaoTipos(){
+  const marcados = [...document.querySelectorAll('.chk-isento-tipo:checked')].map(c=>c.value);
+  saveTiposIsentos(marcados);
+  const msg=document.getElementById('isento-save-msg');
+  if(msg){ msg.style.display='inline'; setTimeout(()=>msg.style.display='none',2500); }
+  toast('Regra de isenção guardada!');
+}
+
+async function reaplicarIsencaoExistentes(){
+  salvarIsencaoTipos(); // garantir que a regra atual está guardada primeiro
+  const tipos = getTiposIsentos();
+  const afetados = socios.filter(s => tipos.includes(s.tipo) && !s.isento);
+  if(!afetados.length){ toast('Nenhum sócio novo a marcar — já estão todos atualizados.'); return; }
+  if(!confirm(`Marcar ${afetados.length} sócio(s) como isento (tipo Fundador/Honorário/etc já definidos)?\n\nIsto só ACRESCENTA isenções — nunca remove uma isenção já existente noutro sócio.`)) return;
+  let ok=0;
+  for(const s of afetados){
+    try{
+      await supaFetch('socios?id=eq.'+s.id, 'PATCH', {isento:true, situacao:'ISENTO'});
+      s.isento=true; s.situacao='ISENTO';
+      ok++;
+    }catch(e){ console.error('Falha ao atualizar', s.nome, e); }
+  }
+  saveSocios();
+  renderSocios();
+  toast(`✓ ${ok} sócio(s) marcados como isentos.`);
+}
+
 function saveQuotasTable(){
   const q = getQuotasConfig();
   getTiposSocio().forEach(tipo=>{
@@ -2347,6 +2410,14 @@ function getSituacaoFromValidade(validade){
   if(diff < 0) return 'VENCIDO';
   if(diff <= 30) return 'A TERMINAR';
   return 'EM DIA';
+}
+
+// Situação de um sócio, considerando isenção (individual ou por tipo) antes de olhar para a data
+function getSituacaoSocio(s){
+  if(!s) return 'VENCIDO';
+  if(s.isento || tipoEIsento(s.tipo)) return 'ISENTO';
+  if(!s.validadeQuota) return 'VENCIDO';
+  return getSituacaoFromValidade(new Date(s.validadeQuota+'T12:00:00'));
 }
 
 // Check all socios for expiring quotas and show alert
@@ -2511,6 +2582,7 @@ function checkQuotaAlerts(){
 
   socios.forEach(s => {
     if(s.estado !== 'ATIVO') return;
+    if(s.isento || tipoEIsento(s.tipo)) return; // isentos nunca geram alerta
     if(!s.validadeQuota) return;
     const v = new Date(s.validadeQuota+'T12:00:00');
     v.setHours(0,0,0,0);
@@ -2885,9 +2957,11 @@ async function importarSociosCSVAntigo(input){
         situacao: l['Situação']||'EM DIA',
         validadeQuota: l['ValidadeQuota']||'',
         dataPagamento: l['DataPagamento']||'',
-        periodoQuota: '1ano'
+        periodoQuota: '1ano',
+        isento: tipoEIsento(l['Tipo']||'EFETIVO')
       };
       if(!registo.nome){ falhou++; continue; }
+      if(registo.isento) registo.situacao='ISENTO';
       if(registo.tipo) tiposNovos.add(registo.tipo);
       try{
         const row = await supaFetch('socios', 'POST', socioToRow(registo));
@@ -2932,13 +3006,25 @@ function handleLogoFile(input){const f=input.files[0];if(f) readLogoFile(f);}
 function handleLogoDrop(e){e.preventDefault();const f=e.dataTransfer.files[0];if(f)readLogoFile(f);}
 function readLogoFile(f){
   const r=new FileReader();r.onload=ev=>{
-    logoImageData=ev.target.result;
-    document.getElementById('logo-preview-area').innerHTML=`<img src="${logoImageData}" style="max-height:120px;max-width:100%;border-radius:var(--radius-lg);object-fit:contain">`;
-    document.getElementById('logo-preview-area').style.display='block';
-    document.getElementById('logo-bg-section').style.display='block';
-    document.getElementById('bg-original').src=logoImageData;
-    document.getElementById('btn-apply-logo').style.display='inline-flex';
-    previewBgRemoval();
+    const img=new Image();
+    img.onload=()=>{
+      // Redimensionar para no máx. 500px no lado maior — evita ultrapassar o limite do localStorage
+      const MAX=500;
+      let w=img.width, h=img.height;
+      if(w>MAX||h>MAX){
+        if(w>h){ h=Math.round(h*MAX/w); w=MAX; } else { w=Math.round(w*MAX/h); h=MAX; }
+      }
+      const c=document.createElement('canvas'); c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      logoImageData=c.toDataURL('image/png');
+      document.getElementById('logo-preview-area').innerHTML=`<img src="${logoImageData}" style="max-height:120px;max-width:100%;border-radius:var(--radius-lg);object-fit:contain">`;
+      document.getElementById('logo-preview-area').style.display='block';
+      document.getElementById('logo-bg-section').style.display='block';
+      document.getElementById('bg-original').src=logoImageData;
+      document.getElementById('btn-apply-logo').style.display='inline-flex';
+      previewBgRemoval();
+    };
+    img.src=ev.target.result;
   };r.readAsDataURL(f);
 }
 function previewBgRemoval(){
@@ -2962,9 +3048,15 @@ function applyLogo(){
   const img=document.getElementById('logo-img');
   img.src=final;img.style.display='block';img.className='logo-img';
   document.getElementById('logo-badge').style.display='none';
-  LS.set('arca_logo',final);
   currentLogoData = final;
-  closeModal('modal-logo');toast('Logo aplicado!');
+  try{
+    localStorage.setItem('arca_logo', JSON.stringify(final));
+    closeModal('modal-logo');toast('Logo aplicado e guardado!');
+  }catch(e){
+    console.error('Falha ao guardar logo:', e);
+    closeModal('modal-logo');
+    toast('⚠ Logo aplicado agora, mas não foi possível guardar (espaço insuficiente). Tenta uma imagem mais pequena.', false);
+  }
 }
 (function(){
   const l=LS.get('arca_logo') || '';
@@ -8395,7 +8487,7 @@ function renderSociosList(){
   ms.sort((a,b)=>a.num-b.num);
   const el=document.getElementById('tabela-socios');
   if(!ms.length){el.innerHTML='<div class="empty-state"><p>Nenhum sócio encontrado.</p></div>';return;}
-  const sB=s=>{const c={'EM DIA':'#085041','VENCIDO':'#712B13','A TERMINAR':'#633806'}[s]||'var(--text-2)';const bg={'EM DIA':'#E1F5EE','VENCIDO':'#FAECE7','A TERMINAR':'#FAEEDA'}[s]||'var(--bg2)';return `<span style="background:${bg};color:${c};padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600">${s||'—'}</span>`;};
+  const sB=s=>{const c={'EM DIA':'#085041','VENCIDO':'#712B13','A TERMINAR':'#633806','ISENTO':'#1B4570'}[s]||'var(--text-2)';const bg={'EM DIA':'#E1F5EE','VENCIDO':'#FAECE7','A TERMINAR':'#FAEEDA','ISENTO':'#DCE7F0'}[s]||'var(--bg2)';return `<span style="background:${bg};color:${c};padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600">${s==='ISENTO'?'🎗️ ISENTO':(s||'—')}</span>`;};
   const eB=e=>{const c={'ATIVO':'var(--teal-d)','INATIVO':'var(--text-3)','ATENÇÃO':'var(--amber)','FALECEU':'var(--coral-d)'}[e]||'var(--text-2)';return `<span style="color:${c};font-weight:500;font-size:12px">${e||'—'}</span>`;};
   el.innerHTML=`<table><thead><tr><th>Nº</th><th>Nome</th><th>Tipo</th><th>Estado</th><th>Situação</th><th>Telemóvel</th><th>Email</th><th>Obs.</th><th></th></tr></thead><tbody>${ms.map(s=>{
     const inativo = s.estado==='INATIVO'||s.estado==='FALECEU';
@@ -8438,6 +8530,7 @@ function openModalSocio(){
   document.getElementById('s-data-pagamento').value='';
   const pp=document.getElementById('s-periodo-quota');if(pp)pp.value='1ano';
   const sv=document.getElementById('s-validade');if(sv)sv.value='';
+  const isc=document.getElementById('s-isento');if(isc)isc.checked=tipoEIsento('EFETIVO');
   openModal('modal-socio');
 }
 
@@ -8462,6 +8555,7 @@ function editSocio(id){
   document.getElementById('s-data-pagamento').value=s.dataPagamento||'';
   const pp=document.getElementById('s-periodo-quota');if(pp)pp.value=s.periodoQuota||'1ano';
   const sv=document.getElementById('s-validade');if(sv)sv.value=s.validadeQuota||'';
+  const isc=document.getElementById('s-isento');if(isc)isc.checked=!!s.isento;
   openModal('modal-socio');
 }
 
@@ -8481,9 +8575,14 @@ async function saveSocio(){
   const periodo=document.getElementById('s-periodo-quota')?.value||'1ano';
   let vq=document.getElementById('s-validade')?.value||'';
   if(dp&&periodo&&!vq){const v=calcValidadeQuota(dp,periodo);if(v)vq=v.toISOString().slice(0,10);}
-  let sit=document.getElementById('s-situacao').value;
-  if(vq){sit=getSituacaoFromValidade(new Date(vq+'T12:00:00'));document.getElementById('s-situacao').value=sit;}
-  const obj={id:editingSocioId||null,num:parseInt(document.getElementById('s-num').value)||nextNumSocio(),nome,sexo:document.getElementById('s-sexo').value,nif:document.getElementById('s-nif').value.trim(),tipo:document.getElementById('s-tipo').value,dataInscricao:document.getElementById('s-data-inscricao').value,dataPagamento:dp,periodoQuota:periodo,validadeQuota:vq,estado:document.getElementById('s-estado').value,tel:document.getElementById('s-tel').value.trim(),morada:document.getElementById('s-morada').value.trim(),cp:document.getElementById('s-cp').value.trim(),email:document.getElementById('s-email').value.trim(),quota:document.getElementById('s-quota').value.trim(),situacao:sit,obs:document.getElementById('s-obs').value.trim(),diasRestantes:0};
+  const tipo=document.getElementById('s-tipo').value;
+  const isento=document.getElementById('s-isento')?.checked || false;
+  let sit;
+  if(isento || tipoEIsento(tipo)){ sit='ISENTO'; }
+  else if(vq){ sit=getSituacaoFromValidade(new Date(vq+'T12:00:00')); }
+  else { sit=document.getElementById('s-situacao').value; }
+  const sitEl=document.getElementById('s-situacao'); if(sitEl) sitEl.value=sit;
+  const obj={id:editingSocioId||null,num:parseInt(document.getElementById('s-num').value)||nextNumSocio(),nome,sexo:document.getElementById('s-sexo').value,nif:document.getElementById('s-nif').value.trim(),tipo,dataInscricao:document.getElementById('s-data-inscricao').value,dataPagamento:dp,periodoQuota:periodo,validadeQuota:vq,estado:document.getElementById('s-estado').value,tel:document.getElementById('s-tel').value.trim(),morada:document.getElementById('s-morada').value.trim(),cp:document.getElementById('s-cp').value.trim(),email:document.getElementById('s-email').value.trim(),quota:document.getElementById('s-quota').value.trim(),situacao:sit,obs:document.getElementById('s-obs').value.trim(),diasRestantes:0,isento};
   try{
     if(editingSocioId){
       const row = await supaFetch('socios?id=eq.'+editingSocioId, 'PATCH', socioToRow(obj));
@@ -8552,20 +8651,21 @@ function filterCartaoSocio(){
 function renderCartaoSocio(){
   const id=document.getElementById('cartao-socio-sel').value;if(!id)return;
   const s=socios.find(x=>x.id==id);if(!s)return;
-  let validStr='—',situacao=s.situacao||'VENCIDO';
-  if(s.validadeQuota){const v=new Date(s.validadeQuota+'T12:00:00');situacao=getSituacaoFromValidade(v);validStr=v.toLocaleDateString('pt-PT');}
+  let validStr='—';
+  const situacao=getSituacaoSocio(s);
+  if(s.validadeQuota){const v=new Date(s.validadeQuota+'T12:00:00');validStr=v.toLocaleDateString('pt-PT');}
   const qrData=`ARCA:${s.num}:${s.validadeQuota||'0'}`;
   const logo=currentLogoData||LS.get('arca_logo')||'';
   const logoEl=document.getElementById('cartao-logo-area');
   if(logoEl){
     const imgPart = logo
-      ? `<img src="${logo}" style="width:64px;height:64px;object-fit:contain;flex-shrink:0;display:block">`
-      : `<div style="width:58px;height:58px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;font-weight:700;color:#fff">ARCA</div>`;
+      ? `<img src="${logo}" style="width:60px;height:60px;object-fit:contain;flex-shrink:0;display:block;background:#fff;border-radius:10px;padding:4px">`
+      : `<div style="width:56px;height:56px;border-radius:10px;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;font-weight:700;color:#fff">ARCA</div>`;
     logoEl.innerHTML = `<div style="display:flex;align-items:center;gap:12px">
       ${imgPart}
       <div style="display:flex;flex-direction:column;justify-content:center">
-        <div style="font-size:18px;font-weight:800;color:#1e3a5f;letter-spacing:.5px;line-height:1.1">ARCA d'Ajuda</div>
-        <div style="font-size:8px;color:#5b7fa6;letter-spacing:.5px;margin-top:4px;line-height:1.4">Associação Recreativa e Cultural da Ajuda</div>
+        <div style="font-size:17px;font-weight:800;color:#fff;letter-spacing:.4px;line-height:1.1">ARCA d'Ajuda</div>
+        <div style="font-size:8px;color:#9FB4CC;letter-spacing:.4px;margin-top:4px;line-height:1.4">Associação Recreativa e Cultural da Ajuda</div>
       </div>
     </div>`;
   }
@@ -8573,16 +8673,16 @@ function renderCartaoSocio(){
   const tEl=document.getElementById('cartao-tipo-num');if(tEl)tEl.textContent=`${s.tipo||'Sócio'} · Nº ${s.num}`;
   const bEl=document.getElementById('cartao-estado-badge');
   if(bEl) bEl.style.display='none';
-  const qrEl=document.getElementById('cartao-qr-area');if(qrEl){qrEl.innerHTML='';const doQR=()=>{if(window.QRCode)new window.QRCode(qrEl,{text:qrData,width:70,height:70,colorDark:'#1e3a5f',colorLight:'#dbeafe',correctLevel:window.QRCode.CorrectLevel.M});};if(window.QRCode)doQR();else loadQRLib(doQR);}
+  const qrEl=document.getElementById('cartao-qr-area');if(qrEl){qrEl.innerHTML='';const doQR=()=>{if(window.QRCode)new window.QRCode(qrEl,{text:qrData,width:62,height:62,colorDark:'#12314F',colorLight:'#ffffff',correctLevel:window.QRCode.CorrectLevel.M});};if(window.QRCode)doQR();else loadQRLib(doQR);}
   const PMAP={'1mes':'1 Mês','3meses':'3 Meses','6meses':'6 Meses','9meses':'9 Meses','1ano':'1 Ano'};
-  const sitCor={'EM DIA':'#085041','VENCIDO':'#712B13','A TERMINAR':'#633806'}[situacao]||'#555';
-  const sitBg={'EM DIA':'#E1F5EE','VENCIDO':'#FAECE7','A TERMINAR':'#FAEEDA'}[situacao]||'#eee';
-  const sitMsg=situacao==='EM DIA'?`<span style="color:#085041;font-weight:600">✅ Quota em dia — válida até ${validStr}</span>`:situacao==='A TERMINAR'?`<span style="color:#633806;font-weight:600">⚠️ A terminar em ${validStr}</span>`:`<span style="color:#712B13;font-weight:600">❌ Quota vencida${s.validadeQuota?' em '+validStr:''}</span>`;
+  const sitCor={'EM DIA':'#085041','VENCIDO':'#712B13','A TERMINAR':'#633806','ISENTO':'#1B4570'}[situacao]||'#555';
+  const sitBg={'EM DIA':'#E1F5EE','VENCIDO':'#FAECE7','A TERMINAR':'#FAEEDA','ISENTO':'#DCE7F0'}[situacao]||'#eee';
+  const sitMsg=situacao==='ISENTO'?`<span style="color:#1B4570;font-weight:600">🎗️ Isento de quota</span>`:situacao==='EM DIA'?`<span style="color:#085041;font-weight:600">✅ Quota em dia — válida até ${validStr}</span>`:situacao==='A TERMINAR'?`<span style="color:#633806;font-weight:600">⚠️ A terminar em ${validStr}</span>`:`<span style="color:#712B13;font-weight:600">❌ Quota vencida${s.validadeQuota?' em '+validStr:''}</span>`;
   const iEl=document.getElementById('cartao-info-area');
   if(iEl)iEl.innerHTML=`<div class="card-title">Dados do sócio</div>
     <div style="background:${sitBg};border-radius:var(--radius);padding:10px 12px;margin-bottom:12px;font-size:12px">${sitMsg}</div>
     <table style="width:100%;font-size:12px;border-collapse:collapse">
-      ${[['Nº Sócio',s.num],['Tipo',s.tipo||'—'],['Estado',s.estado||'—'],['Período',PMAP[s.periodoQuota]||s.periodoQuota||'—'],['Válido até',validStr],['Último pag.',s.dataPagamento||'—'],['Telemóvel',s.tel||'—'],['Email',s.email||'—'],['Obs.',s.obs||'—']].map(([l,v])=>`<tr><td style="color:var(--text-3);padding:4px 0;width:90px;vertical-align:top">${l}</td><td style="padding:4px 0;font-weight:500">${v}</td></tr>`).join('')}
+      ${[['Nº Sócio',s.num],['Tipo',s.tipo||'—'],['Estado',s.estado||'—'],['Período',PMAP[s.periodoQuota]||s.periodoQuota||'—'],['Válido até',s.isento?'—':validStr],['Último pag.',s.dataPagamento||'—'],['Telemóvel',s.tel||'—'],['Email',s.email||'—'],['Obs.',s.obs||'—']].map(([l,v])=>`<tr><td style="color:var(--text-3);padding:4px 0;width:90px;vertical-align:top">${l}</td><td style="padding:4px 0;font-weight:500">${v}</td></tr>`).join('')}
     </table>`;
 }
 
@@ -8604,11 +8704,12 @@ function imprimirCartao(){
   const s=socios.find(x=>x.id==id);if(!s)return;
   const logo=currentLogoData||LS.get('arca_logo')||'';
   const logoImg=logo
-    ?`<img src="${logo}" style="width:64px;height:64px;object-fit:contain;flex-shrink:0;display:block">`
-    :`<div style="width:58px;height:58px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;font-weight:700;color:#fff">ARCA</div>`;
-  const logoHtml=`<div style="display:flex;align-items:center;gap:12px">${logoImg}<div style="display:flex;flex-direction:column;justify-content:center"><div style="font-size:18px;font-weight:800;color:#1e3a5f;letter-spacing:.5px;line-height:1.1">ARCA d'Ajuda</div><div style="font-size:8px;color:#5b7fa6;letter-spacing:.5px;margin-top:4px;line-height:1.4">Associação Recreativa e Cultural da Ajuda</div></div></div>`;
-  let validStr='—',situacao='VENCIDO';
-  if(s.validadeQuota){const v=new Date(s.validadeQuota+'T12:00:00');situacao=getSituacaoFromValidade(v);validStr=v.toLocaleDateString('pt-PT');}
+    ?`<img src="${logo}" style="width:60px;height:60px;object-fit:contain;flex-shrink:0;display:block;background:#fff;border-radius:10px;padding:4px">`
+    :`<div style="width:56px;height:56px;border-radius:10px;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;font-weight:700;color:#fff">ARCA</div>`;
+  const logoHtml=`<div style="display:flex;align-items:center;gap:12px">${logoImg}<div style="display:flex;flex-direction:column;justify-content:center"><div style="font-size:17px;font-weight:800;color:#fff;letter-spacing:.4px;line-height:1.1">ARCA d'Ajuda</div><div style="font-size:8px;color:#9FB4CC;letter-spacing:.4px;margin-top:4px;line-height:1.4">Associação Recreativa e Cultural da Ajuda</div></div></div>`;
+  let validStr='—';
+  const situacao=getSituacaoSocio(s);
+  if(s.validadeQuota){const v=new Date(s.validadeQuota+'T12:00:00');validStr=v.toLocaleDateString('pt-PT');}
   const qrData=`ARCA:${s.num}:${s.validadeQuota||'0'}`;
   const html=`<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>Cartão Sócio</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
@@ -8616,20 +8717,23 @@ function imprimirCartao(){
   .noprint{display:flex;gap:8px}.noprint button{padding:9px 20px;border:none;border-radius:6px;font-size:13px;cursor:pointer}.p{background:#2E75B5;color:#fff}.s{background:#555;color:#fff}
   @media print{.noprint{display:none}body{background:#fff;min-height:auto}}
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important}
-  .cartao{width:340px;height:214px;background:linear-gradient(135deg,#e8f4f8 0%,#dbeafe 40%,#ede9fe 100%);border-radius:12px;padding:18px 20px;color:#1e3a5f;position:relative;overflow:hidden;box-shadow:0 8px 28px rgba(100,130,200,.25);display:flex;flex-direction:column}
-  .c1{position:absolute;top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.08)}
-  .c2{position:absolute;bottom:-40px;left:-20px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.06)}
-  .nome{font-size:14px;font-weight:700;margin-bottom:3px;color:#1e3a5f}.tipo{font-size:11px;color:#5b7fa6;margin-bottom:10px}
-  .valid{font-size:11px;background:rgba(30,58,95,.12);padding:5px 12px;border-radius:20px;color:#1e3a5f;font-weight:600;display:inline-block}
-  .qrw{background:transparent;padding:5px;border-radius:8px;width:76px;height:76px;display:flex;align-items:center;justify-content:center}
+  .cartao{width:340px;height:214px;background:linear-gradient(135deg,#0F2A46 0%,#1B4570 55%,#2E6199 100%);border-radius:16px;padding:20px 22px;color:#fff;position:relative;overflow:hidden;box-shadow:0 10px 32px rgba(18,49,79,.35);display:flex;flex-direction:column}
+  .cartao::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(255,255,255,.045) 0 2px,transparent 2px 22px);pointer-events:none}
+  .c1{position:absolute;top:-40px;right:-40px;width:150px;height:150px;border-radius:50%;background:rgba(184,134,59,.16)}
+  .c2{position:absolute;bottom:-50px;left:-30px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.05)}
+  .barrinha{width:26px;height:3px;background:#B8863B;border-radius:2px;margin-bottom:7px}
+  .nome{font-size:15px;font-weight:700;margin-bottom:3px;color:#fff}.tipo{font-size:11px;color:#B8C4D4;margin-bottom:10px}
+  .valid{font-size:11px;background:rgba(255,255,255,.14);padding:5px 12px;border-radius:20px;color:#fff;font-weight:600;display:inline-block}
+  .qrw{background:#fff;padding:6px;border-radius:8px;width:74px;height:74px;display:flex;align-items:center;justify-content:center}
   </style></head><body>
   <div class="noprint"><button class="p" onclick="window.print()">🖨 Imprimir</button><button class="s" onclick="window.close()">✕</button></div>
   <div style="padding:16px;border:2px dashed #333;border-radius:16px;display:inline-block;position:relative">
     <div style="position:absolute;top:-9px;left:16px;background:#f5f5f5;padding:0 6px;font-size:10px;color:#333;font-family:Arial">✂ recortar aqui</div>
     <div class="cartao"><div class="c1"></div><div class="c2"></div>
-      <div>${logoHtml}</div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:18px;gap:16px">
+      <div style="position:relative;z-index:1">${logoHtml}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:18px;gap:16px;position:relative;z-index:1">
         <div style="flex:1;min-width:0">
+          <div class="barrinha"></div>
           <div class="nome">${s.nome}</div>
           <div class="tipo">${s.tipo||'Sócio'} · Nº ${s.num}</div>
         </div>
@@ -8637,7 +8741,7 @@ function imprimirCartao(){
       </div>
     </div>
   </div>
-  <script>if(window.QRCode)new QRCode(document.getElementById('qr1'),{text:'${qrData}',width:66,height:66,colorDark:'#1e3a5f',colorLight:'#e8f4f8',correctLevel:QRCode.CorrectLevel.M});<\/script>
+  <script>if(window.QRCode)new QRCode(document.getElementById('qr1'),{text:'${qrData}',width:62,height:62,colorDark:'#12314F',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});<\/script>
   </body></html>`;
   const w=window.open('','_blank','width:480,height:540');if(w){w.document.write(html);w.document.close();}
 }
@@ -8649,30 +8753,35 @@ function downloadCartaoPNG(){
   const gerar=()=>{
     // Criar o cartão fora do ecrã, do tamanho exato, para captura nítida
     const logo=currentLogoData||LS.get('arca_logo')||'';
-    let validStr='—',situacao='VENCIDO';
-    if(s.validadeQuota){const v=new Date(s.validadeQuota+'T12:00:00');situacao=getSituacaoFromValidade(v);validStr=v.toLocaleDateString('pt-PT');}
+    let validStr='—';
+    const situacao=getSituacaoSocio(s);
+    if(s.validadeQuota){const v=new Date(s.validadeQuota+'T12:00:00');validStr=v.toLocaleDateString('pt-PT');}
     const qrData=`ARCA:${s.num}:${s.validadeQuota||'0'}`;
     const wrap=document.createElement('div');
-    wrap.style.cssText='position:fixed;left:-9999px;top:0;width:680px;height:428px;border-radius:24px;background:linear-gradient(135deg,#e8f4f8 0%,#dbeafe 40%,#ede9fe 100%);padding:36px 40px;color:#1e3a5f;font-family:Arial,sans-serif;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden';
+    wrap.style.cssText='position:fixed;left:-9999px;top:0;width:680px;height:428px;border-radius:28px;background:linear-gradient(135deg,#0F2A46 0%,#1B4570 55%,#2E6199 100%);padding:40px 44px;color:#fff;font-family:Arial,sans-serif;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden';
     wrap.innerHTML=`
-      <div style="display:flex;align-items:center;gap:20px">
-        ${logo?`<img src="${logo}" style="width:110px;height:110px;object-fit:contain">`:'<div style="width:100px;height:100px;background:#1e3a5f;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:22px">ARCA</div>'}
+      <div style="position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(255,255,255,.045) 0 3px,transparent 3px 34px);pointer-events:none;border-radius:28px"></div>
+      <div style="position:absolute;top:-60px;right:-60px;width:240px;height:240px;border-radius:50%;background:rgba(184,134,59,.16)"></div>
+      <div style="position:absolute;bottom:-80px;left:-50px;width:260px;height:260px;border-radius:50%;background:rgba(255,255,255,.05)"></div>
+      <div style="display:flex;align-items:center;gap:22px;position:relative;z-index:1">
+        ${logo?`<img src="${logo}" style="width:100px;height:100px;object-fit:contain;background:#fff;border-radius:16px;padding:8px">`:'<div style="width:100px;height:100px;background:rgba(255,255,255,.14);border-radius:16px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:22px">ARCA</div>'}
         <div>
-          <div style="font-size:30px;font-weight:800">ARCA d'Ajuda</div>
-          <div style="font-size:14px;color:#5b7fa6;margin-top:4px">Associação Recreativa e Cultural da Ajuda</div>
+          <div style="font-size:30px;font-weight:800;color:#fff">ARCA d'Ajuda</div>
+          <div style="font-size:14px;color:#9FB4CC;margin-top:4px">Associação Recreativa e Cultural da Ajuda</div>
         </div>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:flex-end">
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;position:relative;z-index:1">
         <div>
-          <div style="font-size:26px;font-weight:700">${s.nome}</div>
-          <div style="font-size:15px;color:#5b7fa6;margin:4px 0 10px">${s.tipo||'Sócio'} · Nº ${s.num}</div>
-          <div style="font-size:14px;background:rgba(30,58,95,.12);display:inline-block;padding:6px 16px;border-radius:20px;font-weight:600">Válido até ${validStr}</div>
+          <div style="width:40px;height:4px;background:#B8863B;border-radius:2px;margin-bottom:10px"></div>
+          <div style="font-size:26px;font-weight:700;color:#fff">${s.nome}</div>
+          <div style="font-size:15px;color:#9FB4CC;margin:4px 0 10px">${s.tipo||'Sócio'} · Nº ${s.num}</div>
+          <div style="font-size:14px;background:rgba(255,255,255,.14);display:inline-block;padding:6px 16px;border-radius:20px;font-weight:600;color:#fff">${situacao==='ISENTO'?'🎗️ Isento de quota':'Válido até '+validStr}</div>
         </div>
-        <div id="cartao-png-qr" style="width:130px;height:130px;background:#fff;border-radius:10px;display:flex;align-items:center;justify-content:center"></div>
+        <div id="cartao-png-qr" style="width:130px;height:130px;background:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center"></div>
       </div>`;
     document.body.appendChild(wrap);
     const finish=()=>{
-      if(window.QRCode) new window.QRCode(wrap.querySelector('#cartao-png-qr'),{text:qrData,width:120,height:120,colorDark:'#1e3a5f',colorLight:'#ffffff',correctLevel:window.QRCode.CorrectLevel.M});
+      if(window.QRCode) new window.QRCode(wrap.querySelector('#cartao-png-qr'),{text:qrData,width:120,height:120,colorDark:'#12314F',colorLight:'#ffffff',correctLevel:window.QRCode.CorrectLevel.M});
       setTimeout(()=>{
         html2canvas(wrap,{scale:2,backgroundColor:null}).then(canvas=>{
           const a=document.createElement('a');
