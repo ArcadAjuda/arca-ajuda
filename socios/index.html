@@ -428,7 +428,7 @@ tbody tr:hover td{background:var(--bg2)}
       </div>
       <input type="file" id="socios-csv-input" accept=".csv,.xlsx,.xls" style="display:none" onchange="importSociosCSV(this)">
       <div style="margin-top:14px;display:flex;gap:8px">
-        <button class="btn-danger" onclick="if(confirm('Apagar todos os sócios?'))clearSocios()">🗑 Apagar todos os sócios</button>
+        <button class="btn-danger" onclick="if(confirm('⚠ Apagar TODOS os sócios? Isto apaga mesmo da cloud (Supabase), para todos os dispositivos. Esta ação não pode ser desfeita.\n\nTens a certeza?'))clearSocios()">🗑 Apagar todos os sócios</button>
       </div>
     </div>
   </div>
@@ -3016,8 +3016,9 @@ async function importarSociosCSVAntigo(input){
     if(!linhas.length){ msgEl.style.color='var(--coral-d)'; msgEl.textContent='O ficheiro está vazio.'; return; }
 
     msgEl.textContent = `A importar ${linhas.length} sócio(s) para o Supabase...`;
-    let ok=0, falhou=0;
+    let ok=0, falhou=0, jaExistia=0, sessaoExpirouAMeio=false;
     const tiposNovos = new Set(getTiposSocio());
+    const numsExistentes = new Set(socios.map(s=>s.num));
 
     for(const l of linhas){
       const registo = {
@@ -3041,14 +3042,17 @@ async function importarSociosCSVAntigo(input){
         isento: tipoEIsento(l['Tipo']||'EFETIVO')
       };
       if(!registo.nome){ falhou++; continue; }
+      if(registo.num && numsExistentes.has(registo.num)){ jaExistia++; continue; }
       if(registo.isento) registo.situacao='ISENTO';
       if(registo.tipo) tiposNovos.add(registo.tipo);
       try{
         const row = await supaFetch('socios', 'POST', socioToRow(registo));
         socios.push(rowToSocio(row[0]));
+        if(registo.num) numsExistentes.add(registo.num);
         ok++;
       }catch(err){
         console.error('Falha ao importar', registo.nome, err);
+        if(err.message==='AUTH_EXPIRED'){ sessaoExpirouAMeio=true; break; }
         falhou++;
       }
     }
@@ -3056,8 +3060,13 @@ async function importarSociosCSVAntigo(input){
     saveSocios();
     populateTipoSocioSelects();
     renderSocios();
-    msgEl.style.color = falhou ? 'var(--amber)' : 'var(--teal)';
-    msgEl.textContent = `✓ ${ok} sócio(s) importado(s) com sucesso.` + (falhou?` ⚠ ${falhou} falharam (verifica números duplicados ou nomes em falta).`:'');
+    if(sessaoExpirouAMeio){
+      msgEl.style.color='var(--amber)';
+      msgEl.textContent = `⚠ A sessão expirou a meio. Já importei ${ok} sócio(s)${jaExistia?` (+${jaExistia} já existiam)`:''}. Entra novamente e volta a carregar o MESMO ficheiro para continuar.`;
+    } else {
+      msgEl.style.color = falhou ? 'var(--amber)' : 'var(--teal)';
+      msgEl.textContent = `✓ ${ok} sócio(s) importado(s) com sucesso.` + (jaExistia?` ${jaExistia} já existiam (ignorados).`:'') + (falhou?` ⚠ ${falhou} falharam (verifica nomes em falta).`:'');
+    }
     input.value='';
   };
   r.readAsText(f, 'UTF-8');
@@ -9054,11 +9063,14 @@ async function processarLinhasSocios(linhas, msgEl){
   const dados = linhas.slice(iCab+1).filter(l => l && l[col.nome] && String(l[col.nome]).trim());
   msgEl.style.color='var(--text-2)'; msgEl.textContent=`A importar ${dados.length} sócio(s) para o Supabase...`;
 
-  let ok=0, falhou=0;
+  let ok=0, falhou=0, jaExistia=0;
   const tiposNovos = new Set(getTiposSocio());
+  const numsExistentes = new Set(socios.map(s=>s.num));
   let numAuto = (socios.length ? Math.max(...socios.map(s=>s.num||0)) : 0) + 1;
+  let sessaoExpirouAMeio = false;
 
-  for(const l of dados){
+  for(let idx=0; idx<dados.length; idx++){
+    const l = dados[idx];
     const g = (chave) => col[chave]>-1 ? l[col[chave]] : '';
     const nome = String(g('nome')||'').trim();
     if(!nome){ falhou++; continue; }
@@ -9070,6 +9082,8 @@ async function processarLinhasSocios(linhas, msgEl){
     let numV = parseInt(g('num'));
     if(!numV || isNaN(numV)) numV = numAuto;
     numAuto = Math.max(numAuto, numV+1);
+
+    if(numsExistentes.has(numV)){ jaExistia++; continue; } // já importado antes — não repetir
 
     let obs = String(g('obs')||'').trim();
     const doacao = parseValorMonetario(g('doacao'));
@@ -9090,14 +9104,28 @@ async function processarLinhasSocios(linhas, msgEl){
     try{
       const row = await supaFetch('socios', 'POST', socioToRow(registo));
       socios.push(rowToSocio(row[0]));
+      numsExistentes.add(numV);
       ok++;
-    }catch(err){ console.error('Falha ao importar', nome, err); falhou++; }
+      if(ok % 25 === 0){ msgEl.textContent = `A importar... ${ok+jaExistia+falhou}/${dados.length}`; }
+    }catch(err){
+      console.error('Falha ao importar', nome, err);
+      if(err.message==='AUTH_EXPIRED'){
+        sessaoExpirouAMeio = true;
+        break; // parar imediatamente — continuar só faria acumular falhas até voltares a entrar
+      }
+      falhou++;
+    }
   }
   saveTiposSocio([...tiposNovos]);
   saveSocios();
   renderSocios();
-  msgEl.style.color = falhou ? 'var(--amber)' : 'var(--teal)';
-  msgEl.textContent = `✓ ${ok} sócio(s) importado(s).` + (falhou?` ⚠ ${falhou} falharam (verifica nomes/números duplicados).`:'');
+  if(sessaoExpirouAMeio){
+    msgEl.style.color='var(--amber)';
+    msgEl.textContent = `⚠ A sessão expirou a meio da importação. Já importei ${ok} sócio(s)${jaExistia?` (+${jaExistia} já existiam)`:''}. Entra novamente e volta a carregar o MESMO ficheiro — os já importados não duplicam, só continua a partir de onde ficou.`;
+  } else {
+    msgEl.style.color = falhou ? 'var(--amber)' : 'var(--teal)';
+    msgEl.textContent = `✓ ${ok} sócio(s) importado(s).` + (jaExistia?` ${jaExistia} já existiam (ignorados).`:'') + (falhou?` ⚠ ${falhou} falharam — vê a consola (F12) para detalhes.`:'');
+  }
 }
 
 function importSociosCSV(input){
@@ -9159,7 +9187,20 @@ function parseCSVParaLinhas(texto){
   };
   return linhas.map(parseLinha);
 }
-function clearSocios(){socios=[];saveSocios();renderSocios();toast('Sócios eliminados.');}
+async function clearSocios(){
+  toast('A apagar todos os sócios do Supabase...');
+  try{
+    await supaFetch('socios?id=gt.0', 'DELETE');
+  }catch(e){
+    console.error(e);
+    toast('Não foi possível apagar do Supabase: '+e.message, false);
+    return;
+  }
+  socios=[];
+  saveSocios();
+  renderSocios();
+  toast('✓ Todos os sócios foram apagados (localmente e na cloud).');
+}
 function abrirCartaoSocio(id){
   showPage('socios',document.querySelector('.nav-item[onclick*="socios"]'));
   setTimeout(()=>{showSociosTab('cartao');setTimeout(()=>{const sel=document.getElementById('cartao-socio-sel');if(sel){sel.value=id;renderCartaoSocio();}},80);},50);
