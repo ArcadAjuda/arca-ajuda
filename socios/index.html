@@ -800,7 +800,32 @@ function supaLogout(){
   location.reload();
 }
 
-async function supaFetch(path, method='GET', body=null, extraHeaders=null){
+async function supaRefreshSession(){
+  if(!supaSession?.refresh_token) return false;
+  try{
+    const res = await fetch(`${SUPA_URL}/auth/v1/token?grant_type=refresh_token`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPA_KEY},
+      body: JSON.stringify({refresh_token: supaSession.refresh_token})
+    });
+    const data = await res.json();
+    if(!res.ok) return false;
+    supaSession = data;
+    LS.set('arca_supa_session', supaSession);
+    return true;
+  }catch(e){ return false; }
+}
+
+function supaForcarNovoLogin(motivo){
+  supaSession = null;
+  LS.set('arca_supa_session', null);
+  const overlay = document.getElementById('supa-login-overlay');
+  if(overlay) overlay.style.display='flex';
+  const erroEl = document.getElementById('supa-login-erro');
+  if(erroEl){ erroEl.textContent = motivo || 'A tua sessão expirou. Entra novamente.'; erroEl.style.display='block'; }
+}
+
+async function supaFetch(path, method='GET', body=null, extraHeaders=null, _tentativa=0){
   const headers = {'apikey':SUPA_KEY,'Content-Type':'application/json'};
   headers['Authorization'] = 'Bearer ' + (supaSession?.access_token || SUPA_KEY);
   if(method!=='GET') headers['Prefer']='return=representation';
@@ -808,7 +833,14 @@ async function supaFetch(path, method='GET', body=null, extraHeaders=null){
   const opts = {method, headers};
   if(body) opts.body = JSON.stringify(body);
   const res = await fetch(`${SUPA_URL}/rest/v1/${path}`, opts);
-  if(res.status===401) throw new Error('AUTH_EXPIRED');
+  if(res.status===401){
+    // Sessão provavelmente expirada — tenta renovar automaticamente, uma vez só
+    if(_tentativa===0 && await supaRefreshSession()){
+      return supaFetch(path, method, body, extraHeaders, 1);
+    }
+    supaForcarNovoLogin('A tua sessão expirou. Entra novamente para continuar.');
+    throw new Error('AUTH_EXPIRED');
+  }
   const text = await res.text();
   if(!res.ok) throw new Error(text || ('Erro '+res.status));
   return text ? JSON.parse(text) : null;
@@ -1498,7 +1530,11 @@ async function executeDelete(){
   if(pendingDelete.type==='socio'){
     const idDel=pendingDelete.id;
     try{ await supaFetch('socios?id=eq.'+idDel, 'DELETE'); }
-    catch(e){ console.error(e); toast('Não foi possível apagar no Supabase.',false); return; }
+    catch(e){
+      console.error(e);
+      if(e.message!=='AUTH_EXPIRED') toast('Não foi possível apagar no Supabase: '+e.message,false);
+      return;
+    }
     socios=socios.filter(s=>s.id!=idDel);
     saveSocios(); toast('Sócio eliminado.');
     pendingDelete=null; closeModal('modal-confirma-delete'); renderSocios(); return;
@@ -8597,7 +8633,7 @@ async function saveSocio(){
     saveSocios(); // atualiza a cópia local de segurança
   }catch(e){
     console.error(e);
-    toast('Não foi possível gravar no Supabase — verifica a ligação.',false);
+    if(e.message!=='AUTH_EXPIRED') toast('Não foi possível gravar no Supabase: '+e.message,false);
     return;
   }
   closeModal('modal-socio');renderSocios();
@@ -8630,7 +8666,7 @@ async function toggleInativarSocio(id){
     toast(`${s.nome} reativado.`);
   }
   try{ await supaFetch('socios?id=eq.'+s.id, 'PATCH', {estado:s.estado}); }
-  catch(e){ console.error(e); toast('Alterado localmente, mas falhou gravar no Supabase.',false); }
+  catch(e){ console.error(e); if(e.message!=='AUTH_EXPIRED') toast('Alterado localmente, mas falhou gravar no Supabase: '+e.message,false); }
   saveSocios();renderSocios();
 }
 
