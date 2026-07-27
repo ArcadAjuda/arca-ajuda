@@ -3149,7 +3149,7 @@ async function applyLogo(){
   }
   if(l){
     const i=document.getElementById('logo-img');
-    if(i){ i.src=l;i.style.display='block'; }
+    if(i){ i.src=l;i.style.display='block';i.className='logo-img'; }
     const b=document.getElementById('logo-badge');
     if(b) b.style.display='none';
     currentLogoData = l;
