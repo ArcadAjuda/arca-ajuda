@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ARCA d'Ajuda — Sócios</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -47,7 +49,7 @@ input,select,textarea{font-family:inherit}
 .sidebar{width:var(--nav-w);background:linear-gradient(180deg,var(--bg) 0%,var(--bg) 70%,var(--bg2) 100%);border-right:var(--border);display:flex;flex-direction:column;padding:0;position:sticky;top:60px;height:calc(100vh - 60px);overflow-y:auto;flex-shrink:0}
 .sidebar-greeting{padding:16px 18px 14px;border-bottom:0.5px solid var(--border-c);background:linear-gradient(135deg,var(--teal-l) 0%,#F0F8F5 100%)}
 .sidebar-greeting-row{display:flex;align-items:center;gap:11px}
-.sidebar-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#1D9E75,#0F6E56);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0;box-shadow:0 2px 6px rgba(15,110,86,.25)}
+.sidebar-avatar{width:38px;height:38px;border-radius:50%;background:transparent;border:1.75px solid var(--teal);color:var(--teal-d);display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:600;font-size:20px;flex-shrink:0}
 .sidebar-greeting-text{flex:1;min-width:0}
 .sidebar-greeting-time{font-size:10px;color:var(--teal);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px;display:flex;align-items:center;gap:4px}
 .sidebar-greeting-name{font-size:14px;font-weight:600;color:var(--text);line-height:1.2;display:flex;align-items:center;gap:5px}
@@ -85,12 +87,17 @@ input,select,textarea{font-family:inherit}
 .main{flex:1;overflow-y:auto;padding:22px;padding-bottom:70px}
 
 /* Navegação no cabeçalho (substitui a sidebar) */
-.topbar-nav{display:flex;gap:6px;flex:1;justify-content:center}
-.topnav-item{display:flex;align-items:center;gap:8px;padding:9px 18px;font-size:13px;font-weight:600;color:var(--text-2);border:none;background:none;border-radius:20px;cursor:pointer;transition:all .15s;font-family:inherit}
-.topnav-item svg{width:16px;height:16px;opacity:.7}
-.topnav-item:hover{background:var(--bg2);color:var(--text)}
-.topnav-item.active{background:var(--teal-l);color:var(--teal-d)}
-.topnav-item.active svg{opacity:1;color:var(--teal)}
+.topbar-nav{display:flex;gap:6px}
+.topnav-item{display:flex;align-items:center;gap:8px;padding:9px 18px;font-size:13px;font-weight:600;color:var(--text-2);border:none;border-radius:20px;cursor:pointer;transition:all .15s;font-family:inherit}
+.topnav-item svg{width:16px;height:16px;opacity:.85}
+.topnav-item.nav-socios{background:#EDE7F6;color:#5A4489}
+.topnav-item.nav-socios:hover{background:#E0D6F2}
+.topnav-item.nav-socios.active{background:#5A4489;color:#fff;box-shadow:0 3px 10px rgba(90,68,137,.3)}
+.topnav-item.nav-socios.active svg{color:#fff}
+.topnav-item.nav-config{background:var(--ambar-l,#FAEEDA);color:#8A6425}
+.topnav-item.nav-config:hover{background:#F3E2C0}
+.topnav-item.nav-config.active{background:#B8863B;color:#fff;box-shadow:0 3px 10px rgba(184,134,59,.3)}
+.topnav-item.nav-config.active svg{color:#fff}
 
 .header-greeting{display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 8px;border-radius:8px;transition:background .15s}
 .header-greeting:hover{background:var(--bg2)}
@@ -288,14 +295,6 @@ tbody tr:hover td{background:var(--bg2)}
       <div class="logo-sub">Associação Recreativa e Cultural da Ajuda</div>
     </div>
   </div>
-  <nav class="topbar-nav">
-    <button class="topnav-item active" onclick="showPage('socios',this)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Sócios
-    </button>
-    <button class="topnav-item" onclick="showPage('gestao-config',this)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 114.93 19.07M12 1v3M12 20v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M1 12h3M20 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>Configurações
-    </button>
-  </nav>
   <div class="topbar-right">
     <div class="header-greeting" onclick="editAdminName()" title="Clica para editar o nome">
       <div class="sidebar-avatar" id="sidebar-avatar">B</div>
@@ -304,15 +303,20 @@ tbody tr:hover td{background:var(--bg2)}
         <div class="header-greeting-role" id="sidebar-admin-role">Administração</div>
       </div>
     </div>
+    <nav class="topbar-nav">
+      <button class="topnav-item nav-socios active" onclick="showPage('socios',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Sócios
+      </button>
+      <button class="topnav-item nav-config" onclick="showPage('gestao-config',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 114.93 19.07M12 1v3M12 20v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M1 12h3M20 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>Configurações
+      </button>
+    </nav>
     <select class="mes-sel" id="sel-mes" onchange="renderAll()" style="display:none">
       <option value="0" selected>Todos os meses</option>
       <option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option>
       <option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option>
       <option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option>
       <option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
-    </select>
-    <select class="year-sel" id="sel-ano" onchange="onAnoChange()">
-      <option>2025</option>
     </select>
   </div>
 </div>
@@ -326,6 +330,9 @@ tbody tr:hover td{background:var(--bg2)}
   <div class="page-header">
     <div><div class="page-title">🪪 Sócios</div><div class="page-sub" id="socios-sub">Gestão de sócios da ARCA d'Ajuda</div></div>
     <div class="header-actions">
+      <select class="year-sel" id="sel-ano" onchange="onAnoChange()" style="margin-right:4px">
+        <option>2025</option>
+      </select>
       <button class="btn-secondary" onclick="showSociosTab('importar')">⬆ Importar</button>
       <button class="btn-secondary" onclick="exportSociosCSV()">⬇ CSV</button>
       <button class="btn-primary" onclick="openModalSocio()">+ Novo Sócio</button>
