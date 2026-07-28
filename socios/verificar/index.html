@@ -45,14 +45,14 @@ function getSituacaoAtual(s){
 
 async function verificar(){
   const params = new URLSearchParams(location.search);
-  const num = params.get('num');
+  const codigo = params.get('c');
   const card = document.getElementById('card');
-  if(!num){
-    card.innerHTML = '<div class="erro">Link inválido — falta o número de sócio.</div>';
+  if(!codigo){
+    card.innerHTML = '<div class="erro">Link inválido.</div>';
     return;
   }
   try{
-    const res = await fetch(`${SUPA_URL}/rest/v1/socios_publico?num=eq.${encodeURIComponent(num)}`, {
+    const res = await fetch(`${SUPA_URL}/rest/v1/socios_publico?codigo_verificacao=eq.${encodeURIComponent(codigo)}`, {
       headers: {'apikey': SUPA_KEY, 'Authorization': 'Bearer '+SUPA_KEY}
     });
     if(!res.ok) throw new Error('Erro '+res.status);
@@ -74,7 +74,7 @@ async function verificar(){
       <div class="titulo">ARCA d'Ajuda</div>
       <div class="sub">Verificação de Sócio</div>
       <div class="nome">${s.nome}</div>
-      <div class="num">${s.tipo||'Sócio'} · Nº ${s.num}</div>
+      <div class="num">${s.tipo||'Sócio'}</div>
       <div class="selo ${map.cls}">${map.texto}</div>
       <div class="detalhe">${sit==='ISENTO' ? 'Sócio isento do pagamento de quota.' : sit==='VENCIDO' ? 'Por favor contacta a associação para regularizar.' : 'Válido até '+validStr}</div>
       <div class="rodape">Informação atualizada em tempo real</div>
