@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -412,6 +413,7 @@ tbody tr:hover td{background:var(--bg2)}
         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn-primary" onclick="imprimirCartao()">🖨 Imprimir Cartão</button>
           <button class="btn-secondary" onclick="downloadCartaoPNG()">⬇ Guardar imagem</button>
+          <button class="btn-secondary" onclick="copiarLinkVerificacao()">🔗 Copiar link</button>
         </div>
       </div>
     </div>
@@ -565,6 +567,20 @@ tbody tr:hover td{background:var(--bg2)}
       </div>
       <div id="config-drive-msg" style="font-size:11px;margin-top:6px;min-height:14px"></div>
     </div>
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-title">☁️ Backup automático no Google Drive</div>
+      <p style="font-size:12px;color:var(--text-2);margin-bottom:12px;line-height:1.6">
+        Guarda uma cópia extra de segurança de todos os sócios no teu Google Drive
+        (pasta "ARCA d'Ajuda/Backups"), para além do Supabase. Assim, mesmo que algo
+        corra mal, tens sempre uma cópia acessível.
+      </p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+        <button class="btn-secondary" onclick="gdriveConnectInteractive()">🔗 Ligar Google Drive</button>
+        <button class="btn-primary" onclick="fazerBackupDrive(true)">☁️ Fazer backup agora</button>
+      </div>
+      <div id="drive-status" style="font-size:12px;color:var(--text-2)">⚪ Google Drive não ligado</div>
+    </div>
+
     <div class="card" style="margin-bottom:14px">
       <div class="card-title">📥 Importar sócios do sistema antigo (CSV)</div>
       <p style="font-size:12px;color:var(--text-2);margin-bottom:12px;line-height:1.6">
@@ -844,6 +860,167 @@ async function idbRemoveLogo(){
 // ============================================================
 // SUPABASE — ligação à cloud (Sócios)
 // ============================================================
+// ============================================================
+// GOOGLE DRIVE — backup automático de segurança (mesmo padrão do Gestão RV)
+// ============================================================
+const GDRIVE_CLIENT_ID = '853058400861-ih32rr8mhqah7b59tgv3tfjkme1s6plg.apps.googleusercontent.com';
+const GDRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+let gdriveToken = null;
+let gdriveTokenExpiry = 0;
+let gdriveClient = null;
+let gdrivePending = [];
+
+function gdriveValid(){ return gdriveToken && Date.now()<gdriveTokenExpiry; }
+
+function gdriveInit(){
+  if(gdriveClient) return gdriveClient;
+  if(!(window.google && google.accounts && google.accounts.oauth2)) return null;
+  try{
+    gdriveClient=google.accounts.oauth2.initTokenClient({
+      client_id:GDRIVE_CLIENT_ID,
+      scope:GDRIVE_SCOPE,
+      callback:(resp)=>{
+        const fila=gdrivePending; gdrivePending=[];
+        if(resp && resp.access_token){
+          gdriveToken=resp.access_token;
+          gdriveTokenExpiry=Date.now()+((resp.expires_in?resp.expires_in*1000:3600000))-60000;
+          try{localStorage.setItem('arca_gdrive_tok',JSON.stringify({t:gdriveToken,e:gdriveTokenExpiry}));}catch(e){}
+          fila.forEach(p=>{try{p.ok&&p.ok();}catch(e){console.error(e);}});
+        }else{
+          fila.forEach(p=>{try{p.err&&p.err(resp);}catch(e){console.error(e);}});
+        }
+      }
+    });
+  }catch(e){ console.error('Drive init falhou:',e); gdriveClient=null; }
+  return gdriveClient;
+}
+
+function gdriveAuth(callback, onFail, silent){
+  if(gdriveValid()){ callback&&callback(); return; }
+  gdriveInit();
+  if(!gdriveClient){ onFail&&onFail(); return; }
+  gdrivePending.push({ok:callback, err:onFail});
+  try{
+    if(silent) gdriveClient.requestAccessToken({prompt:''});
+    else gdriveClient.requestAccessToken();
+  }catch(e){ onFail&&onFail(e); }
+}
+
+function gdriveConnectInteractive(){
+  gdriveAuth(
+    ()=>{ toast('Google Drive ligado! ✓'); atualizarEstadoDrive(); fazerBackupDrive(true); },
+    ()=>toast('Não foi possível ligar ao Google Drive.', false)
+  );
+}
+
+function gdriveAutoConnect(){
+  try{
+    const raw=localStorage.getItem('arca_gdrive_tok');
+    if(raw){ const o=JSON.parse(raw); if(o&&o.t&&o.e&&Date.now()<o.e){ gdriveToken=o.t; gdriveTokenExpiry=o.e; } }
+  }catch(e){}
+  if(gdriveValid()){ atualizarEstadoDrive(); return; }
+  let tries=0;
+  const tryConnect=()=>{
+    if(gdriveInit()){ gdriveAuth(()=>atualizarEstadoDrive(), ()=>{}, true); return; }
+    if(tries++<10) setTimeout(tryConnect,500);
+  };
+  tryConnect();
+}
+
+async function gdriveFindOrCreateFolder(name,parentId){
+  const parentClause=parentId?` and '${parentId}' in parents`:" and 'root' in parents";
+  const rawQuery=`name='${name}' and mimeType='application/vnd.google-apps.folder' and trashed=false`+parentClause;
+  const q=encodeURIComponent(rawQuery);
+  const res=await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}`,{
+    headers:{'Authorization':'Bearer '+gdriveToken}
+  });
+  const data=await res.json();
+  if(data.files&&data.files.length>0)return data.files[0].id;
+  const body={name,mimeType:'application/vnd.google-apps.folder'};
+  if(parentId)body.parents=[parentId];
+  const createRes=await fetch('https://www.googleapis.com/drive/v3/files',{
+    method:'POST',
+    headers:{'Authorization':'Bearer '+gdriveToken,'Content-Type':'application/json'},
+    body:JSON.stringify(body)
+  });
+  const created=await createRes.json();
+  return created.id;
+}
+async function gdriveGetSubfolder(subfolderName){
+  const rootId=await gdriveFindOrCreateFolder("ARCA d'Ajuda");
+  return gdriveFindOrCreateFolder(subfolderName,rootId);
+}
+
+async function uploadToGDriveReplace(fileData, fileName, mimeType, subfolder){
+  return new Promise((resolve,reject)=>{
+    gdriveAuth(async()=>{
+      try{
+        const folderId=await gdriveGetSubfolder(subfolder);
+        const q=encodeURIComponent(`name='${fileName}' and '${folderId}' in parents and trashed=false`);
+        const existingRes=await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}`,{
+          headers:{'Authorization':'Bearer '+gdriveToken}
+        });
+        const existing=await existingRes.json();
+        if(existing.files&&existing.files.length){
+          for(const f of existing.files){
+            await fetch(`https://www.googleapis.com/drive/v3/files/${f.id}`,{
+              method:'DELETE', headers:{'Authorization':'Bearer '+gdriveToken}
+            });
+          }
+        }
+        const base64Data=fileData.split(',')[1];
+        const byteChars=atob(base64Data);
+        const byteArr=new Uint8Array(byteChars.length);
+        for(let i=0;i<byteChars.length;i++)byteArr[i]=byteChars.charCodeAt(i);
+        const blob=new Blob([byteArr],{type:mimeType});
+        const meta={name:fileName,parents:[folderId]};
+        const form=new FormData();
+        form.append('metadata',new Blob([JSON.stringify(meta)],{type:'application/json'}));
+        form.append('file',blob);
+        const uploadRes=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{
+          method:'POST', headers:{'Authorization':'Bearer '+gdriveToken}, body:form
+        });
+        const uploaded=await uploadRes.json();
+        resolve(uploaded.id);
+      }catch(e){reject(e);}
+    });
+  });
+}
+
+// Backup: guarda uma cópia de segurança de TODOS os dados de sócios no Drive
+async function fazerBackupDrive(manual){
+  if(!gdriveValid()){
+    if(manual) toast('Liga primeiro o Google Drive.', false);
+    return;
+  }
+  const dataObj = {
+    socios, tiposSocio:getTiposSocio(), tiposIsentos:getTiposIsentos(),
+    quotas:getQuotasConfig(), exportedAt:new Date().toISOString()
+  };
+  const dataUrl = 'data:application/json;base64,'+btoa(unescape(encodeURIComponent(JSON.stringify(dataObj,null,2))));
+  const nomeFich = 'ARCA_Socios_backup.json';
+  try{
+    await uploadToGDriveReplace(dataUrl, nomeFich, 'application/json', 'Backups');
+    LS.set('arca_ultimo_backup_drive', new Date().toISOString());
+    if(manual) toast('✓ Backup guardado no Google Drive!');
+    atualizarEstadoDrive();
+  }catch(e){
+    console.error(e);
+    if(manual) toast('Não foi possível fazer backup no Drive.', false);
+  }
+}
+
+function atualizarEstadoDrive(){
+  const el = document.getElementById('drive-status');
+  if(!el) return;
+  const ultimo = LS.get('arca_ultimo_backup_drive');
+  if(gdriveValid()){
+    el.innerHTML = `🟢 Ligado ao Google Drive` + (ultimo?` — último backup: ${new Date(ultimo).toLocaleString('pt-PT')}`:' — ainda sem backup feito');
+  } else {
+    el.textContent = '⚪ Google Drive não ligado';
+  }
+}
+
 const SUPA_URL = 'https://yfsyifypsrqnwkqkfrnm.supabase.co';
 const SUPA_KEY = 'sb_publishable_AkzlMeHlYHDyl0HzeC7_qg__j_Y6C9W';
 let supaSession = LS.get('arca_supa_session');
@@ -2258,7 +2435,7 @@ function renderConfig(tab){
   if(tab==='quotas') renderConfigQuotas();
   if(tab==='direccao') renderConfigDireccao();
   if(tab==='acessos') renderConfigAcessos();
-  if(tab==='dados') renderPinStatus();
+  if(tab==='dados'){ renderPinStatus(); atualizarEstadoDrive(); }
 }
 
 // ============================================================
@@ -3083,6 +3260,7 @@ async function importarSociosCSVAntigo(input){
     saveSocios();
     populateTipoSocioSelects();
     renderSocios();
+    if(gdriveValid() && ok>0) fazerBackupDrive(false);
     if(sessaoExpirouAMeio){
       msgEl.style.color='var(--amber)';
       msgEl.textContent = `⚠ A sessão expirou a meio. Já importei ${ok} sócio(s)${jaExistia?` (+${jaExistia} já existiam)`:''}. Entra novamente e volta a carregar o MESMO ficheiro para continuar.`;
@@ -4737,7 +4915,6 @@ function getMotivacionais(){
 let motivTimer = null;
 let motivAtivo = LS.get('arca_motiv_ativo') !== false;
 let lastMotivIdx = -1;
-let lastShownMsgIds = JSON.parse(LS.get('arca_motiv_seen') || '[]');
 const appStartTime = Date.now();
 
 // ── Random delay generator ──────────────────────────────────
@@ -4759,6 +4936,21 @@ function randomMotivDelay(){
 function sessionMinutes(){ return Math.floor((Date.now()-appStartTime)/60000); }
 
 // ── Pick message based on context ───────────────────────────
+function getMotivSeenAno(){
+  const anoAtual = new Date().getFullYear();
+  let dados = LS.get('arca_motiv_seen_ano');
+  if(!dados || dados.ano !== anoAtual){
+    dados = {ano: anoAtual, ids: []}; // novo ano -> reinicia, mensagens voltam a poder aparecer
+    LS.set('arca_motiv_seen_ano', dados);
+  }
+  return dados;
+}
+function marcarMotivVista(idx){
+  const dados = getMotivSeenAno();
+  if(!dados.ids.includes(idx)) dados.ids.push(idx);
+  LS.set('arca_motiv_seen_ano', dados);
+}
+
 function pickMensagem(){
   const msgs = getMotivacionais();
   if(!msgs.length) return null;
@@ -4779,11 +4971,15 @@ function pickMensagem(){
     pool = msgs;
   }
 
-  // Filter out recently seen messages (last 5 shown)
-  const unseenPool = pool.filter((_,i)=>!lastShownMsgIds.includes(i));
-  const finalPool = unseenPool.length >= 3 ? unseenPool : pool;
+  // Filtrar mensagens já mostradas ESTE ANO — só repetem quando o ano mudar
+  const vistasEsteAno = getMotivSeenAno().ids;
+  const naoVistas = pool.filter((_,i)=>{
+    const globalIdx = msgs.indexOf(pool[i]);
+    return !vistasEsteAno.includes(globalIdx);
+  });
+  // Se já viste todas as deste tipo este ano, evita só a última mostrada (para não repetir seguida)
+  const finalPool = naoVistas.length ? naoVistas : pool;
 
-  // Pick random from final pool, avoiding exact last message
   let idx;
   let attempts = 0;
   do {
@@ -4791,11 +4987,9 @@ function pickMensagem(){
     attempts++;
   } while(finalPool[idx]===msgs[lastMotivIdx] && finalPool.length>1 && attempts<10);
 
-  // Track seen
   const globalIdx = msgs.indexOf(finalPool[idx]);
   lastMotivIdx = globalIdx;
-  lastShownMsgIds = [globalIdx,...lastShownMsgIds].slice(0,8);
-  try{ LS.set('arca_motiv_seen', JSON.stringify(lastShownMsgIds)); }catch(e){}
+  marcarMotivVista(globalIdx);
 
   return finalPool[idx];
 }
@@ -8607,7 +8801,7 @@ function renderSociosList(){
   ms.sort((a,b)=>a.num-b.num);
   const el=document.getElementById('tabela-socios');
   if(!ms.length){el.innerHTML='<div class="empty-state"><p>Nenhum sócio encontrado.</p></div>';return;}
-  const sB=s=>{const c={'EM DIA':'#085041','VENCIDO':'#712B13','A TERMINAR':'#633806','ISENTO':'#1B4570'}[s]||'var(--text-2)';const bg={'EM DIA':'#E1F5EE','VENCIDO':'#FAECE7','A TERMINAR':'#FAEEDA','ISENTO':'#DCE7F0'}[s]||'var(--bg2)';return `<span style="background:${bg};color:${c};padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;display:inline-flex;align-items:center;gap:4px">${s==='ISENTO'?'🎗️ ISENTO':(s||'—')}</span>`;};
+  const sB=s=>{const c={'EM DIA':'#085041','VENCIDO':'#712B13','A TERMINAR':'#633806','ISENTO':'#1B4570'}[s]||'var(--text-2)';const bg={'EM DIA':'#E1F5EE','VENCIDO':'#FAECE7','A TERMINAR':'#FAEEDA','ISENTO':'#DCE7F0'}[s]||'var(--bg2)';return `<span style="background:${bg};color:${c};padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;display:inline-block;line-height:1.4">${s||'—'}</span>`;};
   const eB=e=>{const c={'ATIVO':'var(--teal-d)','INATIVO':'var(--text-3)','ATENÇÃO':'var(--amber)','FALECEU':'var(--coral-d)'}[e]||'var(--text-2)';return `<span style="color:${c};font-weight:500;font-size:12px">${e||'—'}</span>`;};
   el.innerHTML=`<table><thead><tr><th>Nº</th><th>Nome</th><th>Tipo</th><th>Estado</th><th>Situação</th><th>Telemóvel</th><th>Email</th><th>Obs.</th><th></th></tr></thead><tbody>${ms.map(s=>{
     const inativo = s.estado==='INATIVO'||s.estado==='FALECEU';
@@ -8768,13 +8962,24 @@ function filterCartaoSocio(){
   sel.innerHTML='<option value="">-- Seleciona um sócio --</option>'+f.map(s=>`<option value="${s.id}">Nº${s.num} — ${s.nome}</option>`).join('');
 }
 
+function copiarLinkVerificacao(){
+  const id=document.getElementById('cartao-socio-sel').value;
+  if(!id){toast('Seleciona um sócio.',false);return;}
+  const s=socios.find(x=>x.id==id);if(!s)return;
+  const link = `https://arca-ajuda.github.io/arca-ajuda/socios/verificar/?num=${s.num}`;
+  navigator.clipboard.writeText(link).then(()=>{
+    toast('Link copiado! Já podes enviar por WhatsApp/SMS/Email.');
+  }).catch(()=>{
+    prompt('Copia o link manualmente:', link);
+  });
+}
 function renderCartaoSocio(){
   const id=document.getElementById('cartao-socio-sel').value;if(!id)return;
   const s=socios.find(x=>x.id==id);if(!s)return;
   let validStr='—';
   const situacao=getSituacaoSocio(s);
   if(s.validadeQuota){const v=new Date(s.validadeQuota+'T12:00:00');validStr=v.toLocaleDateString('pt-PT');}
-  const qrData=`ARCA:${s.num}:${s.validadeQuota||'0'}`;
+  const qrData=`https://arca-ajuda.github.io/arca-ajuda/socios/verificar/?num=${s.num}`;
   const logo=currentLogoData||LS.get('arca_logo')||'';
   const logoEl=document.getElementById('cartao-logo-area');
   if(logoEl){
@@ -8797,7 +9002,7 @@ function renderCartaoSocio(){
   const PMAP={'1mes':'1 Mês','3meses':'3 Meses','6meses':'6 Meses','9meses':'9 Meses','1ano':'1 Ano'};
   const sitCor={'EM DIA':'#085041','VENCIDO':'#712B13','A TERMINAR':'#633806','ISENTO':'#1B4570'}[situacao]||'#555';
   const sitBg={'EM DIA':'#E1F5EE','VENCIDO':'#FAECE7','A TERMINAR':'#FAEEDA','ISENTO':'#DCE7F0'}[situacao]||'#eee';
-  const sitMsg=situacao==='ISENTO'?`<span style="color:#1B4570;font-weight:600">🎗️ Isento de quota</span>`:situacao==='EM DIA'?`<span style="color:#085041;font-weight:600">✅ Quota em dia — válida até ${validStr}</span>`:situacao==='A TERMINAR'?`<span style="color:#633806;font-weight:600">⚠️ A terminar em ${validStr}</span>`:`<span style="color:#712B13;font-weight:600">❌ Quota vencida${s.validadeQuota?' em '+validStr:''}</span>`;
+  const sitMsg=situacao==='ISENTO'?`<span style="color:#1B4570;font-weight:600">Isento de quota</span>`:situacao==='EM DIA'?`<span style="color:#085041;font-weight:600">✅ Quota em dia — válida até ${validStr}</span>`:situacao==='A TERMINAR'?`<span style="color:#633806;font-weight:600">⚠️ A terminar em ${validStr}</span>`:`<span style="color:#712B13;font-weight:600">❌ Quota vencida${s.validadeQuota?' em '+validStr:''}</span>`;
   const iEl=document.getElementById('cartao-info-area');
   if(iEl)iEl.innerHTML=`<div class="card-title">Dados do sócio</div>
     <div style="background:${sitBg};border-radius:var(--radius);padding:10px 12px;margin-bottom:12px;font-size:12px">${sitMsg}</div>
@@ -8831,7 +9036,7 @@ function imprimirCartao(){
   let validStr='—';
   const situacao=getSituacaoSocio(s);
   if(s.validadeQuota){const v=new Date(s.validadeQuota+'T12:00:00');validStr=v.toLocaleDateString('pt-PT');}
-  const qrData=`ARCA:${s.num}:${s.validadeQuota||'0'}`;
+  const qrData=`https://arca-ajuda.github.io/arca-ajuda/socios/verificar/?num=${s.num}`;
   const html=`<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>Cartão Sócio</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
   <style>*{box-sizing:border-box;margin:0;padding:0}body{background:#f5f5f5;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:Arial,sans-serif;flex-direction:column;gap:20px}
@@ -8877,7 +9082,7 @@ function downloadCartaoPNG(){
     let validStr='—';
     const situacao=getSituacaoSocio(s);
     if(s.validadeQuota){const v=new Date(s.validadeQuota+'T12:00:00');validStr=v.toLocaleDateString('pt-PT');}
-    const qrData=`ARCA:${s.num}:${s.validadeQuota||'0'}`;
+    const qrData=`https://arca-ajuda.github.io/arca-ajuda/socios/verificar/?num=${s.num}`;
     const wrap=document.createElement('div');
     wrap.style.cssText='position:fixed;left:-9999px;top:0;width:680px;height:428px;border-radius:28px;background:linear-gradient(135deg,#1B4570 0%,#2E6199 55%,#4A85BE 100%);padding:40px 44px;color:#fff;font-family:Arial,sans-serif;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden';
     wrap.innerHTML=`
@@ -8896,7 +9101,7 @@ function downloadCartaoPNG(){
           <div style="width:40px;height:4px;background:#B8863B;border-radius:2px;margin-bottom:10px"></div>
           <div style="font-size:26px;font-weight:700;color:#fff">${s.nome}</div>
           <div style="font-size:15px;color:#9FB4CC;margin:4px 0 10px">${s.tipo||'Sócio'} · Nº ${s.num}</div>
-          <div style="font-size:14px;background:rgba(255,255,255,.14);display:inline-block;padding:6px 16px;border-radius:20px;font-weight:600;color:#fff">${situacao==='ISENTO'?'🎗️ Isento de quota':'Válido até '+validStr}</div>
+          <div style="font-size:14px;background:rgba(255,255,255,.14);display:inline-block;padding:6px 16px;border-radius:20px;font-weight:600;color:#fff">${situacao==='ISENTO'?'Isento de quota':'Válido até '+validStr}</div>
         </div>
         <div id="cartao-png-qr" style="width:130px;height:130px;background:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center"></div>
       </div>`;
@@ -8927,10 +9132,13 @@ function downloadCartaoPNG(){
 
 function verificarSocio(){
   const input=(document.getElementById('verificar-input').value||'').trim();
-  if(!input){toast('Insere um código ou número.',false);return;}
-  // Aceita: "90", "ARCA:90:...", "ARCA:90"
+  if(!input){toast('Insere um código, número ou link.',false);return;}
+  // Aceita: "90", "ARCA:90:...", link https://.../verificar/?num=90
   let num;
-  if(input.startsWith('ARCA:')){
+  if(input.includes('num=')){
+    const m = input.match(/num=(\d+)/);
+    num = m ? parseInt(m[1]) : NaN;
+  } else if(input.startsWith('ARCA:')){
     const parts=input.split(':');
     num=parseInt(parts[1]);
   } else {
@@ -9141,6 +9349,7 @@ async function processarLinhasSocios(linhas, msgEl){
   saveTiposSocio([...tiposNovos]);
   saveSocios();
   renderSocios();
+  if(gdriveValid() && ok>0) fazerBackupDrive(false);
   if(sessaoExpirouAMeio){
     msgEl.style.color='var(--amber)';
     msgEl.textContent = `⚠ A sessão expirou a meio da importação. Já importei ${ok} sócio(s)${jaExistia?` (+${jaExistia} já existiam)`:''}. Entra novamente e volta a carregar o MESMO ficheiro — os já importados não duplicam, só continua a partir de onde ficou.`;
@@ -9240,6 +9449,7 @@ async function iniciarAppSocios(){
   setTimeout(()=>{ try{ checkQuotaAlerts(); }catch(e){ console.warn(e); } }, 1500);
   try{ startMotivacional(); }catch(e){ console.warn('init:',e); }
   try{ checkRoleLogin(); }catch(e){ console.warn('init:',e); }
+  try{ gdriveAutoConnect(); }catch(e){ console.warn('init:',e); }
   (function(){
     const el=document.getElementById('login-logo-area');
     if(el&&currentLogoData) el.innerHTML=`<img src="${currentLogoData}" style="height:64px;max-width:160px;object-fit:contain;border-radius:8px">`;
