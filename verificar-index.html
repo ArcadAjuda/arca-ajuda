@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verificar Sócio — ARCA d'Ajuda</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,Arial,sans-serif;background:linear-gradient(135deg,#1B4570,#2E6199);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .card{background:#fff;border-radius:20px;padding:32px 28px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.25);text-align:center}
+  .titulo{font-size:13px;font-weight:700;color:#1B4570;letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px}
+  .sub{font-size:11px;color:#888;margin-bottom:20px}
+  .nome{font-size:20px;font-weight:700;color:#222;margin-bottom:4px}
+  .num{font-size:13px;color:#888;margin-bottom:18px}
+  .selo{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:14px;font-size:16px;font-weight:700;margin-bottom:14px}
+  .selo.ok{background:#E1F5EE;color:#085041}
+  .selo.aviso{background:#FAEEDA;color:#633806}
+  .selo.mau{background:#FAECE7;color:#712B13}
+  .selo.isento{background:#DCE7F0;color:#1B4570}
+  .detalhe{font-size:12.5px;color:#666;line-height:1.6}
+  .loading{color:#888;font-size:13px}
+  .erro{color:#A23B2E;font-size:13px}
+  .rodape{margin-top:20px;font-size:10.5px;color:#aaa}
+</style>
+</head>
+<body>
+<div class="card" id="card">
+  <div class="loading">A verificar...</div>
+</div>
+
+<script>
+const SUPA_URL = 'https://yfsyifypsrqnwkqkfrnm.supabase.co';
+const SUPA_KEY = 'sb_publishable_AkzlMeHlYHDyl0HzeC7_qg__j_Y6C9W';
+
+function getSituacaoAtual(s){
+  if(s.isento) return 'ISENTO';
+  if(!s.validade_quota) return 'VENCIDO';
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const v = new Date(s.validade_quota+'T00:00:00'); v.setHours(0,0,0,0);
+  const diff = Math.floor((v-hoje)/86400000);
+  if(diff < 0) return 'VENCIDO';
+  if(diff <= 30) return 'A TERMINAR';
+  return 'EM DIA';
+}
+
+async function verificar(){
+  const params = new URLSearchParams(location.search);
+  const num = params.get('num');
+  const card = document.getElementById('card');
+  if(!num){
+    card.innerHTML = '<div class="erro">Link inválido — falta o número de sócio.</div>';
+    return;
+  }
+  try{
+    const res = await fetch(`${SUPA_URL}/rest/v1/socios_publico?num=eq.${encodeURIComponent(num)}`, {
+      headers: {'apikey': SUPA_KEY, 'Authorization': 'Bearer '+SUPA_KEY}
+    });
+    if(!res.ok) throw new Error('Erro '+res.status);
+    const data = await res.json();
+    if(!data.length){
+      card.innerHTML = '<div class="erro">Sócio não encontrado.</div>';
+      return;
+    }
+    const s = data[0];
+    const sit = getSituacaoAtual(s);
+    const map = {
+      'EM DIA': {cls:'ok', texto:'✅ QUOTA EM DIA'},
+      'A TERMINAR': {cls:'aviso', texto:'⚠️ A TERMINAR EM BREVE'},
+      'VENCIDO': {cls:'mau', texto:'❌ QUOTA VENCIDA'},
+      'ISENTO': {cls:'isento', texto:'🎗️ ISENTO DE QUOTA'}
+    }[sit];
+    const validStr = s.validade_quota ? new Date(s.validade_quota+'T12:00:00').toLocaleDateString('pt-PT') : '—';
+    card.innerHTML = `
+      <div class="titulo">ARCA d'Ajuda</div>
+      <div class="sub">Verificação de Sócio</div>
+      <div class="nome">${s.nome}</div>
+      <div class="num">${s.tipo||'Sócio'} · Nº ${s.num}</div>
+      <div class="selo ${map.cls}">${map.texto}</div>
+      <div class="detalhe">${sit==='ISENTO' ? 'Sócio isento do pagamento de quota.' : sit==='VENCIDO' ? 'Por favor contacta a associação para regularizar.' : 'Válido até '+validStr}</div>
+      <div class="rodape">Informação atualizada em tempo real</div>
+    `;
+  }catch(e){
+    console.error(e);
+    card.innerHTML = '<div class="erro">Não foi possível verificar agora. Tenta mais tarde.</div>';
+  }
+}
+verificar();
+</script>
+</body>
+</html>
