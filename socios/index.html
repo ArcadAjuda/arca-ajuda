@@ -1094,7 +1094,8 @@ function rowToSocio(r){
     dataInscricao:r.data_inscricao||'', dataPagamento:r.data_pagamento||'',
     periodoQuota:r.periodo_quota||'1ano', validadeQuota:r.validade_quota||'',
     estado:r.estado, tel:r.tel||'', morada:r.morada||'', cp:r.cp||'', email:r.email||'',
-    quota:r.quota||'', situacao:r.situacao, obs:r.obs||'', diasRestantes:0, isento: !!r.isento
+    quota:r.quota||'', situacao:r.situacao, obs:r.obs||'', diasRestantes:0, isento: !!r.isento,
+    codigoVerificacao: r.codigo_verificacao||''
   };
 }
 async function carregarSociosSupabase(){
@@ -8776,7 +8777,7 @@ function copiarLinkVerificacao(){
   const id=document.getElementById('cartao-socio-sel').value;
   if(!id){toast('Seleciona um sócio.',false);return;}
   const s=socios.find(x=>x.id==id);if(!s)return;
-  const link = `https://arca-ajuda.github.io/arca-ajuda/socios/verificar/?num=${s.num}`;
+  const link = `https://arca-ajuda.github.io/arca-ajuda/socios/verificar/?c=${s.codigoVerificacao||s.num}`;
   navigator.clipboard.writeText(link).then(()=>{
     toast('Link copiado! Já podes enviar por WhatsApp/SMS/Email.');
   }).catch(()=>{
@@ -8789,7 +8790,7 @@ function renderCartaoSocio(){
   let validStr='—';
   const situacao=getSituacaoSocio(s);
   if(s.validadeQuota){const v=new Date(s.validadeQuota+'T12:00:00');validStr=v.toLocaleDateString('pt-PT');}
-  const qrData=`https://arca-ajuda.github.io/arca-ajuda/socios/verificar/?num=${s.num}`;
+  const qrData=`https://arca-ajuda.github.io/arca-ajuda/socios/verificar/?c=${s.codigoVerificacao||s.num}`;
   const logo=currentLogoData||LS.get('arca_logo')||'';
   const logoEl=document.getElementById('cartao-logo-area');
   if(logoEl){
@@ -8846,7 +8847,7 @@ function imprimirCartao(){
   let validStr='—';
   const situacao=getSituacaoSocio(s);
   if(s.validadeQuota){const v=new Date(s.validadeQuota+'T12:00:00');validStr=v.toLocaleDateString('pt-PT');}
-  const qrData=`https://arca-ajuda.github.io/arca-ajuda/socios/verificar/?num=${s.num}`;
+  const qrData=`https://arca-ajuda.github.io/arca-ajuda/socios/verificar/?c=${s.codigoVerificacao||s.num}`;
   const html=`<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>Cartão Sócio</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
   <style>*{box-sizing:border-box;margin:0;padding:0}body{background:#f5f5f5;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:Arial,sans-serif;flex-direction:column;gap:20px}
@@ -8892,7 +8893,7 @@ function downloadCartaoPNG(){
     let validStr='—';
     const situacao=getSituacaoSocio(s);
     if(s.validadeQuota){const v=new Date(s.validadeQuota+'T12:00:00');validStr=v.toLocaleDateString('pt-PT');}
-    const qrData=`https://arca-ajuda.github.io/arca-ajuda/socios/verificar/?num=${s.num}`;
+    const qrData=`https://arca-ajuda.github.io/arca-ajuda/socios/verificar/?c=${s.codigoVerificacao||s.num}`;
     const wrap=document.createElement('div');
     wrap.style.cssText='position:fixed;left:-9999px;top:0;width:680px;height:428px;border-radius:28px;background:linear-gradient(135deg,#1B4570 0%,#2E6199 55%,#4A85BE 100%);padding:40px 44px;color:#fff;font-family:Arial,sans-serif;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden';
     wrap.innerHTML=`
@@ -8943,23 +8944,29 @@ function downloadCartaoPNG(){
 function verificarSocio(){
   const input=(document.getElementById('verificar-input').value||'').trim();
   if(!input){toast('Insere um código, número ou link.',false);return;}
-  // Aceita: "90", "ARCA:90:...", link https://.../verificar/?num=90
-  let num;
-  if(input.includes('num=')){
-    const m = input.match(/num=(\d+)/);
-    num = m ? parseInt(m[1]) : NaN;
-  } else if(input.startsWith('ARCA:')){
-    const parts=input.split(':');
-    num=parseInt(parts[1]);
-  } else {
-    num=parseInt(input);
-  }
-  if(isNaN(num)){toast('Número inválido.',false);return;}
-  // Comparação flexível: num pode ser number ou string na lista
-  const s=socios.find(x=>Number(x.num)===num);
   const el=document.getElementById('verificar-resultado');
   if(!el) return;
-  if(!s){el.innerHTML=`<div style="background:var(--coral-l);border:0.5px solid #F09595;border-radius:var(--radius-lg);padding:16px;color:var(--coral-d)"><strong>❌ Sócio não encontrado</strong><br><span style="font-size:12px">Número ${num} não existe.</span></div>`;return;}
+  let s;
+  // Aceita: link novo (?c=código), link antigo (?num=90), "90", "ARCA:90:..."
+  if(input.includes('c=')){
+    const m = input.match(/[?&]c=([a-zA-Z0-9]+)/);
+    const codigo = m ? m[1] : null;
+    s = codigo ? socios.find(x=>x.codigoVerificacao===codigo) : null;
+  } else {
+    let num;
+    if(input.includes('num=')){
+      const m = input.match(/num=(\d+)/);
+      num = m ? parseInt(m[1]) : NaN;
+    } else if(input.startsWith('ARCA:')){
+      const parts=input.split(':');
+      num=parseInt(parts[1]);
+    } else {
+      num=parseInt(input);
+    }
+    if(isNaN(num)){toast('Código ou número inválido.',false);return;}
+    s=socios.find(x=>Number(x.num)===num);
+  }
+  if(!s){el.innerHTML=`<div style="background:var(--coral-l);border:0.5px solid #F09595;border-radius:var(--radius-lg);padding:16px;color:var(--coral-d)"><strong>❌ Sócio não encontrado</strong></div>`;return;}
   let sit='VENCIDO',validStr='—';
   if(s.validadeQuota){
     const v=new Date(s.validadeQuota+'T12:00:00');
