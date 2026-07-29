@@ -304,7 +304,7 @@ tbody tr:hover td{background:var(--bg2)}
         <div class="header-greeting-role" id="sidebar-admin-role">Administração</div>
       </div>
     </div>
-    <span id="role-badge" class="bottombar-badge">Administrador</span>
+    <span id="role-badge" class="bottombar-badge" style="display:none">Administrador</span>
     <nav class="topbar-nav">
       <a href="../index.html" class="topnav-item nav-geral" title="Voltar ao Menu Geral">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Geral
@@ -555,6 +555,15 @@ tbody tr:hover td{background:var(--bg2)}
         <button class="btn-secondary" onclick="lockApp()" id="btn-lock-now" style="display:none">🔒 Bloquear agora</button>
       </div>
     </div>
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-title">📋 Registo de Atividade</div>
+      <p style="font-size:12px;color:var(--text-2);margin-bottom:12px;line-height:1.6">
+        Últimos acessos e alterações feitas por cada utilizador.
+      </p>
+      <button class="btn-secondary" onclick="carregarAtividade()" style="margin-bottom:10px">🔄 Atualizar</button>
+      <div id="atividade-lista" style="max-height:280px;overflow-y:auto;font-size:12.5px"></div>
+    </div>
+
     <div class="card" style="margin-bottom:14px">
       <div class="card-title">☁️ Backup automático no Google Drive</div>
       <p style="font-size:12px;color:var(--text-2);margin-bottom:12px;line-height:1.6">
@@ -1017,6 +1026,13 @@ async function supaAuthLogin(email, password){
   supaSession = data;
   LS.set('arca_supa_session', supaSession);
   return data;
+}
+
+async function registarAtividade(tipo, socioNome, detalhes){
+  try{
+    const utilizador = supaSession?.user?.email || 'desconhecido';
+    await supaFetch('atividade', 'POST', {tipo, utilizador, socio_nome:socioNome||null, detalhes:detalhes||null});
+  }catch(e){ console.warn('Não foi possível registar atividade:', e); }
 }
 
 function supaLogout(){
@@ -1715,6 +1731,7 @@ async function executeDelete(){
     }
     socios=socios.filter(s=>s.id!=idDel);
     saveSocios(); toast('Sócio eliminado.');
+    registarAtividade('eliminar', pendingDelete.label);
     pendingDelete=null; closeModal('modal-confirma-delete'); renderSocios(); return;
   }
   if(pendingDelete.type==='lembrete'){
@@ -2369,7 +2386,7 @@ function renderConfig(tab){
   if(tab==='quotas') renderConfigQuotas();
   if(tab==='direccao') renderConfigDireccao();
   if(tab==='acessos') renderConfigAcessos();
-  if(tab==='dados'){ renderPinStatus(); atualizarEstadoDrive(); }
+  if(tab==='dados'){ renderPinStatus(); atualizarEstadoDrive(); carregarAtividade(); }
 }
 
 // ============================================================
@@ -4898,6 +4915,33 @@ function toggleMotivacional(){
     toast('Mensagens pausadas.');
   }
   renderConfigDados();
+}
+
+async function carregarAtividade(){
+  const el = document.getElementById('atividade-lista');
+  if(!el) return;
+  el.innerHTML = '<div style="color:var(--text-3)">A carregar...</div>';
+  try{
+    const rows = await supaFetch('atividade?order=created_at.desc&limit=40');
+    if(!rows || !rows.length){ el.innerHTML = '<div style="color:var(--text-3)">Ainda sem registos.</div>'; return; }
+    const ICONES = {login:'🔓', criar:'➕', editar:'✏️', eliminar:'🗑️'};
+    const TEXTOS = {login:'entrou na aplicação', criar:'criou o sócio', editar:'editou o sócio', eliminar:'eliminou o sócio'};
+    el.innerHTML = rows.map(r=>{
+      const data = new Date(r.created_at).toLocaleString('pt-PT',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+      const quem = (r.utilizador||'desconhecido').split('@')[0];
+      const acaoTxt = TEXTOS[r.tipo]||r.tipo;
+      return `<div style="padding:8px 0;border-bottom:1px solid var(--border-c);display:flex;gap:8px;align-items:flex-start">
+        <span>${ICONES[r.tipo]||'•'}</span>
+        <div style="flex:1">
+          <strong>${quem}</strong> ${acaoTxt}${r.socio_nome?` <em>${r.socio_nome}</em>`:''}
+          <div style="color:var(--text-3);font-size:11px">${data}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){
+    console.error(e);
+    el.innerHTML = '<div style="color:var(--coral-d)">Não foi possível carregar (corre o SQL 005_atividade.sql no Supabase se ainda não o fizeste).</div>';
+  }
 }
 
 function renderConfigDados(){
@@ -8710,10 +8754,12 @@ async function saveSocio(){
       const idx=socios.findIndex(s=>s.id==editingSocioId);
       if(idx>=0) socios[idx]=rowToSocio(row[0]);
       toast('Sócio atualizado!');
+      registarAtividade('editar', nome);
     } else {
       const row = await supaFetch('socios', 'POST', socioToRow(obj));
       socios.push(rowToSocio(row[0]));
       toast('Sócio adicionado!');
+      registarAtividade('criar', nome);
     }
     saveSocios(); // atualiza a cópia local de segurança
   }catch(e){
@@ -9280,6 +9326,7 @@ async function fazerLoginSupabase(){
     await supaAuthLogin(email,pass);
     document.getElementById('supa-login-overlay').style.display='none';
     await iniciarAppSocios();
+    registarAtividade('login');
   }catch(e){
     erroEl.textContent = e.message.includes('Invalid') ? 'Email ou password incorretos.' : e.message;
     erroEl.style.display='block';
