@@ -344,7 +344,8 @@ tbody tr:hover td{background:var(--bg2)}
       <select class="year-sel" id="sel-ano" onchange="onAnoChange()" style="margin-right:4px">
         <option>2025</option>
       </select>
-      <button class="btn-secondary" onclick="copiarLinkInscricao()">📝 Link de Inscrição</button>
+      <button class="btn-secondary" onclick="copiarLinkInscricao()" title="Copiar link da ficha de inscrição">📋 Copiar Link Inscrição</button>
+      <button class="btn-secondary" onclick="abrirLinkInscricao()" title="Abrir a ficha de inscrição num separador novo">📝 Abrir Ficha</button>
       <button class="btn-secondary" onclick="showSociosTab('importar')">⬆ Importar</button>
       <button class="btn-secondary" onclick="exportSociosCSV()">⬇ CSV</button>
       <button class="btn-primary" onclick="openModalSocio()">+ Novo Sócio</button>
@@ -8987,12 +8988,14 @@ function filterCartaoSocio(){
 
 function copiarLinkInscricao(){
   const link = `https://arca-ajuda.github.io/arca-ajuda/socios/inscricao/`;
-  window.open(link, '_blank');
   navigator.clipboard.writeText(link).then(()=>{
-    toast('Link copiado (já podes colar para partilhar) e aberto num novo separador.');
+    toast('Link copiado! Já podes colar para partilhar (WhatsApp, redes sociais, etc.)');
   }).catch(()=>{
     prompt('Copia o link manualmente:', link);
   });
+}
+function abrirLinkInscricao(){
+  window.open('https://arca-ajuda.github.io/arca-ajuda/socios/inscricao/', '_blank');
 }
 function copiarLinkVerificacao(){
   const id=document.getElementById('cartao-socio-sel').value;
