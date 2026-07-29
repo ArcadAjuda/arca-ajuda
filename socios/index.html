@@ -2461,16 +2461,25 @@ function renderConfig(tab){
 // ============================================================
 // QUOTAS CONFIG
 // ============================================================
-function getTiposIsentos(){
-  return LS.get('arca_tipos_isentos') || ['FUNDADOR','HONORÁRIO'];
-}
-function saveTiposIsentos(lista){ LS.set('arca_tipos_isentos', lista); }
-function tipoEIsento(tipo){ return getTiposIsentos().includes(tipo); }
+// Cache carregada do Supabase no arranque — leitura instantânea (síncrona)
+// durante o uso normal, escrita sempre enviada para a cloud
+let tiposSocioCache = ['FUNDADOR','EFETIVO','ATLETA','HONORÁRIO','BENEMÉRITO','PARCEIRO/EMPRESA'];
+let tiposIsentosCache = ['FUNDADOR','HONORÁRIO'];
 
-function getTiposSocio(){
-  return LS.get('arca_tipos_socio') || ['FUNDADOR','EFETIVO','ATLETA','HONORÁRIO','BENEMÉRITO','PARCEIRO/EMPRESA'];
+async function carregarTiposSocioSupabase(){
+  try{
+    const rows = await supaFetch('socios_tipos?order=ordem.asc,id.asc');
+    if(rows && rows.length){
+      tiposSocioCache = rows.map(r=>r.nome);
+      tiposIsentosCache = rows.filter(r=>r.isento).map(r=>r.nome);
+    }
+  }catch(e){ console.warn('Não foi possível carregar tipos de sócio do Supabase, a usar valores locais:', e); }
 }
-function saveTiposSocio(lista){ LS.set('arca_tipos_socio', lista); }
+
+function getTiposIsentos(){ return tiposIsentosCache; }
+function tipoEIsento(tipo){ return getTiposIsentos().includes(tipo); }
+function getTiposSocio(){ return tiposSocioCache; }
+
 function populateTipoSocioSelects(){
   const tipos = getTiposSocio();
   document.querySelectorAll('#s-tipo, #sf-tipo').forEach(sel=>{
@@ -2482,24 +2491,30 @@ function populateTipoSocioSelects(){
     if(tipos.includes(atual)) sel.value = atual;
   });
 }
-function adicionarTipoSocio(){
+
+async function adicionarTipoSocio(){
   const nome = (document.getElementById('novo-tipo-socio')?.value||'').trim().toUpperCase();
   if(!nome){ toast('Escreve o nome do novo tipo.',false); return; }
-  const tipos = getTiposSocio();
-  if(tipos.includes(nome)){ toast('Esse tipo já existe.',false); return; }
-  tipos.push(nome);
-  saveTiposSocio(tipos);
+  if(tiposSocioCache.includes(nome)){ toast('Esse tipo já existe.',false); return; }
+  try{
+    await supaFetch('socios_tipos', 'POST', {nome, ordem:tiposSocioCache.length, isento:false});
+  }catch(e){ console.error(e); toast('Não foi possível guardar no Supabase: '+e.message, false); return; }
+  tiposSocioCache.push(nome);
   const q = getQuotasConfig(); q[nome] = q[nome]||{'1mes':0,'3meses':0,'6meses':0,'9meses':0,'1ano':0}; saveQuotasConfig(q);
   document.getElementById('novo-tipo-socio').value='';
   populateTipoSocioSelects();
   renderConfigQuotas();
   toast('Tipo de sócio criado: '+nome);
 }
-function removerTipoSocio(nome){
+
+async function removerTipoSocio(nome){
   const emUso = socios.filter(s=>s.tipo===nome).length;
   if(emUso>0){ if(!confirm(`${emUso} sócio(s) têm o tipo "${nome}". Remover mesmo assim? (o tipo deles mantém-se guardado, mas deixa de aparecer na lista para novos sócios)`)) return; }
   else if(!confirm(`Remover o tipo "${nome}"?`)) return;
-  saveTiposSocio(getTiposSocio().filter(t=>t!==nome));
+  try{
+    await supaFetch('socios_tipos?nome=eq.'+encodeURIComponent(nome), 'DELETE');
+  }catch(e){ console.error(e); toast('Não foi possível remover no Supabase: '+e.message, false); return; }
+  tiposSocioCache = tiposSocioCache.filter(t=>t!==nome);
   populateTipoSocioSelects();
   renderConfigQuotas();
   toast('Tipo removido.');
@@ -2524,6 +2539,16 @@ function getQuotasConfig(){
   };
 }
 function saveQuotasConfig(q){ LS.set('arca_quotas',q); }
+async function carregarQuotasSupabase(){
+  try{
+    const rows = await supaFetch('socios_precos');
+    if(rows && rows.length){
+      const q = {};
+      rows.forEach(r=>{ if(!q[r.tipo]) q[r.tipo]={}; q[r.tipo][r.periodo]=parseFloat(r.valor)||0; });
+      saveQuotasConfig(q);
+    }
+  }catch(e){ console.warn('Não foi possível carregar preços de quotas do Supabase, a usar valores locais:', e); }
+}
 
 function getPeriodoDias(key){
   return {
@@ -2633,9 +2658,14 @@ function renderConfigQuotas(){
   el.innerHTML = html;
 }
 
-function salvarIsencaoTipos(){
-  const marcados = [...document.querySelectorAll('.chk-isento-tipo:checked')].map(c=>c.value);
-  saveTiposIsentos(marcados);
+async function salvarIsencaoTipos(){
+  const marcados = new Set([...document.querySelectorAll('.chk-isento-tipo:checked')].map(c=>c.value));
+  try{
+    for(const nome of tiposSocioCache){
+      await supaFetch('socios_tipos?nome=eq.'+encodeURIComponent(nome), 'PATCH', {isento: marcados.has(nome)});
+    }
+  }catch(e){ console.error(e); toast('Não foi possível guardar no Supabase: '+e.message, false); return; }
+  tiposIsentosCache = [...marcados];
   const msg=document.getElementById('isento-save-msg');
   if(msg){ msg.style.display='inline'; setTimeout(()=>msg.style.display='none',2500); }
   toast('Regra de isenção guardada!');
@@ -2660,20 +2690,31 @@ async function reaplicarIsencaoExistentes(){
   toast(`✓ ${ok} sócio(s) marcados como isentos.`);
 }
 
-function saveQuotasTable(){
+async function saveQuotasTable(){
   const q = getQuotasConfig();
+  const linhasParaSupabase = [];
   getTiposSocio().forEach(tipo=>{
     if(!q[tipo]) q[tipo]={};
     PERIODOS_QUOTA.forEach(p=>{
       const id = `quota-${tipo.replace(/\//g,'_')}-${p.key}`;
       const el = document.getElementById(id);
-      if(el) q[tipo][p.key] = parseFloat(el.value)||0;
+      if(el){
+        const valor = parseFloat(el.value)||0;
+        q[tipo][p.key] = valor;
+        linhasParaSupabase.push({tipo, periodo:p.key, valor});
+      }
     });
   });
   saveQuotasConfig(q);
   const msg = document.getElementById('quota-save-msg');
   if(msg){ msg.style.display='inline'; setTimeout(()=>msg.style.display='none',2500); }
-  toast('Preços de quotas guardados!');
+  try{
+    await supaFetch('socios_precos?on_conflict=tipo,periodo', 'POST', linhasParaSupabase, {'Prefer':'resolution=merge-duplicates,return=minimal'});
+    toast('Preços de quotas guardados (e sincronizados com a ficha de inscrição online)!');
+  }catch(e){
+    console.error(e);
+    toast('Preços guardados neste dispositivo, mas falhou sincronizar com o Supabase — a ficha online pode não ver os valores mais recentes.', false);
+  }
 }
 
 function resetQuotasDefault(){
@@ -3186,13 +3227,39 @@ function exportJSON(){
   const data={socios,tiposSocio:getTiposSocio(),quotas:getQuotasConfig(),exportedAt:new Date().toISOString()};
   const a=document.createElement('a');a.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(data,null,2));a.download='ARCA_Socios_backup.json';a.click();
 }
+// Regista no Supabase quaisquer tipos novos encontrados numa importação (CSV/Excel)
+async function registarNovosTipos(novosTipos){
+  for(const nome of novosTipos){
+    if(!tiposSocioCache.includes(nome)){
+      try{
+        await supaFetch('socios_tipos', 'POST', {nome, ordem:tiposSocioCache.length, isento:false});
+        tiposSocioCache.push(nome);
+      }catch(e){ console.error('Falha ao criar tipo', nome, e); }
+    }
+  }
+}
+// Usado ao restaurar um backup JSON — garante os tipos e aplica as isenções guardadas nesse backup
+async function sincronizarTiposCompletos(listaTipos, listaIsentos){
+  for(const nome of (listaTipos||[])){
+    if(!tiposSocioCache.includes(nome)){
+      try{
+        await supaFetch('socios_tipos', 'POST', {nome, ordem:tiposSocioCache.length, isento:(listaIsentos||[]).includes(nome)});
+        tiposSocioCache.push(nome);
+      }catch(e){ console.error('Falha ao criar tipo', nome, e); }
+    } else if(listaIsentos){
+      try{ await supaFetch('socios_tipos?nome=eq.'+encodeURIComponent(nome), 'PATCH', {isento:listaIsentos.includes(nome)}); }
+      catch(e){ console.error('Falha ao atualizar isenção do tipo', nome, e); }
+    }
+  }
+  if(listaIsentos) tiposIsentosCache = tiposSocioCache.filter(t=>listaIsentos.includes(t));
+}
+
 async function importJSON(input){
   const f=input.files[0];if(!f) return;
   const r=new FileReader();r.onload=async e=>{
     let d;
     try{ d=JSON.parse(e.target.result); }catch(err){ toast('Ficheiro inválido.',false); return; }
-    if(d.tiposIsentos) saveTiposIsentos(d.tiposIsentos);
-    if(d.tiposSocio) saveTiposSocio(d.tiposSocio);
+    if(d.tiposSocio) await sincronizarTiposCompletos(d.tiposSocio, d.tiposIsentos);
     if(d.quotas) saveQuotasConfig(d.quotas);
     populateTipoSocioSelects();
     if(!d.socios || !d.socios.length){ toast('Configurações restauradas (o ficheiro não tinha sócios).'); return; }
@@ -3299,7 +3366,7 @@ async function importarSociosCSVAntigo(input){
         falhou++;
       }
     }
-    saveTiposSocio([...tiposNovos]);
+    await registarNovosTipos([...tiposNovos]);
     saveSocios();
     populateTipoSocioSelects();
     renderSocios();
@@ -4748,7 +4815,7 @@ function renderOficios(){
 // ============================================================
 
 // Direção members - loaded dynamically from config
-function getDirMembers(){ return LS.get('arca_direccao') || [
+let dirMembersCache = [
   {id:1, cargo:'Presidente', socioNum:null},
   {id:2, cargo:'Vice-Presidente', socioNum:null},
   {id:3, cargo:'Tesoureiro/a', socioNum:null},
@@ -4756,8 +4823,23 @@ function getDirMembers(){ return LS.get('arca_direccao') || [
   {id:5, cargo:'Diretor/a Desportivo/a', socioNum:null},
   {id:6, cargo:'Diretor/a Cultural', socioNum:null},
   {id:7, cargo:'Vogal', socioNum:null}
-]; }
-function saveDirMembers(m){ LS.set('arca_direccao', m); }
+];
+const DIRECAO_PADRAO = ['Presidente','Vice-Presidente','Tesoureiro/a','Secretário/a','Diretor/a Desportivo/a','Diretor/a Cultural','Vogal'];
+
+async function carregarDirecaoSupabase(){
+  try{
+    const rows = await supaFetch('direcao_membros?order=ordem.asc,id.asc');
+    if(rows && rows.length){
+      dirMembersCache = rows.map(r=>({id:r.id, cargo:r.cargo, socioNum:r.socio_num}));
+    } else {
+      // Primeira vez — cria os cargos por defeito no Supabase
+      const corpo = DIRECAO_PADRAO.map((cargo,i)=>({cargo, ordem:i, socio_num:null}));
+      const criados = await supaFetch('direcao_membros', 'POST', corpo);
+      dirMembersCache = criados.map(r=>({id:r.id, cargo:r.cargo, socioNum:r.socio_num}));
+    }
+  }catch(e){ console.warn('Não foi possível carregar a Direção do Supabase, a usar valores locais:', e); }
+}
+function getDirMembers(){ return dirMembersCache; }
 
 function getSocioPorNum(num){
   if(num===null||num===undefined||num==='') return null;
@@ -4772,9 +4854,19 @@ function numsEmDireccao(){
   return new Set(getDirMembers().map(m=>m.socioNum).filter(n=>n!==null && n!==undefined && n!==''));
 }
 // Interruptor: a Direção pode ligar/desligar esta regalia a qualquer momento
-function direcaoEstaIsenta(){
-  const v = LS.get('arca_direcao_isenta');
-  return v===null ? true : v; // por defeito, ativado
+let direcaoIsentaCache = true;
+async function carregarDirecaoIsentaSupabase(){
+  try{
+    const rows = await supaFetch('config_app?chave=eq.direcao_isenta');
+    if(rows && rows.length) direcaoIsentaCache = rows[0].valor === 'true';
+  }catch(e){ console.warn('Não foi possível carregar o interruptor da Direção:', e); }
+}
+function direcaoEstaIsenta(){ return direcaoIsentaCache; }
+async function setDirecaoEstaIsenta(valor){
+  direcaoIsentaCache = !!valor;
+  try{
+    await supaFetch('config_app?chave=eq.direcao_isenta', 'PATCH', {valor: valor ? 'true' : 'false'});
+  }catch(e){ console.error('Falha ao guardar interruptor da Direção no Supabase:', e); }
 }
 function setDirecaoEstaIsenta(valor){ LS.set('arca_direcao_isenta', !!valor); }
 // Conjunto efetivo a usar nas verificações de isenção (vazio se a regra estiver desligada)
@@ -5149,44 +5241,47 @@ function extrairNumSocioDoValor(valor){
   return m ? parseInt(m[1]) : null;
 }
 
-function addDirMembro(){
-  const membros = getDirMembers();
-  const newId = Date.now();
-  membros.push({id:newId, cargo:'Vogal', socioNum:null});
-  saveDirMembers(membros);
-  renderConfigDireccao();
-  setTimeout(()=>document.getElementById('dir-nome-'+newId)?.focus(), 50);
+async function addDirMembro(){
+  try{
+    const row = await supaFetch('direcao_membros', 'POST', {cargo:'Vogal', socio_num:null, ordem:dirMembersCache.length});
+    const novo = {id:row[0].id, cargo:row[0].cargo, socioNum:row[0].socio_num};
+    dirMembersCache.push(novo);
+    renderConfigDireccao();
+    setTimeout(()=>document.getElementById('dir-nome-'+novo.id)?.focus(), 50);
+  }catch(e){ console.error(e); toast('Não foi possível criar no Supabase: '+e.message, false); }
 }
 
-function saveDirMembro(id){
-  const membros = getDirMembers();
-  const idx = membros.findIndex(m=>m.id===id);
+async function saveDirMembro(id){
+  const idx = dirMembersCache.findIndex(m=>m.id===id);
   if(idx<0) return;
-  const cargo = document.getElementById('dir-cargo-'+id)?.value||membros[idx].cargo;
+  const cargo = document.getElementById('dir-cargo-'+id)?.value||dirMembersCache[idx].cargo;
   const valor = document.getElementById('dir-nome-'+id)?.value||'';
   const numSocio = extrairNumSocioDoValor(valor);
   if(valor.trim() && (numSocio===null || !getSocioPorNum(numSocio))){
     toast('Não encontrei nenhum sócio com esse número/nome. Escolhe uma opção da lista.', false);
     return;
   }
-  membros[idx] = {...membros[idx], cargo, socioNum:numSocio};
-  saveDirMembers(membros);
+  try{
+    await supaFetch('direcao_membros?id=eq.'+id, 'PATCH', {cargo, socio_num:numSocio});
+  }catch(e){ console.error(e); toast('Não foi possível guardar no Supabase: '+e.message, false); return; }
+  dirMembersCache[idx] = {...dirMembersCache[idx], cargo, socioNum:numSocio};
   toast('Guardado!');
   renderConfigDireccao();
 }
 
-function saveAllDirMembros(){
-  const membros = getDirMembers();
+async function saveAllDirMembros(){
   let algumInvalido=false;
-  membros.forEach(m=>{
+  for(const m of dirMembersCache){
     const cargo = document.getElementById('dir-cargo-'+m.id)?.value||m.cargo;
     const valor = document.getElementById('dir-nome-'+m.id)?.value||'';
     const numSocio = extrairNumSocioDoValor(valor);
-    if(valor.trim() && (numSocio===null || !getSocioPorNum(numSocio))){ algumInvalido=true; return; }
-    m.cargo = cargo; m.socioNum = numSocio;
-  });
-  saveDirMembers(membros);
-  toast(algumInvalido ? 'Guardado, mas algum campo não correspondia a um sócio válido — verifica.' : 'Todos os membros guardados!', !algumInvalido);
+    if(valor.trim() && (numSocio===null || !getSocioPorNum(numSocio))){ algumInvalido=true; continue; }
+    try{
+      await supaFetch('direcao_membros?id=eq.'+m.id, 'PATCH', {cargo, socio_num:numSocio});
+      m.cargo = cargo; m.socioNum = numSocio;
+    }catch(e){ console.error('Falha ao guardar', m.cargo, e); algumInvalido=true; }
+  }
+  toast(algumInvalido ? 'Guardado, mas algum campo falhou ou não correspondia a um sócio válido — verifica.' : 'Todos os membros guardados!', !algumInvalido);
   renderConfigDireccao();
 }
 
@@ -5214,28 +5309,30 @@ async function sincronizarIsencaoDirecao(){
   toast(`✓ ${ok} sócio(s) da Direção marcados como isentos.`);
 }
 
-function deleteDirMembro(id){
-  let membros = getDirMembers().filter(m=>m.id!==id);
-  saveDirMembers(membros);
+async function deleteDirMembro(id){
+  try{
+    await supaFetch('direcao_membros?id=eq.'+id, 'DELETE');
+  }catch(e){ console.error(e); toast('Não foi possível remover no Supabase: '+e.message, false); return; }
+  dirMembersCache = dirMembersCache.filter(m=>m.id!==id);
   renderConfigDireccao();
   toast('Membro removido.');
 }
 
-function moveDirMembro(id, dir){
-  const membros = getDirMembers();
-  // Save current values first
-  membros.forEach(m=>{
+async function moveDirMembro(id, dir){
+  // Guardar valores atuais dos campos primeiro (para não perder edições feitas antes de mover)
+  for(const m of dirMembersCache){
     const cargo = document.getElementById('dir-cargo-'+m.id)?.value;
-    const nome = document.getElementById('dir-nome-'+m.id)?.value;
-    if(cargo) m.cargo=cargo;
-    if(nome!==undefined) m.nome=nome.trim();
-  });
-  const idx = membros.findIndex(m=>m.id===id);
+    if(cargo) m.cargo = cargo;
+  }
+  const idx = dirMembersCache.findIndex(m=>m.id===id);
   const other = idx+dir;
-  if(other<0||other>=membros.length) return;
-  [membros[idx],membros[other]] = [membros[other],membros[idx]];
-  saveDirMembers(membros);
+  if(other<0||other>=dirMembersCache.length) return;
+  [dirMembersCache[idx],dirMembersCache[other]] = [dirMembersCache[other],dirMembersCache[idx]];
   renderConfigDireccao();
+  // Atualiza a ordem no Supabase (em segundo plano)
+  try{
+    await Promise.all(dirMembersCache.map((m,i)=>supaFetch('direcao_membros?id=eq.'+m.id, 'PATCH', {ordem:i, cargo:m.cargo})));
+  }catch(e){ console.error('Falha ao guardar nova ordem da Direção:', e); }
 }
 
 // ============================================================
@@ -9387,7 +9484,7 @@ async function processarLinhasSocios(linhas, msgEl){
       falhou++;
     }
   }
-  saveTiposSocio([...tiposNovos]);
+  await registarNovosTipos([...tiposNovos]);
   saveSocios();
   renderSocios();
   if(gdriveValid() && ok>0) fazerBackupDrive(false);
@@ -9485,6 +9582,10 @@ async function iniciarAppSocios(){
   try{ updateSidebarGreeting(); }catch(e){ console.warn('init:',e); }
   try{ updateSidebarSaldos(); }catch(e){ console.warn('init:',e); }
   await carregarSociosSupabase();
+  try{ await carregarTiposSocioSupabase(); }catch(e){ console.warn('init:',e); }
+  try{ await carregarDirecaoSupabase(); }catch(e){ console.warn('init:',e); }
+  try{ await carregarDirecaoIsentaSupabase(); }catch(e){ console.warn('init:',e); }
+  try{ await carregarQuotasSupabase(); }catch(e){ console.warn('init:',e); }
   try{ populateTipoSocioSelects(); }catch(e){ console.warn('init:',e); }
   try{ renderSocios(); }catch(e){ console.warn('init:',e); }
   setTimeout(()=>{ try{ checkQuotaAlerts(); }catch(e){ console.warn(e); } }, 1500);
