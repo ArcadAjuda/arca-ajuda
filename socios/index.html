@@ -344,6 +344,7 @@ tbody tr:hover td{background:var(--bg2)}
       <select class="year-sel" id="sel-ano" onchange="onAnoChange()" style="margin-right:4px">
         <option>2025</option>
       </select>
+      <button class="btn-secondary" onclick="copiarLinkInscricao()">📝 Link de Inscrição</button>
       <button class="btn-secondary" onclick="showSociosTab('importar')">⬆ Importar</button>
       <button class="btn-secondary" onclick="exportSociosCSV()">⬇ CSV</button>
       <button class="btn-primary" onclick="openModalSocio()">+ Novo Sócio</button>
@@ -2713,7 +2714,7 @@ function getSituacaoFromValidade(validade){
 // Situação de um sócio, considerando isenção (individual ou por tipo) antes de olhar para a data
 function getSituacaoSocio(s){
   if(!s) return 'VENCIDO';
-  if(s.isento || tipoEIsento(s.tipo)) return 'ISENTO';
+  if(s.isento || tipoEIsento(s.tipo) || numsEmDireccaoIsentos().has(Number(s.num))) return 'ISENTO';
   if(!s.validadeQuota) return 'VENCIDO';
   return getSituacaoFromValidade(new Date(s.validadeQuota+'T12:00:00'));
 }
@@ -4747,26 +4748,50 @@ function renderOficios(){
 
 // Direção members - loaded dynamically from config
 function getDirMembers(){ return LS.get('arca_direccao') || [
-  {id:1, cargo:'Presidente', nome:''},
-  {id:2, cargo:'Vice-Presidente', nome:''},
-  {id:3, cargo:'Tesoureiro/a', nome:''},
-  {id:4, cargo:'Secretário/a', nome:''},
-  {id:5, cargo:'Diretor/a Desportivo/a', nome:''},
-  {id:6, cargo:'Diretor/a Cultural', nome:''},
-  {id:7, cargo:'Vogal', nome:''}
+  {id:1, cargo:'Presidente', socioNum:null},
+  {id:2, cargo:'Vice-Presidente', socioNum:null},
+  {id:3, cargo:'Tesoureiro/a', socioNum:null},
+  {id:4, cargo:'Secretário/a', socioNum:null},
+  {id:5, cargo:'Diretor/a Desportivo/a', socioNum:null},
+  {id:6, cargo:'Diretor/a Cultural', socioNum:null},
+  {id:7, cargo:'Vogal', socioNum:null}
 ]; }
 function saveDirMembers(m){ LS.set('arca_direccao', m); }
+
+function getSocioPorNum(num){
+  if(num===null||num===undefined||num==='') return null;
+  return socios.find(s=>Number(s.num)===Number(num)) || null;
+}
+function getNomeDirMembro(m){
+  const s = getSocioPorNum(m.socioNum);
+  return s ? s.nome : '';
+}
+// Números de sócio que ocupam atualmente algum cargo na Direção — usado para isenção automática
+function numsEmDireccao(){
+  return new Set(getDirMembers().map(m=>m.socioNum).filter(n=>n!==null && n!==undefined && n!==''));
+}
+// Interruptor: a Direção pode ligar/desligar esta regalia a qualquer momento
+function direcaoEstaIsenta(){
+  const v = LS.get('arca_direcao_isenta');
+  return v===null ? true : v; // por defeito, ativado
+}
+function setDirecaoEstaIsenta(valor){ LS.set('arca_direcao_isenta', !!valor); }
+// Conjunto efetivo a usar nas verificações de isenção (vazio se a regra estiver desligada)
+function numsEmDireccaoIsentos(){
+  return direcaoEstaIsenta() ? numsEmDireccao() : new Set();
+}
 
 // Get admin name for personalised jokes
 function getAdminNome(){
   const m = getDirMembers();
   const sec = m.find(x=>x.cargo.toLowerCase().includes('secret'));
-  return sec?.nome ? sec.nome.split(' ')[0] : 'Administrativa';
+  const nome = sec ? getNomeDirMembro(sec) : '';
+  return nome ? nome.split(' ')[0] : 'Administrativa';
 }
 
 function getMsgComNome(){
   const nome = getAdminNome();
-  const dir = getDirMembers().filter(x=>x.nome);
+  const dir = getDirMembers().map(m=>({...m, nome:getNomeDirMembro(m)})).filter(x=>x.nome);
   // Pick a random direction member that is NOT the admin
   const outros = dir.filter(x=>!x.cargo.toLowerCase().includes('secret'));
   const remetente = outros.length ? outros[Math.floor(Math.random()*outros.length)] : {cargo:'Direção', nome:'A Direção'};
@@ -4840,10 +4865,11 @@ function getMotivacionais(){
     if(item.tipo !== 'piada_admin') return item;
     // Only show this piada if the remetente_cargo matches a configured member
     const dir = getDirMembers();
-    const hasMatch = dir.some(d=>d.cargo===item.remetente_cargo&&d.nome);
+    const hasMatch = dir.some(d=>d.cargo===item.remetente_cargo&&getNomeDirMembro(d));
     if(!hasMatch) return null; // skip if no one configured for that role
     const rem2 = dir.find(d=>d.cargo===item.remetente_cargo);
-    const remNome = rem2?.nome ? rem2.nome.split(' ')[0] : item.remetente_cargo;
+    const rem2Nome = rem2 ? getNomeDirMembro(rem2) : '';
+    const remNome = rem2Nome ? rem2Nome.split(' ')[0] : item.remetente_cargo;
     const adminNome = nome && nome !== 'Administrativa' ? nome : 'Colega';
     // Replace placeholders
     const msg = `[${remNome} — ${item.remetente_cargo}] ${item.msg}`;
@@ -5056,19 +5082,28 @@ function renderConfigDireccao(){
   let html = `
   <div class="card" style="margin-bottom:14px">
     <div class="card-title">👥 Membros da Direção</div>
-    <p style="font-size:12px;color:var(--text-2);margin-bottom:16px;line-height:1.6">
-      Os nomes configurados aqui são usados nas mensagens motivacionais e piadas personalizadas para a administrativa. 
-      As piadas são enviadas com o nome e cargo do membro da direção como remetente.
+    <p style="font-size:12px;color:var(--text-2);margin-bottom:14px;line-height:1.6">
+      Escolhe o <strong>sócio</strong> que ocupa cada cargo (procura por número ou nome). Como têm de ser sócios,
+      isto liga automaticamente: o nome fica sempre atualizado, e é usado nas mensagens motivacionais/piadas.
     </p>
+    <label style="display:flex;align-items:center;gap:8px;background:var(--bg2);border:var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:16px;cursor:pointer;font-size:13px">
+      <input type="checkbox" id="dir-isenta-toggle" ${direcaoEstaIsenta()?'checked':''} onchange="setDirecaoEstaIsenta(this.checked); toast(this.checked?'Membros da Direção passam a isentos automaticamente.':'Isenção automática da Direção desligada — deixa de dar essa regalia.'); renderConfigDireccao();">
+      <span>🎗️ <strong>Isentar automaticamente</strong> quem estiver ligado a um cargo da Direção — a Direção pode desligar isto a qualquer momento</span>
+    </label>
+    <datalist id="dir-socios-datalist">
+      ${socios.map(s=>`<option value="${s.num} - ${s.nome.replace(/"/g,'&quot;')}">`).join('')}
+    </datalist>
     <div style="display:flex;flex-direction:column;gap:8px" id="dir-lista">`;
 
   membros.forEach((m,i) => {
+    const socioLigado = getSocioPorNum(m.socioNum);
+    const valorAtual = socioLigado ? `${socioLigado.num} - ${socioLigado.nome}` : '';
     html += `
       <div class="gestao-item" id="dir-item-${m.id}" style="gap:8px;flex-wrap:wrap">
         <select id="dir-cargo-${m.id}" style="padding:7px 10px;border:var(--border);border-radius:var(--radius);background:var(--bg2);font-size:13px;min-width:190px">
           ${CARGOS_DISPONIVEIS.map(c=>`<option value="${c}" ${c===m.cargo?'selected':''}>${c}</option>`).join('')}
         </select>
-        <input type="text" id="dir-nome-${m.id}" value="${m.nome||''}" placeholder="Nome completo..."
+        <input type="text" id="dir-nome-${m.id}" list="dir-socios-datalist" value="${valorAtual}" placeholder="Nº ou nome do sócio..."
           style="flex:1;min-width:160px;padding:7px 10px;border:var(--border);border-radius:var(--radius);background:var(--bg2);font-size:13px">
         <div style="display:flex;gap:4px">
           <button class="reorder-btn" ${i===0?'disabled':''} onclick="moveDirMembro(${m.id},-1)" title="Subir">▲</button>
@@ -5084,6 +5119,7 @@ function renderConfigDireccao(){
     <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn-primary" onclick="addDirMembro()">+ Adicionar membro</button>
       <button class="btn-secondary" onclick="saveAllDirMembros()">💾 Guardar todos</button>
+      <button class="btn-secondary" onclick="sincronizarIsencaoDirecao()">🎗️ Aplicar isenção a estes sócios agora</button>
     </div>
   </div>
   <div class="card">
@@ -5104,10 +5140,18 @@ function renderConfigDireccao(){
   el.innerHTML = html;
 }
 
+// Extrai o número de sócio do valor escrito no campo (formato "12 - Nome")
+function extrairNumSocioDoValor(valor){
+  const v = (valor||'').trim();
+  if(!v) return null;
+  const m = v.match(/^(\d+)/);
+  return m ? parseInt(m[1]) : null;
+}
+
 function addDirMembro(){
   const membros = getDirMembers();
   const newId = Date.now();
-  membros.push({id:newId, cargo:'Vogal', nome:''});
+  membros.push({id:newId, cargo:'Vogal', socioNum:null});
   saveDirMembers(membros);
   renderConfigDireccao();
   setTimeout(()=>document.getElementById('dir-nome-'+newId)?.focus(), 50);
@@ -5118,22 +5162,55 @@ function saveDirMembro(id){
   const idx = membros.findIndex(m=>m.id===id);
   if(idx<0) return;
   const cargo = document.getElementById('dir-cargo-'+id)?.value||membros[idx].cargo;
-  const nome = document.getElementById('dir-nome-'+id)?.value.trim()||'';
-  membros[idx] = {...membros[idx], cargo, nome};
+  const valor = document.getElementById('dir-nome-'+id)?.value||'';
+  const numSocio = extrairNumSocioDoValor(valor);
+  if(valor.trim() && (numSocio===null || !getSocioPorNum(numSocio))){
+    toast('Não encontrei nenhum sócio com esse número/nome. Escolhe uma opção da lista.', false);
+    return;
+  }
+  membros[idx] = {...membros[idx], cargo, socioNum:numSocio};
   saveDirMembers(membros);
   toast('Guardado!');
+  renderConfigDireccao();
 }
 
 function saveAllDirMembros(){
   const membros = getDirMembers();
+  let algumInvalido=false;
   membros.forEach(m=>{
     const cargo = document.getElementById('dir-cargo-'+m.id)?.value||m.cargo;
-    const nome = document.getElementById('dir-nome-'+m.id)?.value.trim()||'';
-    m.cargo = cargo; m.nome = nome;
+    const valor = document.getElementById('dir-nome-'+m.id)?.value||'';
+    const numSocio = extrairNumSocioDoValor(valor);
+    if(valor.trim() && (numSocio===null || !getSocioPorNum(numSocio))){ algumInvalido=true; return; }
+    m.cargo = cargo; m.socioNum = numSocio;
   });
   saveDirMembers(membros);
-  toast('Todos os membros guardados!');
+  toast(algumInvalido ? 'Guardado, mas algum campo não correspondia a um sócio válido — verifica.' : 'Todos os membros guardados!', !algumInvalido);
   renderConfigDireccao();
+}
+
+// Marca no Supabase, de imediato, todos os sócios atualmente na Direção como isentos
+async function sincronizarIsencaoDirecao(){
+  if(!direcaoEstaIsenta()){
+    toast('A isenção automática da Direção está desligada — ativa o interruptor acima primeiro.', false);
+    return;
+  }
+  const nums = [...numsEmDireccao()];
+  if(!nums.length){ toast('Ainda não ligaste nenhum sócio a um cargo da Direção.', false); return; }
+  const afetados = socios.filter(s=>nums.includes(Number(s.num)) && !s.isento);
+  if(!afetados.length){ toast('Já estão todos marcados como isentos.'); return; }
+  if(!confirm(`Marcar ${afetados.length} sócio(s) da Direção como isentos de quota?`)) return;
+  let ok=0;
+  for(const s of afetados){
+    try{
+      await supaFetch('socios?id=eq.'+s.id, 'PATCH', {isento:true, situacao:'ISENTO'});
+      s.isento=true; s.situacao='ISENTO';
+      ok++;
+    }catch(e){ console.error('Falha ao atualizar', s.nome, e); }
+  }
+  saveSocios();
+  renderSocios();
+  toast(`✓ ${ok} sócio(s) da Direção marcados como isentos.`);
 }
 
 function deleteDirMembro(id){
@@ -8831,7 +8908,8 @@ async function saveSocio(){
   let vq=document.getElementById('s-validade')?.value||'';
   if(dp&&periodo&&!vq){const v=calcValidadeQuota(dp,periodo);if(v)vq=v.toISOString().slice(0,10);}
   const tipo=document.getElementById('s-tipo').value;
-  const isento=tipoEIsento(tipo);
+  const numAtual=parseInt(document.getElementById('s-num').value)||null;
+  const isento=tipoEIsento(tipo) || (numAtual!==null && numsEmDireccaoIsentos().has(numAtual));
   let sit;
   if(isento){ sit='ISENTO'; }
   else if(vq){ sit=getSituacaoFromValidade(new Date(vq+'T12:00:00')); }
@@ -8907,6 +8985,14 @@ function filterCartaoSocio(){
   sel.innerHTML='<option value="">-- Seleciona um sócio --</option>'+f.map(s=>`<option value="${s.id}">Nº${s.num} — ${s.nome}</option>`).join('');
 }
 
+function copiarLinkInscricao(){
+  const link = `https://arca-ajuda.github.io/arca-ajuda/socios/inscricao/`;
+  navigator.clipboard.writeText(link).then(()=>{
+    toast('Link da ficha de inscrição copiado! Já podes partilhar (WhatsApp, redes sociais, etc.)');
+  }).catch(()=>{
+    prompt('Copia o link manualmente:', link);
+  });
+}
 function copiarLinkVerificacao(){
   const id=document.getElementById('cartao-socio-sel').value;
   if(!id){toast('Seleciona um sócio.',false);return;}
