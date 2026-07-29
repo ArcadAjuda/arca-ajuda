@@ -470,7 +470,7 @@ tbody tr:hover td{background:var(--bg2)}
       <div class="form-row">
         <div class="form-group"><label>Nº Sócio</label><input type="number" id="s-num" placeholder="Auto"></div>
         <div class="form-group"><label>Tipo</label>
-          <select id="s-tipo" onchange="const chk=document.getElementById('s-isento'); if(chk) chk.checked=tipoEIsento(this.value);"></select>
+          <select id="s-tipo"></select>
         </div>
       </div>
       <div class="form-row">
@@ -512,12 +512,6 @@ tbody tr:hover td{background:var(--bg2)}
         </div>
         <div class="form-group"><label>Válido até</label>
           <input type="date" id="s-validade" placeholder="Auto — calculado do pagamento">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group" style="display:flex;align-items:center;gap:8px;padding-top:22px">
-          <input type="checkbox" id="s-isento" style="width:16px;height:16px;cursor:pointer" onchange="toast(this.checked?'Marcado como isento — não vai aparecer como vencido.':'Isenção removida — a quota passa a ser calculada normalmente.')">
-          <label for="s-isento" style="margin:0;cursor:pointer;font-weight:500;color:var(--text)">🎗️ Isento de quota (não paga — ex: Direção)</label>
         </div>
       </div>
       <div class="form-row">
@@ -8655,7 +8649,6 @@ function openModalSocio(){
   document.getElementById('s-data-pagamento').value='';
   const pp=document.getElementById('s-periodo-quota');if(pp)pp.value='1ano';
   const sv=document.getElementById('s-validade');if(sv)sv.value='';
-  const isc=document.getElementById('s-isento');if(isc)isc.checked=tipoEIsento('EFETIVO');
   openModal('modal-socio');
 }
 
@@ -8680,7 +8673,6 @@ function editSocio(id){
   document.getElementById('s-data-pagamento').value=s.dataPagamento||'';
   const pp=document.getElementById('s-periodo-quota');if(pp)pp.value=s.periodoQuota||'1ano';
   const sv=document.getElementById('s-validade');if(sv)sv.value=s.validadeQuota||'';
-  const isc=document.getElementById('s-isento');if(isc)isc.checked=!!s.isento;
   openModal('modal-socio');
 }
 
@@ -8701,9 +8693,9 @@ async function saveSocio(){
   let vq=document.getElementById('s-validade')?.value||'';
   if(dp&&periodo&&!vq){const v=calcValidadeQuota(dp,periodo);if(v)vq=v.toISOString().slice(0,10);}
   const tipo=document.getElementById('s-tipo').value;
-  const isento=document.getElementById('s-isento')?.checked || false;
+  const isento=tipoEIsento(tipo);
   let sit;
-  if(isento || tipoEIsento(tipo)){ sit='ISENTO'; }
+  if(isento){ sit='ISENTO'; }
   else if(vq){ sit=getSituacaoFromValidade(new Date(vq+'T12:00:00')); }
   else { sit=document.getElementById('s-situacao').value; }
   const sitEl=document.getElementById('s-situacao'); if(sitEl) sitEl.value=sit;
