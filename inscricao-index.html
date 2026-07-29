@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ficha de Inscrição — ARCA d'Ajuda</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,Arial,sans-serif;background:linear-gradient(135deg,#1B4570,#2E6199);min-height:100vh;padding:24px 16px;display:flex;justify-content:center}
+  .card{background:#fff;border-radius:20px;padding:32px 28px;max-width:460px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.25);align-self:flex-start;margin-top:20px}
+  .cabecalho{text-align:center;margin-bottom:22px}
+  .titulo{font-size:14px;font-weight:700;color:#1B4570;letter-spacing:.5px;text-transform:uppercase}
+  .sub{font-size:20px;font-weight:700;color:#222;margin-top:4px}
+  label{display:block;font-size:12.5px;font-weight:600;color:#555;margin-bottom:5px;margin-top:14px}
+  input,select{width:100%;padding:10px 12px;border:1.5px solid #E2D5BC;border-radius:8px;font-size:14px;font-family:inherit;background:#FBF8F0}
+  input:focus,select:focus{outline:none;border-color:#2E6199}
+  .obrig{color:#A23B2E}
+  button{width:100%;margin-top:22px;padding:13px;background:#1B4570;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer}
+  button:disabled{opacity:.6;cursor:default}
+  .erro{color:#A23B2E;font-size:12.5px;margin-top:10px;text-align:center;display:none}
+  .sucesso{display:none;text-align:center;padding:20px 0}
+  .sucesso .num{font-size:40px;font-weight:800;color:#085041;margin:14px 0 6px}
+  .sucesso p{color:#555;font-size:13.5px;line-height:1.6}
+  .rodape{text-align:center;margin-top:18px;font-size:11px;color:rgba(255,255,255,.75)}
+</style>
+</head>
+<body>
+<div>
+<div class="card">
+  <div id="form-area">
+    <div class="cabecalho">
+      <div class="titulo">ARCA d'Ajuda</div>
+      <div class="sub">Ficha de Inscrição de Sócio</div>
+    </div>
+
+    <label>Nome completo <span class="obrig">*</span></label>
+    <input type="text" id="f-nome" placeholder="O teu nome completo">
+
+    <label>Sexo</label>
+    <select id="f-sexo"><option value="">—</option><option value="M">Masculino</option><option value="F">Feminino</option></select>
+
+    <label>NIF</label>
+    <input type="text" id="f-nif" placeholder="123456789">
+
+    <label>Tipo de sócio pretendido</label>
+    <select id="f-tipo"><option value="EFETIVO">Efetivo</option><option value="ATLETA">Atleta</option></select>
+
+    <label>Telemóvel</label>
+    <input type="tel" id="f-tel" placeholder="9XXXXXXXX">
+
+    <label>Email</label>
+    <input type="email" id="f-email" placeholder="email@exemplo.com">
+
+    <label>Morada</label>
+    <input type="text" id="f-morada" placeholder="Rua, nº, andar...">
+
+    <label>Código Postal</label>
+    <input type="text" id="f-cp" placeholder="9000-000">
+
+    <label>Observações</label>
+    <input type="text" id="f-obs" placeholder="Ex: quero inscrever-me na modalidade X">
+
+    <button id="btn-submeter" onclick="submeterInscricao()">Submeter Inscrição</button>
+    <div class="erro" id="erro-msg"></div>
+  </div>
+
+  <div class="sucesso" id="sucesso-area">
+    <div style="font-size:38px">✅</div>
+    <div style="font-size:16px;font-weight:700;color:#222;margin-top:8px">Inscrição recebida!</div>
+    <div class="num" id="sucesso-num"></div>
+    <p>É o teu número de sócio. A Direção da ARCA d'Ajuda vai confirmar a tua inscrição e entrar em contacto em breve.</p>
+  </div>
+</div>
+<div class="rodape">Associação Recreativa e Cultural da Ajuda</div>
+</div>
+
+<script>
+const SUPA_URL = 'https://yfsyifypsrqnwkqkfrnm.supabase.co';
+const SUPA_KEY = 'sb_publishable_AkzlMeHlYHDyl0HzeC7_qg__j_Y6C9W';
+
+async function submeterInscricao(){
+  const nome = document.getElementById('f-nome').value.trim();
+  const erroEl = document.getElementById('erro-msg');
+  erroEl.style.display='none';
+  if(!nome){
+    erroEl.textContent = 'Por favor preenche o nome completo.';
+    erroEl.style.display='block';
+    return;
+  }
+  const btn = document.getElementById('btn-submeter');
+  btn.disabled = true; btn.textContent = 'A enviar...';
+
+  const payload = {
+    p_nome: nome,
+    p_sexo: document.getElementById('f-sexo').value || null,
+    p_nif: document.getElementById('f-nif').value.trim() || null,
+    p_tipo: document.getElementById('f-tipo').value || 'EFETIVO',
+    p_tel: document.getElementById('f-tel').value.trim() || null,
+    p_morada: document.getElementById('f-morada').value.trim() || null,
+    p_cp: document.getElementById('f-cp').value.trim() || null,
+    p_email: document.getElementById('f-email').value.trim() || null,
+    p_obs: document.getElementById('f-obs').value.trim() || null
+  };
+
+  try{
+    const res = await fetch(`${SUPA_URL}/rest/v1/rpc/inscrever_socio`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPA_KEY,
+        'Authorization': 'Bearer ' + SUPA_KEY
+      },
+      body: JSON.stringify(payload)
+    });
+    if(!res.ok){
+      const txt = await res.text();
+      throw new Error(txt || ('Erro '+res.status));
+    }
+    const novoSocio = await res.json();
+    document.getElementById('form-area').style.display = 'none';
+    document.getElementById('sucesso-area').style.display = 'block';
+    document.getElementById('sucesso-num').textContent = 'Nº ' + novoSocio.num;
+  }catch(e){
+    console.error(e);
+    erroEl.textContent = 'Não foi possível enviar a inscrição. Tenta novamente ou contacta a associação diretamente.';
+    erroEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Submeter Inscrição';
+  }
+}
+</script>
+</body>
+</html>
