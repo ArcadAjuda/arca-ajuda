@@ -8987,8 +8987,9 @@ function filterCartaoSocio(){
 
 function copiarLinkInscricao(){
   const link = `https://arca-ajuda.github.io/arca-ajuda/socios/inscricao/`;
+  window.open(link, '_blank');
   navigator.clipboard.writeText(link).then(()=>{
-    toast('Link da ficha de inscrição copiado! Já podes partilhar (WhatsApp, redes sociais, etc.)');
+    toast('Link copiado (já podes colar para partilhar) e aberto num novo separador.');
   }).catch(()=>{
     prompt('Copia o link manualmente:', link);
   });
