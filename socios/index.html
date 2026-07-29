@@ -568,8 +568,8 @@ tbody tr:hover td{background:var(--bg2)}
       <div class="card-title">☁️ Backup automático no Google Drive</div>
       <p style="font-size:12px;color:var(--text-2);margin-bottom:12px;line-height:1.6">
         Guarda uma cópia extra de segurança de todos os sócios no teu Google Drive
-        (pasta "ARCA d'Ajuda/Backups"), para além do Supabase. Assim, mesmo que algo
-        corra mal, tens sempre uma cópia acessível.
+        (pasta "ARCA d'Ajuda/Backups"), em <strong>JSON e Excel</strong>, para além do Supabase.
+        Assim, mesmo que algo corra mal, tens sempre uma cópia acessível e fácil de abrir.
       </p>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
         <button class="btn-secondary" onclick="gdriveConnectInteractive()">🔗 Ligar Google Drive</button>
@@ -592,7 +592,8 @@ tbody tr:hover td{background:var(--bg2)}
       <div class="card-title">Exportar / Importar dados</div>
       <div style="display:flex;flex-direction:column;gap:10px;max-width:400px">
         <button class="btn-secondary" onclick="exportJSON()">⬇ Exportar sócios (backup JSON)</button>
-        <button class="btn-secondary" onclick="document.getElementById('import-file').click()">⬆ Restaurar backup (JSON)</button>
+        <button class="btn-secondary" onclick="exportarSociosExcel()">📊 Exportar sócios (Excel)</button>
+        <button class="btn-secondary" onclick="document.getElementById('import-file').click()">⬆ Restaurar backup para o Supabase (JSON)</button>
         <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(this)">
         <hr style="border:none;border-top:var(--border)">
         <button class="btn-danger" onclick="if(confirm('Apagar a cópia local de Sócios neste dispositivo? Os dados na cloud (Supabase) não são afetados.'))clearAll()">🗑 Apagar cópia local (Sócios)</button>
@@ -988,6 +989,36 @@ async function uploadToGDriveReplace(fileData, fileName, mimeType, subfolder){
 }
 
 // Backup: guarda uma cópia de segurança de TODOS os dados de sócios no Drive
+function loadXLSXLibPromise(){
+  return new Promise((resolve)=>{ loadXLSXLib(resolve); });
+}
+
+function construirWorkbookSocios(){
+  const PMAP={'1mes':'1 Mês','3meses':'3 Meses','6meses':'6 Meses','9meses':'9 Meses','1ano':'1 Ano'};
+  const linhas = socios.map(s=>({
+    'Nº':s.num, 'Nome':s.nome, 'Sexo':s.sexo||'', 'NIF':s.nif||'', 'Tipo':s.tipo||'',
+    'Data Inscrição':s.dataInscricao||'', 'Estado':s.estado||'', 'Telemóvel':s.tel||'',
+    'Morada':s.morada||'', 'Código Postal':s.cp||'', 'Email':s.email||'',
+    'Quota (€)':s.quota||'', 'Período':PMAP[s.periodoQuota]||s.periodoQuota||'',
+    'Situação':s.situacao||'', 'Isento':s.isento?'Sim':'Não',
+    'Validade Quota':s.validadeQuota||'', 'Data Pagamento':s.dataPagamento||'',
+    'Observações':s.obs||''
+  }));
+  const ws = window.XLSX.utils.json_to_sheet(linhas);
+  ws['!cols'] = [{wch:5},{wch:28},{wch:6},{wch:11},{wch:14},{wch:12},{wch:9},{wch:12},{wch:28},{wch:10},{wch:24},{wch:9},{wch:9},{wch:11},{wch:7},{wch:12},{wch:12},{wch:24}];
+  const wb = window.XLSX.utils.book_new();
+  window.XLSX.utils.book_append_sheet(wb, ws, 'Sócios');
+  return wb;
+}
+
+function exportarSociosExcel(){
+  loadXLSXLib(()=>{
+    const wb = construirWorkbookSocios();
+    window.XLSX.writeFile(wb, `ARCA_Socios_${new Date().toISOString().slice(0,10)}.xlsx`);
+    toast('Excel descarregado!');
+  });
+}
+
 let _backupDriveEmCurso = false;
 async function fazerBackupDrive(manual){
   if(!gdriveValid()){
@@ -999,16 +1030,23 @@ async function fazerBackupDrive(manual){
     return;
   }
   _backupDriveEmCurso = true;
-  const dataObj = {
-    socios, tiposSocio:getTiposSocio(), tiposIsentos:getTiposIsentos(),
-    quotas:getQuotasConfig(), exportedAt:new Date().toISOString()
-  };
-  const dataUrl = 'data:application/json;base64,'+btoa(unescape(encodeURIComponent(JSON.stringify(dataObj,null,2))));
-  const nomeFich = 'ARCA_Socios_backup.json';
   try{
-    await uploadToGDriveReplace(dataUrl, nomeFich, 'application/json', 'Backups');
+    const dataObj = {
+      socios, tiposSocio:getTiposSocio(), tiposIsentos:getTiposIsentos(),
+      quotas:getQuotasConfig(), exportedAt:new Date().toISOString()
+    };
+    const dataUrl = 'data:application/json;base64,'+btoa(unescape(encodeURIComponent(JSON.stringify(dataObj,null,2))));
+    await uploadToGDriveReplace(dataUrl, 'ARCA_Socios_backup.json', 'application/json', 'Backups');
+
+    // Também guarda uma versão em Excel, mais fácil de abrir/consultar diretamente
+    await loadXLSXLibPromise();
+    const wb = construirWorkbookSocios();
+    const xlsxBase64 = window.XLSX.write(wb, {type:'base64', bookType:'xlsx'});
+    const xlsxDataUrl = 'data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,'+xlsxBase64;
+    await uploadToGDriveReplace(xlsxDataUrl, 'ARCA_Socios_backup.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'Backups');
+
     LS.set('arca_ultimo_backup_drive', new Date().toISOString());
-    if(manual) toast('✓ Backup guardado no Google Drive!');
+    if(manual) toast('✓ Backup guardado no Google Drive (JSON + Excel)!');
     atualizarEstadoDrive();
   }catch(e){
     console.error(e);
@@ -3146,16 +3184,39 @@ function exportJSON(){
   const data={socios,tiposSocio:getTiposSocio(),quotas:getQuotasConfig(),exportedAt:new Date().toISOString()};
   const a=document.createElement('a');a.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(data,null,2));a.download='ARCA_Socios_backup.json';a.click();
 }
-function importJSON(input){
+async function importJSON(input){
   const f=input.files[0];if(!f) return;
-  const r=new FileReader();r.onload=e=>{
-    try{
-      const d=JSON.parse(e.target.result);
-      if(d.tiposSocio) saveTiposSocio(d.tiposSocio);
-      if(d.quotas) saveQuotasConfig(d.quotas);
-      if(d.socios) { socios=d.socios; saveSocios(); }
-      populateTipoSocioSelects(); renderSocios(); toast('Backup restaurado localmente (não enviado à cloud).');
-    }catch(err){toast('Ficheiro inválido.',false);}
+  const r=new FileReader();r.onload=async e=>{
+    let d;
+    try{ d=JSON.parse(e.target.result); }catch(err){ toast('Ficheiro inválido.',false); return; }
+    if(d.tiposIsentos) saveTiposIsentos(d.tiposIsentos);
+    if(d.tiposSocio) saveTiposSocio(d.tiposSocio);
+    if(d.quotas) saveQuotasConfig(d.quotas);
+    populateTipoSocioSelects();
+    if(!d.socios || !d.socios.length){ toast('Configurações restauradas (o ficheiro não tinha sócios).'); return; }
+    if(!confirm(`Este backup tem ${d.socios.length} sócio(s).\n\nEnviar para o Supabase agora? (sócios com o mesmo número já existente no Supabase são ignorados, para nunca duplicar)`)) return;
+    toast(`A restaurar ${d.socios.length} sócio(s) no Supabase...`);
+    const numsExistentes = new Set(socios.map(s=>s.num));
+    let ok=0, jaExistia=0, falhou=0, sessaoExpirouAMeio=false;
+    for(const s of d.socios){
+      if(s.num && numsExistentes.has(s.num)){ jaExistia++; continue; }
+      try{
+        const row = await supaFetch('socios','POST', socioToRow(s));
+        socios.push(rowToSocio(row[0]));
+        if(s.num) numsExistentes.add(s.num);
+        ok++;
+      }catch(err){
+        console.error(err);
+        if(err.message==='AUTH_EXPIRED'){ sessaoExpirouAMeio=true; break; }
+        falhou++;
+      }
+    }
+    saveSocios(); renderSocios();
+    if(sessaoExpirouAMeio){
+      toast(`⚠ Sessão expirou a meio. Já restaurei ${ok}. Entra novamente e volta a carregar o mesmo ficheiro para continuar.`, false);
+    } else {
+      toast(`✓ ${ok} sócio(s) restaurado(s) no Supabase.` + (jaExistia?` ${jaExistia} já existiam (ignorados).`:'') + (falhou?` ⚠ ${falhou} falharam.`:''));
+    }
   };r.readAsText(f);
 }
 
