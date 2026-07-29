@@ -917,24 +917,32 @@ function gdriveAutoConnect(){
   tryConnect();
 }
 
-async function gdriveFindOrCreateFolder(name,parentId){
-  const parentClause=parentId?` and '${parentId}' in parents`:" and 'root' in parents";
-  const rawQuery=`name='${name}' and mimeType='application/vnd.google-apps.folder' and trashed=false`+parentClause;
-  const q=encodeURIComponent(rawQuery);
-  const res=await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}`,{
-    headers:{'Authorization':'Bearer '+gdriveToken}
-  });
-  const data=await res.json();
-  if(data.files&&data.files.length>0)return data.files[0].id;
-  const body={name,mimeType:'application/vnd.google-apps.folder'};
-  if(parentId)body.parents=[parentId];
-  const createRes=await fetch('https://www.googleapis.com/drive/v3/files',{
-    method:'POST',
-    headers:{'Authorization':'Bearer '+gdriveToken,'Content-Type':'application/json'},
-    body:JSON.stringify(body)
-  });
-  const created=await createRes.json();
-  return created.id;
+const _gdriveFolderCache = {};
+function gdriveFindOrCreateFolder(name,parentId){
+  const cacheKey = (parentId||'root')+'/'+name;
+  if(_gdriveFolderCache[cacheKey]) return _gdriveFolderCache[cacheKey]; // evita criar a pasta 2x se for chamado em simultâneo
+  const promise = (async()=>{
+    const parentClause=parentId?` and '${parentId}' in parents`:" and 'root' in parents";
+    const rawQuery=`name='${name}' and mimeType='application/vnd.google-apps.folder' and trashed=false`+parentClause;
+    const q=encodeURIComponent(rawQuery);
+    const res=await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}`,{
+      headers:{'Authorization':'Bearer '+gdriveToken}
+    });
+    const data=await res.json();
+    if(data.files&&data.files.length>0)return data.files[0].id;
+    const body={name,mimeType:'application/vnd.google-apps.folder'};
+    if(parentId)body.parents=[parentId];
+    const createRes=await fetch('https://www.googleapis.com/drive/v3/files',{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+gdriveToken,'Content-Type':'application/json'},
+      body:JSON.stringify(body)
+    });
+    const created=await createRes.json();
+    return created.id;
+  })();
+  _gdriveFolderCache[cacheKey] = promise;
+  promise.catch(()=>{ delete _gdriveFolderCache[cacheKey]; }); // se falhar, permite tentar de novo depois
+  return promise;
 }
 async function gdriveGetSubfolder(subfolderName){
   const rootId=await gdriveFindOrCreateFolder("ARCA d'Ajuda");
