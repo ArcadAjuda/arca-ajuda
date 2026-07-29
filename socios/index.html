@@ -988,11 +988,17 @@ async function uploadToGDriveReplace(fileData, fileName, mimeType, subfolder){
 }
 
 // Backup: guarda uma cópia de segurança de TODOS os dados de sócios no Drive
+let _backupDriveEmCurso = false;
 async function fazerBackupDrive(manual){
   if(!gdriveValid()){
     if(manual) toast('Liga primeiro o Google Drive.', false);
     return;
   }
+  if(_backupDriveEmCurso){
+    if(manual) toast('Já há um backup em curso, aguarda um instante...', false);
+    return;
+  }
+  _backupDriveEmCurso = true;
   const dataObj = {
     socios, tiposSocio:getTiposSocio(), tiposIsentos:getTiposIsentos(),
     quotas:getQuotasConfig(), exportedAt:new Date().toISOString()
@@ -1007,6 +1013,8 @@ async function fazerBackupDrive(manual){
   }catch(e){
     console.error(e);
     if(manual) toast('Não foi possível fazer backup no Drive.', false);
+  }finally{
+    _backupDriveEmCurso = false;
   }
 }
 
