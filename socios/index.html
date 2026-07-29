@@ -922,8 +922,9 @@ function gdriveFindOrCreateFolder(name,parentId){
   const cacheKey = (parentId||'root')+'/'+name;
   if(_gdriveFolderCache[cacheKey]) return _gdriveFolderCache[cacheKey]; // evita criar a pasta 2x se for chamado em simultâneo
   const promise = (async()=>{
+    const nomeEscapado = name.replace(/'/g, "\\'"); // escapar apóstrofos (ex: "ARCA d'Ajuda") — sem isto a pesquisa nunca encontra a pasta
     const parentClause=parentId?` and '${parentId}' in parents`:" and 'root' in parents";
-    const rawQuery=`name='${name}' and mimeType='application/vnd.google-apps.folder' and trashed=false`+parentClause;
+    const rawQuery=`name='${nomeEscapado}' and mimeType='application/vnd.google-apps.folder' and trashed=false`+parentClause;
     const q=encodeURIComponent(rawQuery);
     const res=await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}`,{
       headers:{'Authorization':'Bearer '+gdriveToken}
@@ -954,7 +955,8 @@ async function uploadToGDriveReplace(fileData, fileName, mimeType, subfolder){
     gdriveAuth(async()=>{
       try{
         const folderId=await gdriveGetSubfolder(subfolder);
-        const q=encodeURIComponent(`name='${fileName}' and '${folderId}' in parents and trashed=false`);
+        const fileNameEscapado = fileName.replace(/'/g, "\\'");
+        const q=encodeURIComponent(`name='${fileNameEscapado}' and '${folderId}' in parents and trashed=false`);
         const existingRes=await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}`,{
           headers:{'Authorization':'Bearer '+gdriveToken}
         });
@@ -1006,6 +1008,16 @@ async function fazerBackupDrive(manual){
     console.error(e);
     if(manual) toast('Não foi possível fazer backup no Drive.', false);
   }
+}
+
+// Backup automático "de fundo" — corre sozinho após alterações, mas no
+// máximo 1 vez a cada 3 minutos (evita gastar pedidos se estiveres a
+// editar vários sócios seguidos)
+async function fazerBackupDriveAuto(){
+  if(!gdriveValid()) return;
+  const ultimo = LS.get('arca_ultimo_backup_drive');
+  if(ultimo && (Date.now()-new Date(ultimo).getTime()) < 3*60*1000) return;
+  fazerBackupDrive(false);
 }
 
 function atualizarEstadoDrive(){
@@ -1740,6 +1752,7 @@ async function executeDelete(){
     socios=socios.filter(s=>s.id!=idDel);
     saveSocios(); toast('Sócio eliminado.');
     registarAtividade('eliminar', pendingDelete.label);
+    fazerBackupDriveAuto();
     pendingDelete=null; closeModal('modal-confirma-delete'); renderSocios(); return;
   }
   if(pendingDelete.type==='lembrete'){
@@ -8763,11 +8776,13 @@ async function saveSocio(){
       if(idx>=0) socios[idx]=rowToSocio(row[0]);
       toast('Sócio atualizado!');
       registarAtividade('editar', nome);
+      fazerBackupDriveAuto();
     } else {
       const row = await supaFetch('socios', 'POST', socioToRow(obj));
       socios.push(rowToSocio(row[0]));
       toast('Sócio adicionado!');
       registarAtividade('criar', nome);
+      fazerBackupDriveAuto();
     }
     saveSocios(); // atualiza a cópia local de segurança
   }catch(e){
