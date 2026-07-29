@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt">
 <head>
@@ -8,20 +7,29 @@
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:-apple-system,Arial,sans-serif;background:linear-gradient(135deg,#1B4570,#2E6199);min-height:100vh;padding:24px 16px;display:flex;justify-content:center}
-  .card{background:#fff;border-radius:20px;padding:32px 28px;max-width:460px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.25);align-self:flex-start;margin-top:20px}
+  .card{background:#fff;border-radius:20px;padding:32px 28px;max-width:460px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.25);align-self:flex-start;margin-top:20px;margin-bottom:20px}
   .cabecalho{text-align:center;margin-bottom:22px}
   .titulo{font-size:14px;font-weight:700;color:#1B4570;letter-spacing:.5px;text-transform:uppercase}
   .sub{font-size:20px;font-weight:700;color:#222;margin-top:4px}
+  .seccao{font-size:11.5px;font-weight:700;color:#8A6425;text-transform:uppercase;letter-spacing:.4px;margin-top:22px;padding-top:16px;border-top:1px solid #eee}
+  .seccao:first-of-type{border-top:none;margin-top:16px;padding-top:0}
   label{display:block;font-size:12.5px;font-weight:600;color:#555;margin-bottom:5px;margin-top:14px}
   input,select{width:100%;padding:10px 12px;border:1.5px solid #E2D5BC;border-radius:8px;font-size:14px;font-family:inherit;background:#FBF8F0}
   input:focus,select:focus{outline:none;border-color:#2E6199}
   .obrig{color:#A23B2E}
+  .linha2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .ajuda{font-size:11px;color:#999;margin-top:4px}
+  .caixa-valor{background:#F6F1E4;border-radius:10px;padding:12px 14px;margin-top:16px}
+  .caixa-valor .quota-ref{font-size:12.5px;color:#555}
+  .caixa-valor .quota-ref strong{color:#1B4570}
+  .donativo-linha{font-size:12.5px;color:#B8863B;font-weight:700;margin-top:8px;display:none}
   button{width:100%;margin-top:22px;padding:13px;background:#1B4570;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer}
   button:disabled{opacity:.6;cursor:default}
   .erro{color:#A23B2E;font-size:12.5px;margin-top:10px;text-align:center;display:none}
   .sucesso{display:none;text-align:center;padding:20px 0}
   .sucesso .num{font-size:40px;font-weight:800;color:#085041;margin:14px 0 6px}
   .sucesso p{color:#555;font-size:13.5px;line-height:1.6}
+  .link-cartao{display:inline-block;margin-top:16px;padding:11px 20px;background:#1B4570;color:#fff;text-decoration:none;border-radius:10px;font-size:13.5px;font-weight:700}
   .rodape{text-align:center;margin-top:18px;font-size:11px;color:rgba(255,255,255,.75)}
 </style>
 </head>
@@ -34,17 +42,21 @@
       <div class="sub">Ficha de Inscrição de Sócio</div>
     </div>
 
+    <div class="seccao">Dados Pessoais</div>
     <label>Nome completo <span class="obrig">*</span></label>
     <input type="text" id="f-nome" placeholder="O teu nome completo">
 
-    <label>Sexo</label>
-    <select id="f-sexo"><option value="">—</option><option value="M">Masculino</option><option value="F">Feminino</option></select>
-
-    <label>NIF</label>
-    <input type="text" id="f-nif" placeholder="123456789">
+    <div class="linha2">
+      <div><label>Sexo</label>
+        <select id="f-sexo"><option value="">—</option><option value="M">Masculino</option><option value="F">Feminino</option></select>
+      </div>
+      <div><label>NIF</label>
+        <input type="text" id="f-nif" placeholder="123456789" maxlength="9">
+      </div>
+    </div>
 
     <label>Tipo de sócio pretendido</label>
-    <select id="f-tipo"><option value="EFETIVO">Efetivo</option><option value="ATLETA">Atleta</option></select>
+    <select id="f-tipo" onchange="atualizarValorQuota()"><option value="EFETIVO">Efetivo</option><option value="ATLETA">Atleta</option><option value="PARCEIRO/EMPRESA">Parceiro/Empresa</option></select>
 
     <label>Telemóvel</label>
     <input type="tel" id="f-tel" placeholder="9XXXXXXXX">
@@ -56,8 +68,36 @@
     <input type="text" id="f-morada" placeholder="Rua, nº, andar...">
 
     <label>Código Postal</label>
-    <input type="text" id="f-cp" placeholder="9000-000">
+    <input type="text" id="f-cp" placeholder="9000-000" maxlength="8" oninput="formatarCodigoPostal(this)">
+    <div class="ajuda" id="cp-ajuda"></div>
 
+    <div class="seccao">Inscrição e Quota</div>
+    <div class="linha2">
+      <div><label>Data de Inscrição</label>
+        <input type="date" id="f-data-inscricao">
+      </div>
+      <div><label>Data de Pagamento</label>
+        <input type="date" id="f-data-pagamento" onchange="atualizarValidade()">
+      </div>
+    </div>
+
+    <label>Período da Quota</label>
+    <select id="f-periodo" onchange="atualizarValorQuota()">
+      <option value="3meses">3 Meses</option>
+      <option value="6meses">6 Meses</option>
+      <option value="9meses">9 Meses</option>
+      <option value="1ano" selected>12 Meses (1 Ano)</option>
+    </select>
+
+    <div class="caixa-valor">
+      <div class="quota-ref">Valor da quota para este tipo/período: <strong id="quota-ref-valor">€ —</strong></div>
+      <label style="margin-top:10px">Valor que vais pagar (€)</label>
+      <input type="number" id="f-valor-pago" step="0.01" min="0" oninput="calcularDonativo()">
+      <div class="donativo-linha" id="donativo-linha">🎗️ Donativo incluído: <span id="donativo-valor">€0,00</span></div>
+      <div class="ajuda">Se pagares mais do que o valor da quota, a diferença fica registada como donativo à associação.</div>
+    </div>
+
+    <div class="seccao">Outros</div>
     <label>Observações</label>
     <input type="text" id="f-obs" placeholder="Ex: quero inscrever-me na modalidade X">
 
@@ -70,6 +110,7 @@
     <div style="font-size:16px;font-weight:700;color:#222;margin-top:8px">Inscrição recebida!</div>
     <div class="num" id="sucesso-num"></div>
     <p>É o teu número de sócio. A Direção da ARCA d'Ajuda vai confirmar a tua inscrição e entrar em contacto em breve.</p>
+    <a class="link-cartao" id="link-cartao" href="#" target="_blank">🪪 Ver o meu Cartão de Sócio</a>
   </div>
 </div>
 <div class="rodape">Associação Recreativa e Cultural da Ajuda</div>
@@ -78,18 +119,106 @@
 <script>
 const SUPA_URL = 'https://yfsyifypsrqnwkqkfrnm.supabase.co';
 const SUPA_KEY = 'sb_publishable_AkzlMeHlYHDyl0HzeC7_qg__j_Y6C9W';
+let precosCache = [];
+
+// Formata o código postal automaticamente para 0000-000 enquanto se escreve
+function formatarCodigoPostal(input){
+  let v = input.value.replace(/[^0-9]/g,'').slice(0,7);
+  if(v.length > 4) v = v.slice(0,4) + '-' + v.slice(4);
+  input.value = v;
+  const ajuda = document.getElementById('cp-ajuda');
+  const valido = /^\d{4}-\d{3}$/.test(v);
+  ajuda.textContent = (v.length>0 && !valido) ? 'Formato esperado: 0000-000' : '';
+  ajuda.style.color = '#A23B2E';
+}
+
+function mesesDoPeriodo(periodo){
+  return {'1mes':1,'3meses':3,'6meses':6,'9meses':9,'1ano':12}[periodo] || 12;
+}
+
+function atualizarValidade(){
+  const dataPag = document.getElementById('f-data-pagamento').value;
+  if(!dataPag) return;
+  // apenas para referência interna, a validade real é calculada no envio
+}
+
+async function carregarPrecos(){
+  try{
+    const res = await fetch(`${SUPA_URL}/rest/v1/socios_precos_publico`, {
+      headers: {'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY}
+    });
+    if(res.ok) precosCache = await res.json();
+  }catch(e){ console.warn('Não foi possível carregar preços:', e); }
+  atualizarValorQuota();
+}
+
+function getPrecoAtual(){
+  const tipo = document.getElementById('f-tipo').value;
+  const periodo = document.getElementById('f-periodo').value;
+  const p = precosCache.find(x=>x.tipo===tipo && x.periodo===periodo);
+  return p ? parseFloat(p.valor)||0 : 0;
+}
+
+function atualizarValorQuota(){
+  const valor = getPrecoAtual();
+  document.getElementById('quota-ref-valor').textContent = '€ ' + valor.toFixed(2);
+  const campoValor = document.getElementById('f-valor-pago');
+  if(!campoValor.dataset.editadoManual) campoValor.value = valor.toFixed(2);
+  calcularDonativo();
+}
+
+function calcularDonativo(){
+  document.getElementById('f-valor-pago').dataset.editadoManual = '1';
+  const pago = parseFloat(document.getElementById('f-valor-pago').value)||0;
+  const padrao = getPrecoAtual();
+  const diff = pago - padrao;
+  const linha = document.getElementById('donativo-linha');
+  if(diff > 0.009){
+    linha.style.display = 'block';
+    document.getElementById('donativo-valor').textContent = '€' + diff.toFixed(2);
+  } else {
+    linha.style.display = 'none';
+  }
+}
 
 async function submeterInscricao(){
   const nome = document.getElementById('f-nome').value.trim();
+  const cp = document.getElementById('f-cp').value.trim();
   const erroEl = document.getElementById('erro-msg');
   erroEl.style.display='none';
+
   if(!nome){
     erroEl.textContent = 'Por favor preenche o nome completo.';
     erroEl.style.display='block';
     return;
   }
+  if(cp && !/^\d{4}-\d{3}$/.test(cp)){
+    erroEl.textContent = 'O código postal deve ter o formato 0000-000.';
+    erroEl.style.display='block';
+    return;
+  }
+
   const btn = document.getElementById('btn-submeter');
   btn.disabled = true; btn.textContent = 'A enviar...';
+
+  const dataInscricao = document.getElementById('f-data-inscricao').value || new Date().toISOString().slice(0,10);
+  const dataPagamento = document.getElementById('f-data-pagamento').value || null;
+  const periodo = document.getElementById('f-periodo').value;
+  const valorPago = parseFloat(document.getElementById('f-valor-pago').value) || 0;
+  const valorPadrao = getPrecoAtual();
+
+  let validade = null;
+  if(dataPagamento){
+    const d = new Date(dataPagamento+'T12:00:00');
+    d.setMonth(d.getMonth() + mesesDoPeriodo(periodo));
+    validade = d.toISOString().slice(0,10);
+  }
+
+  let obsFinal = document.getElementById('f-obs').value.trim();
+  if(valorPago > valorPadrao + 0.009){
+    const donativo = (valorPago - valorPadrao).toFixed(2);
+    obsFinal = (obsFinal ? obsFinal + ' | ' : '') + `Donativo incluído: €${donativo}`;
+  }
 
   const payload = {
     p_nome: nome,
@@ -98,9 +227,14 @@ async function submeterInscricao(){
     p_tipo: document.getElementById('f-tipo').value || 'EFETIVO',
     p_tel: document.getElementById('f-tel').value.trim() || null,
     p_morada: document.getElementById('f-morada').value.trim() || null,
-    p_cp: document.getElementById('f-cp').value.trim() || null,
+    p_cp: cp || null,
     p_email: document.getElementById('f-email').value.trim() || null,
-    p_obs: document.getElementById('f-obs').value.trim() || null
+    p_obs: obsFinal || null,
+    p_data_inscricao: dataInscricao,
+    p_data_pagamento: dataPagamento,
+    p_periodo_quota: periodo,
+    p_validade_quota: validade,
+    p_quota: valorPago || null
   };
 
   try{
@@ -121,6 +255,12 @@ async function submeterInscricao(){
     document.getElementById('form-area').style.display = 'none';
     document.getElementById('sucesso-area').style.display = 'block';
     document.getElementById('sucesso-num').textContent = 'Nº ' + novoSocio.num;
+    if(novoSocio.codigo_verificacao){
+      document.getElementById('link-cartao').href =
+        `https://arca-ajuda.github.io/arca-ajuda/socios/verificar/?c=${novoSocio.codigo_verificacao}`;
+    } else {
+      document.getElementById('link-cartao').style.display = 'none';
+    }
   }catch(e){
     console.error(e);
     erroEl.textContent = 'Não foi possível enviar a inscrição. Tenta novamente ou contacta a associação diretamente.';
@@ -128,6 +268,10 @@ async function submeterInscricao(){
     btn.disabled = false; btn.textContent = 'Submeter Inscrição';
   }
 }
+
+document.getElementById('f-data-inscricao').value = new Date().toISOString().slice(0,10);
+document.getElementById('f-data-pagamento').value = new Date().toISOString().slice(0,10);
+carregarPrecos();
 </script>
 </body>
 </html>
