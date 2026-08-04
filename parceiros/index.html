@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Benefícios para Associados — ARCA d'Ajuda</title>
+<style>
+  :root{
+    --azul:#1B4570; --azul-d:#12314F; --azul-l:#E6F1FB;
+    --laranja:#D85A30; --laranja-d:#B8481F;
+    --texto:#1a1a1a; --texto-2:#555; --texto-3:#888;
+    --bg:#EEF1F5; --card:#fff; --linha:#e2e2e2;
+    --radius:14px; --sombra:0 4px 20px rgba(0,0,0,.08);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--texto);line-height:1.5}
+
+  /* ===== CABEÇALHO ===== */
+  .topo{background:linear-gradient(135deg,var(--azul-d),var(--azul));color:#fff;padding:34px 20px;text-align:center;border-bottom:4px solid var(--laranja)}
+  .topo h1{font-size:26px;font-weight:800;letter-spacing:.5px}
+  .topo p{font-size:15px;opacity:.9;margin-top:6px}
+  .intro{max-width:760px;margin:0 auto;padding:22px 20px;text-align:center;color:var(--texto-2);font-size:14.5px}
+
+  /* ===== GRELHA DE PARCEIROS (público) ===== */
+  .lista{max-width:760px;margin:0 auto;padding:0 16px 40px}
+  .parceiro{background:var(--card);border-radius:var(--radius);box-shadow:var(--sombra);border-left:5px solid var(--azul);margin-bottom:16px;padding:20px 22px;display:flex;gap:18px;align-items:flex-start}
+  .parceiro-logo{width:90px;height:90px;flex-shrink:0;border-radius:10px;background:#f4f4f4;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .parceiro-logo img{max-width:100%;max-height:100%;object-fit:contain}
+  .parceiro-logo .sem-logo{font-size:30px;color:#bbb}
+  .parceiro-info{flex:1;min-width:0}
+  .parceiro-nome{font-size:18px;font-weight:700;color:var(--azul-d)}
+  .parceiro-cat{font-size:11.5px;font-weight:700;color:var(--laranja);text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
+  .parceiro-vantagens{margin-top:10px}
+  .parceiro-vantagens .v{font-size:14px;color:var(--texto);margin-bottom:3px;padding-left:2px}
+  .parceiro-contactos{margin-top:12px;padding-top:10px;border-top:1px solid var(--linha);font-size:12.5px;color:var(--texto-3);display:flex;flex-wrap:wrap;gap:4px 14px}
+  .parceiro-contactos span{white-space:nowrap}
+
+  .rodape{text-align:center;padding:24px 20px 40px;color:var(--texto-3);font-size:12px}
+  .vazio{text-align:center;padding:50px 20px;color:var(--texto-3)}
+
+  /* ===== BOTÃO GESTÃO (canto) ===== */
+  .btn-gestao{position:fixed;bottom:18px;right:18px;background:var(--azul);color:#fff;border:none;border-radius:50%;width:52px;height:52px;font-size:22px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.25);z-index:50}
+
+  /* ===== PAINEL DE GESTÃO ===== */
+  .gestao-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;display:none;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto}
+  .gestao-overlay.aberto{display:flex}
+  .gestao-box{background:#fff;border-radius:16px;max-width:640px;width:100%;padding:26px;margin:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+  .gestao-titulo{font-size:19px;font-weight:800;color:var(--azul-d);margin-bottom:4px;display:flex;justify-content:space-between;align-items:center}
+  .gestao-fechar{background:none;border:none;font-size:24px;cursor:pointer;color:#999;line-height:1}
+  label{display:block;font-size:12.5px;font-weight:600;color:var(--texto-2);margin:14px 0 4px}
+  input,select,textarea{width:100%;padding:10px 12px;border:1.5px solid var(--linha);border-radius:8px;font-size:14px;font-family:inherit;background:#fafafa}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--azul)}
+  textarea{resize:vertical;min-height:60px}
+  .linha2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .btn{width:100%;margin-top:18px;padding:12px;background:var(--azul);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer}
+  .btn:disabled{opacity:.6;cursor:default}
+  .btn-laranja{background:var(--laranja)}
+  .btn-cinza{background:#eee;color:#333}
+  .erro{color:#A23B2E;font-size:13px;margin-top:10px;text-align:center;display:none}
+  .link-publico{background:var(--azul-l);border-radius:10px;padding:12px 14px;margin:16px 0;font-size:12.5px;color:var(--azul-d);word-break:break-all}
+  .link-publico b{display:block;margin-bottom:4px;font-size:11px;text-transform:uppercase;letter-spacing:.4px}
+
+  /* lista na gestão */
+  .g-parceiro{display:flex;align-items:center;gap:12px;padding:10px;border:1px solid var(--linha);border-radius:10px;margin-bottom:8px;background:#fafafa}
+  .g-parceiro .g-logo{width:46px;height:46px;border-radius:8px;background:#f0f0f0;flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .g-parceiro .g-logo img{max-width:100%;max-height:100%;object-fit:contain}
+  .g-parceiro .g-nome{flex:1;min-width:0}
+  .g-parceiro .g-nome b{font-size:14px;color:var(--texto)}
+  .g-parceiro .g-nome small{display:block;color:var(--texto-3);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .g-acao{border:none;background:none;cursor:pointer;font-size:16px;padding:4px}
+  .compress-info{font-size:11px;color:var(--texto-3);margin-top:4px}
+</style>
+</head>
+<body>
+
+<!-- ===================== PÁGINA PÚBLICA ===================== -->
+<div class="topo">
+  <h1>ARCA d'Ajuda</h1>
+  <p>Benefícios para Associados</p>
+</div>
+<div class="intro">
+  A Associação Recreativa e Cultural da Ajuda orgulha-se de apresentar a sua rede de parceiros,
+  oferecendo vantagens e descontos exclusivos aos seus associados.
+</div>
+<div class="lista" id="lista-publica">
+  <div class="vazio">A carregar parceiros…</div>
+</div>
+<div class="rodape">
+  Associação Recreativa e Cultural da Ajuda · Funchal, Madeira
+</div>
+
+<button class="btn-gestao" onclick="abrirGestao()" title="Gestão">⚙️</button>
+
+<!-- ===================== PAINEL DE GESTÃO ===================== -->
+<div class="gestao-overlay" id="gestao-overlay">
+  <div class="gestao-box">
+
+    <!-- LOGIN -->
+    <div id="gestao-login">
+      <div class="gestao-titulo">🔒 Gestão de Parceiros <button class="gestao-fechar" onclick="fecharGestao()">×</button></div>
+      <p style="color:var(--texto-2);font-size:13.5px;margin-top:6px">Introduz as credenciais de administração (as mesmas da app de sócios).</p>
+      <label>Email</label>
+      <input type="email" id="login-email" placeholder="email@arcadajuda.pt" autocomplete="username">
+      <label>Password</label>
+      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')fazerLogin()">
+      <button class="btn" id="btn-login" onclick="fazerLogin()">Entrar</button>
+      <div class="erro" id="login-erro"></div>
+    </div>
+
+    <!-- GESTÃO (depois do login) -->
+    <div id="gestao-conteudo" style="display:none">
+      <div class="gestao-titulo">
+        ⚙️ Gestão de Parceiros
+        <button class="gestao-fechar" onclick="fecharGestao()">×</button>
+      </div>
+
+      <div class="link-publico">
+        <b>🔗 Link público (para partilhar / enviar aos sócios)</b>
+        <span id="link-publico-url"></span>
+      </div>
+
+      <div id="gestao-lista"></div>
+
+      <hr style="margin:20px 0;border:none;border-top:1px solid var(--linha)">
+
+      <div class="gestao-titulo" style="font-size:16px" id="form-titulo">➕ Adicionar Parceiro</div>
+      <input type="hidden" id="edit-id">
+      <label>Nome do parceiro *</label>
+      <input type="text" id="p-nome" placeholder="ex: Madeira Magic">
+      <label>Categoria</label>
+      <input type="text" id="p-categoria" placeholder="ex: Ginásio / Health Club" list="categorias-sugestoes">
+      <datalist id="categorias-sugestoes">
+        <option value="Saúde / Urgências"><option value="Clínica Médica"><option value="Ginásio / Health Club">
+        <option value="Artigos Desportivos"><option value="Agência de Viagens"><option value="Gabinete de Estética">
+        <option value="Mediação Imobiliária"><option value="Brinquedos e Festas"><option value="Produtos de Limpeza e Higiene">
+        <option value="Souvenirs / Aspiradores">
+      </datalist>
+      <label>Vantagens / descontos (uma por linha)</label>
+      <textarea id="p-vantagem" placeholder="15% de desconto nas mensalidades&#10;5% em produtos selecionados"></textarea>
+      <div class="linha2">
+        <div><label>Telefone</label><input type="text" id="p-tel" placeholder="291 000 000"></div>
+        <div><label>Email</label><input type="email" id="p-email" placeholder="email@empresa.pt"></div>
+      </div>
+      <label>Morada</label>
+      <input type="text" id="p-morada" placeholder="Rua, nº, localidade">
+      <label>Logótipo</label>
+      <input type="file" id="p-logo" accept="image/*" style="background:none;border:none;padding:6px 0">
+      <div class="compress-info">As imagens são otimizadas automaticamente para carregarem rápido.</div>
+      <div id="logo-preview" style="margin-top:8px"></div>
+
+      <button class="btn" id="btn-guardar" onclick="guardarParceiro()">Guardar parceiro</button>
+      <button class="btn btn-cinza" id="btn-cancelar-edit" onclick="cancelarEdicao()" style="display:none">Cancelar edição</button>
+      <div class="erro" id="form-erro"></div>
+
+      <button class="btn btn-cinza" style="margin-top:24px" onclick="sair()">Terminar sessão</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const SUPA_URL = 'https://yfsyifypsrqnwkqkfrnm.supabase.co';
+const SUPA_KEY = 'sb_publishable_AkzlMeHlYHDyl0HzeC7_qg__j_Y6C9W';
+
+let sessao = null;
+try{ sessao = JSON.parse(localStorage.getItem('arca_parc_sessao')||'null'); }catch(e){}
+
+// ---------- Helpers Supabase ----------
+async function supaFetch(path, method='GET', body=null, extraHeaders=null){
+  const headers = {'apikey':SUPA_KEY,'Content-Type':'application/json'};
+  headers['Authorization'] = 'Bearer ' + (sessao?.access_token || SUPA_KEY);
+  if(method!=='GET') headers['Prefer']='return=representation';
+  if(extraHeaders) Object.assign(headers, extraHeaders);
+  const opts = {method, headers};
+  if(body) opts.body = JSON.stringify(body);
+  const res = await fetch(`${SUPA_URL}/rest/v1/${path}`, opts);
+  if(!res.ok){ const t = await res.text(); throw new Error(t || ('Erro '+res.status)); }
+  if(res.status===204) return null;
+  return res.json();
+}
+
+// ==========================================================
+// PÁGINA PÚBLICA
+// ==========================================================
+async function carregarPublico(){
+  const box = document.getElementById('lista-publica');
+  try{
+    const parceiros = await fetch(`${SUPA_URL}/rest/v1/parceiros?ativo=eq.true&order=ordem.asc,nome.asc`, {
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    }).then(r=>r.json());
+
+    if(!parceiros || parceiros.length===0){
+      box.innerHTML = '<div class="vazio">Ainda não há parceiros para mostrar.</div>';
+      return;
+    }
+    box.innerHTML = parceiros.map(p=>{
+      const vantagens = (p.vantagem||'').split('\n').filter(v=>v.trim()).map(v=>`<div class="v">• ${escapeHtml(v.trim())}</div>`).join('');
+      const contactos = [];
+      if(p.morada) contactos.push(`<span>📍 ${escapeHtml(p.morada)}</span>`);
+      if(p.tel) contactos.push(`<span>📞 ${escapeHtml(p.tel)}</span>`);
+      if(p.email) contactos.push(`<span>✉️ ${escapeHtml(p.email)}</span>`);
+      return `
+        <div class="parceiro">
+          <div class="parceiro-logo">
+            ${p.logo_url ? `<img src="${p.logo_url}" alt="${escapeHtml(p.nome)}">` : '<span class="sem-logo">🏢</span>'}
+          </div>
+          <div class="parceiro-info">
+            <div class="parceiro-nome">${escapeHtml(p.nome||'')}</div>
+            ${p.categoria ? `<div class="parceiro-cat">${escapeHtml(p.categoria)}</div>` : ''}
+            <div class="parceiro-vantagens">${vantagens||'<div class="v" style="color:#999">Vantagens exclusivas para associados</div>'}</div>
+            ${contactos.length ? `<div class="parceiro-contactos">${contactos.join('')}</div>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+  }catch(e){
+    console.error(e);
+    box.innerHTML = '<div class="vazio">Não foi possível carregar os parceiros.</div>';
+  }
+}
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ==========================================================
+// GESTÃO
+// ==========================================================
+function abrirGestao(){
+  document.getElementById('gestao-overlay').classList.add('aberto');
+  document.getElementById('link-publico-url').textContent = location.href.split('#')[0].split('?')[0];
+  if(sessao){ mostrarConteudoGestao(); } else { document.getElementById('gestao-login').style.display='block'; document.getElementById('gestao-conteudo').style.display='none'; }
+}
+function fecharGestao(){ document.getElementById('gestao-overlay').classList.remove('aberto'); }
+
+async function fazerLogin(){
+  const email = document.getElementById('login-email').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  const erro = document.getElementById('login-erro');
+  const btn = document.getElementById('btn-login');
+  erro.style.display='none';
+  if(!email || !pass){ erro.textContent='Preenche email e password.'; erro.style.display='block'; return; }
+  btn.disabled=true; btn.textContent='A entrar…';
+  try{
+    const res = await fetch(`${SUPA_URL}/auth/v1/token?grant_type=password`, {
+      method:'POST', headers:{'Content-Type':'application/json','apikey':SUPA_KEY},
+      body: JSON.stringify({email,password:pass})
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error_description||data.msg||'Credenciais incorretas.');
+    sessao = data;
+    localStorage.setItem('arca_parc_sessao', JSON.stringify(sessao));
+    mostrarConteudoGestao();
+  }catch(e){
+    erro.textContent = e.message || 'Erro ao entrar.';
+    erro.style.display='block';
+  }finally{
+    btn.disabled=false; btn.textContent='Entrar';
+  }
+}
+
+function sair(){
+  sessao = null;
+  localStorage.removeItem('arca_parc_sessao');
+  fecharGestao();
+  location.reload();
+}
+
+function mostrarConteudoGestao(){
+  document.getElementById('gestao-login').style.display='none';
+  document.getElementById('gestao-conteudo').style.display='block';
+  cancelarEdicao();
+  carregarListaGestao();
+}
+
+async function carregarListaGestao(){
+  const box = document.getElementById('gestao-lista');
+  box.innerHTML = '<div style="color:#888;font-size:13px;padding:8px">A carregar…</div>';
+  try{
+    const parceiros = await supaFetch('parceiros?order=ordem.asc,nome.asc');
+    if(!parceiros || parceiros.length===0){
+      box.innerHTML = '<div style="color:#888;font-size:13px;padding:8px;text-align:center">Ainda não há parceiros. Adiciona o primeiro abaixo.</div>';
+      return;
+    }
+    box.innerHTML = parceiros.map(p=>`
+      <div class="g-parceiro">
+        <div class="g-logo">${p.logo_url?`<img src="${p.logo_url}">`:'🏢'}</div>
+        <div class="g-nome"><b>${escapeHtml(p.nome||'')}</b><small>${escapeHtml(p.categoria||'—')}</small></div>
+        <button class="g-acao" title="Editar" onclick='editarParceiro(${JSON.stringify(p).replace(/'/g,"&#39;")})'>✏️</button>
+        <button class="g-acao" title="Remover" onclick="removerParceiro(${p.id})">🗑️</button>
+      </div>
+    `).join('');
+  }catch(e){
+    console.error(e);
+    box.innerHTML = '<div style="color:#A23B2E;font-size:13px;padding:8px">Erro ao carregar. Faz login novamente.</div>';
+  }
+}
+
+// ---------- Compressão de imagem ----------
+function comprimirImagem(file, maxLado=400, qualidade=0.82){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = e=>{
+      const img = new Image();
+      img.onload = ()=>{
+        let {width, height} = img;
+        if(width > height){ if(width>maxLado){ height=Math.round(height*maxLado/width); width=maxLado; } }
+        else { if(height>maxLado){ width=Math.round(width*maxLado/height); height=maxLado; } }
+        const canvas = document.createElement('canvas');
+        canvas.width=width; canvas.height=height;
+        const ctx = canvas.getContext('2d');
+        // fundo branco (para logos PNG transparentes não ficarem pretos em JPEG)
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,width,height);
+        ctx.drawImage(img,0,0,width,height);
+        canvas.toBlob(blob=>{
+          if(!blob){ reject(new Error('Falha ao comprimir')); return; }
+          resolve(blob);
+        }, 'image/jpeg', qualidade);
+      };
+      img.onerror = ()=>reject(new Error('Imagem inválida'));
+      img.src = e.target.result;
+    };
+    reader.onerror = ()=>reject(new Error('Falha a ler ficheiro'));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function uploadLogo(file){
+  const blob = await comprimirImagem(file);
+  const nomeFicheiro = 'parceiro_' + Date.now() + '.jpg';
+  const res = await fetch(`${SUPA_URL}/storage/v1/object/logos/${nomeFicheiro}`, {
+    method:'POST',
+    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+(sessao?.access_token||SUPA_KEY),'Content-Type':'image/jpeg','x-upsert':'true'},
+    body: blob
+  });
+  if(!res.ok){ const t=await res.text(); throw new Error('Upload falhou: '+t); }
+  return `${SUPA_URL}/storage/v1/object/public/logos/${nomeFicheiro}`;
+}
+
+// preview ao escolher ficheiro
+document.getElementById('p-logo').addEventListener('change', function(){
+  const prev = document.getElementById('logo-preview');
+  if(this.files && this.files[0]){
+    const url = URL.createObjectURL(this.files[0]);
+    prev.innerHTML = `<img src="${url}" style="max-height:70px;border-radius:8px;border:1px solid #ddd">`;
+  } else { prev.innerHTML=''; }
+});
+
+async function guardarParceiro(){
+  const id = document.getElementById('edit-id').value;
+  const nome = document.getElementById('p-nome').value.trim();
+  const categoria = document.getElementById('p-categoria').value.trim();
+  const vantagem = document.getElementById('p-vantagem').value.trim();
+  const tel = document.getElementById('p-tel').value.trim();
+  const email = document.getElementById('p-email').value.trim();
+  const morada = document.getElementById('p-morada').value.trim();
+  const fileInput = document.getElementById('p-logo');
+  const erro = document.getElementById('form-erro');
+  const btn = document.getElementById('btn-guardar');
+  erro.style.display='none';
+
+  if(!nome){ erro.textContent='O nome é obrigatório.'; erro.style.display='block'; return; }
+  btn.disabled=true; btn.textContent='A guardar…';
+
+  try{
+    let logo_url;
+    if(fileInput.files && fileInput.files[0]){
+      btn.textContent='A otimizar imagem…';
+      logo_url = await uploadLogo(fileInput.files[0]);
+    }
+    const dados = {nome, categoria:categoria||null, vantagem:vantagem||null, tel:tel||null, email:email||null, morada:morada||null, ativo:true};
+    if(logo_url!==undefined) dados.logo_url = logo_url;
+
+    if(id){
+      await supaFetch('parceiros?id=eq.'+id, 'PATCH', dados);
+    }else{
+      dados.ordem = 0;
+      await supaFetch('parceiros', 'POST', dados);
+    }
+    cancelarEdicao();
+    carregarListaGestao();
+    carregarPublico();
+  }catch(e){
+    console.error(e);
+    erro.textContent = 'Erro ao guardar: ' + e.message;
+    erro.style.display='block';
+  }finally{
+    btn.disabled=false; btn.textContent='Guardar parceiro';
+  }
+}
+
+function editarParceiro(p){
+  document.getElementById('edit-id').value = p.id;
+  document.getElementById('p-nome').value = p.nome||'';
+  document.getElementById('p-categoria').value = p.categoria||'';
+  document.getElementById('p-vantagem').value = p.vantagem||'';
+  document.getElementById('p-tel').value = p.tel||'';
+  document.getElementById('p-email').value = p.email||'';
+  document.getElementById('p-morada').value = p.morada||'';
+  document.getElementById('logo-preview').innerHTML = p.logo_url?`<img src="${p.logo_url}" style="max-height:70px;border-radius:8px;border:1px solid #ddd"> <small style="color:#888">(logo atual — escolhe outro para trocar)</small>`:'';
+  document.getElementById('p-logo').value = '';
+  document.getElementById('form-titulo').textContent = '✏️ Editar Parceiro';
+  document.getElementById('btn-cancelar-edit').style.display='block';
+  document.getElementById('gestao-conteudo').scrollIntoView({behavior:'smooth', block:'end'});
+}
+
+function cancelarEdicao(){
+  document.getElementById('edit-id').value = '';
+  document.getElementById('p-nome').value='';
+  document.getElementById('p-categoria').value='';
+  document.getElementById('p-vantagem').value='';
+  document.getElementById('p-tel').value='';
+  document.getElementById('p-email').value='';
+  document.getElementById('p-morada').value='';
+  document.getElementById('p-logo').value='';
+  document.getElementById('logo-preview').innerHTML='';
+  document.getElementById('form-titulo').textContent='➕ Adicionar Parceiro';
+  document.getElementById('btn-cancelar-edit').style.display='none';
+  document.getElementById('form-erro').style.display='none';
+}
+
+async function removerParceiro(id){
+  if(!confirm('Remover este parceiro? Esta ação não pode ser desfeita.')) return;
+  try{
+    await supaFetch('parceiros?id=eq.'+id, 'DELETE');
+    carregarListaGestao();
+    carregarPublico();
+  }catch(e){
+    console.error(e);
+    alert('Erro ao remover: ' + e.message);
+  }
+}
+
+// ---------- Arranque ----------
+carregarPublico();
+</script>
+</body>
+</html>
