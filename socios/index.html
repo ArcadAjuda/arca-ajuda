@@ -549,11 +549,15 @@ tbody tr:hover td{background:var(--bg2)}
     <button class="inner-tab active" onclick="showInner('config','quotas',this)">💶 Quotas</button>
     <button class="inner-tab" onclick="showInner('config','direccao',this)">👥 Direção</button>
     <button class="inner-tab" onclick="showInner('config','acessos',this)">🔐 Acessos</button>
-    <button class="inner-tab" onclick="showInner('config','dados',this)">Dados</button>
+    <button class="inner-tab" onclick="showInner('config','dados',this)">💾 Dados</button>
+    <button class="inner-tab" onclick="showInner('config','email',this)">📧 Email</button>
+    <button class="inner-tab" onclick="showInner('config','parcerias',this)">🤝 Parcerias</button>
   </div>
   <div class="inner-panel active" id="config-inner-quotas"><div id="config-quotas-content"></div></div>
   <div class="inner-panel" id="config-inner-direccao"><div id="config-direccao-content"></div></div>
   <div class="inner-panel" id="config-inner-acessos"><div id="config-acessos-content"></div></div>
+  <div class="inner-panel" id="config-inner-email"><div id="config-email-content"></div></div>
+    <div class="inner-panel" id="config-inner-parcerias"><div id="config-parcerias-content"></div></div>
   <div class="inner-panel" id="config-inner-dados">
     <div class="card" style="margin-bottom:14px">
       <div class="card-title">🔒 Código de Acesso</div>
@@ -2466,9 +2470,147 @@ function renderConfig(tab){
   if(tab==='direccao') renderConfigDireccao();
   if(tab==='acessos') renderConfigAcessos();
   if(tab==='dados'){ renderPinStatus(); atualizarEstadoDrive(); carregarAtividade(); }
+  if(tab==='email') renderConfigEmail();
+    if(tab==='parcerias') renderConfigParcerias();
 }
 
 // ============================================================
+// ABA EMAIL + PARCERIAS  (config)
+// ============================================================
+async function renderConfigEmail(){
+  const box = document.getElementById('config-email-content');
+  if(!box) return;
+  box.innerHTML = '<div style="color:var(--text-2);font-size:13px;padding:8px">A carregar…</div>';
+  let cfg = {email_recepcao:'', email_remetente:'', modelo_email_socio:'', envio_automatico:'false'};
+  try{
+    const rows = await supaFetch('config_app?chave=in.(email_recepcao,email_remetente,modelo_email_socio,envio_automatico)');
+    (rows||[]).forEach(r=>{ cfg[r.chave] = r.valor; });
+  }catch(e){ console.warn('Falha a ler config de email:', e); }
+  const autoOn = String(cfg.envio_automatico)==='true';
+  box.innerHTML = `
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-title">📧 Endereços de Email</div>
+      <div style="font-size:13px;color:var(--text-2);margin-bottom:14px;line-height:1.6">Define os emails usados pelo sistema. Podes mudá-los a qualquer momento — não ficam presos no código.</div>
+      <label style="display:block;font-size:12.5px;font-weight:600;color:var(--text-2);margin:10px 0 4px">Email de receção (recebe avisos de novos sócios)</label>
+      <input type="email" id="cfg-email-recepcao" value="${cfg.email_recepcao||''}" placeholder="ex: geral@arcadajuda.pt" style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:14px;background:var(--card)">
+      <label style="display:block;font-size:12.5px;font-weight:600;color:var(--text-2);margin:14px 0 4px">Email remetente (aparece como "de" nos emails enviados)</label>
+      <input type="email" id="cfg-email-remetente" value="${cfg.email_remetente||''}" placeholder="ex: avisos@arcadajuda.pt" style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:14px;background:var(--card)">
+    </div>
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-title">✉️ Modelo do Email ao Sócio</div>
+      <div style="font-size:13px;color:var(--text-2);margin-bottom:14px;line-height:1.6">Texto base do email enviado ao sócio. Podes usar <b>{nome}</b> e <b>{num}</b> — serão substituídos pelos dados do sócio.</div>
+      <textarea id="cfg-modelo-email" rows="6" placeholder="Bem-vindo(a) {nome}!" style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:14px;background:var(--card);font-family:inherit;resize:vertical">${cfg.modelo_email_socio||''}</textarea>
+    </div>
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-title">⚙️ Envio Automático</div>
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-top:6px">
+        <input type="checkbox" id="cfg-envio-auto" ${autoOn?'checked':''} style="width:18px;height:18px;cursor:pointer">
+        <span style="font-size:14px;color:var(--text)">Enviar emails automaticamente (sem confirmação manual)</span>
+      </label>
+      <div style="font-size:12px;color:var(--text-2);margin-top:8px;line-height:1.5">Se desligado, os emails ficam preparados mas só são enviados quando confirmares.</div>
+    </div>
+    <button class="btn-primary" onclick="guardarConfigEmail()">💾 Guardar configurações de email</button>
+  `;
+}
+async function guardarConfigEmail(){
+  const recepcao = (document.getElementById('cfg-email-recepcao')?.value||'').trim();
+  const remetente = (document.getElementById('cfg-email-remetente')?.value||'').trim();
+  const modelo = (document.getElementById('cfg-modelo-email')?.value||'').trim();
+  const auto = document.getElementById('cfg-envio-auto')?.checked ? 'true' : 'false';
+  try{
+    await guardarChaveConfig('email_recepcao', recepcao);
+    await guardarChaveConfig('email_remetente', remetente);
+    await guardarChaveConfig('modelo_email_socio', modelo);
+    await guardarChaveConfig('envio_automatico', auto);
+    toast('Configurações de email guardadas');
+  }catch(e){ console.error(e); toast('Erro ao guardar', false); }
+}
+async function guardarChaveConfig(chave, valor){
+  const existentes = await supaFetch('config_app?chave=eq.'+encodeURIComponent(chave));
+  if(existentes && existentes.length){
+    await supaFetch('config_app?chave=eq.'+encodeURIComponent(chave), 'PATCH', {valor: valor});
+  }else{
+    await supaFetch('config_app', 'POST', {chave: chave, valor: valor});
+  }
+}
+async function renderConfigParcerias(){
+  const box = document.getElementById('config-parcerias-content');
+  if(!box) return;
+  box.innerHTML = '<div style="color:var(--text-2);font-size:13px;padding:8px">A carregar…</div>';
+  let parceiros = [];
+  try{ parceiros = await supaFetch('parceiros?order=ordem.asc,id.asc') || []; }
+  catch(e){ console.warn('Falha a ler parceiros:', e); }
+  let lista = '';
+  if(parceiros.length===0){
+    lista = '<div style="color:var(--text-2);font-size:13px;padding:12px;text-align:center">Ainda não há parceiros. Adiciona o primeiro abaixo.</div>';
+  }else{
+    lista = parceiros.map(p=>`
+      <div style="display:flex;align-items:center;gap:12px;padding:10px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:var(--card)">
+        <div style="width:52px;height:52px;border-radius:8px;background:var(--bg-2,#f0f0f0);flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden">
+          ${p.logo_url ? `<img src="${p.logo_url}" style="max-width:100%;max-height:100%;object-fit:contain">` : '<span style="font-size:20px">🏷️</span>'}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:14px;color:var(--text)">${p.nome||'—'}</div>
+          <div style="font-size:12.5px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.vantagem||'—'}</div>
+        </div>
+        <button onclick="apagarParceiro(${p.id})" title="Remover" style="border:none;background:transparent;cursor:pointer;font-size:16px;color:var(--coral)">🗑️</button>
+      </div>
+    `).join('');
+  }
+  box.innerHTML = `
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-title">🤝 Parceiros da Associação</div>
+      <div style="font-size:13px;color:var(--text-2);margin-bottom:14px;line-height:1.6">Estes parceiros e vantagens podem ser incluídos nos emails aos sócios (com logótipo).</div>
+      ${lista}
+    </div>
+    <div class="card">
+      <div class="card-title">➕ Adicionar Parceiro</div>
+      <label style="display:block;font-size:12.5px;font-weight:600;color:var(--text-2);margin:10px 0 4px">Nome do parceiro</label>
+      <input type="text" id="parc-nome" placeholder="ex: Farmácia Central" style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:14px;background:var(--card)">
+      <label style="display:block;font-size:12.5px;font-weight:600;color:var(--text-2);margin:14px 0 4px">Vantagem / desconto</label>
+      <input type="text" id="parc-vantagem" placeholder="ex: 10% de desconto para sócios" style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:14px;background:var(--card)">
+      <label style="display:block;font-size:12.5px;font-weight:600;color:var(--text-2);margin:14px 0 4px">Logótipo (opcional)</label>
+      <input type="file" id="parc-logo" accept="image/*" style="width:100%;font-size:13px">
+      <button class="btn-primary" style="margin-top:16px" onclick="adicionarParceiro()">Adicionar parceiro</button>
+    </div>
+  `;
+}
+async function adicionarParceiro(){
+  const nome = (document.getElementById('parc-nome')?.value||'').trim();
+  const vantagem = (document.getElementById('parc-vantagem')?.value||'').trim();
+  const fileInput = document.getElementById('parc-logo');
+  if(!nome){ toast('Indica o nome do parceiro', false); return; }
+  let logo_url = null;
+  try{
+    if(fileInput && fileInput.files && fileInput.files[0]){
+      logo_url = await uploadLogoParceiro(fileInput.files[0]);
+    }
+    await supaFetch('parceiros', 'POST', {nome, vantagem: vantagem||null, logo_url, ordem:0});
+    toast('Parceiro adicionado');
+    renderConfigParcerias();
+  }catch(e){ console.error(e); toast('Erro ao adicionar parceiro', false); }
+}
+async function uploadLogoParceiro(file){
+  const ext = (file.name.split('.').pop()||'png').toLowerCase();
+  const nomeFicheiro = 'parceiro_' + Date.now() + '.' + ext;
+  const token = supaSession?.access_token || SUPA_KEY;
+  const res = await fetch(`${SUPA_URL}/storage/v1/object/logos/${nomeFicheiro}`, {
+    method: 'POST',
+    headers: {'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + token, 'Content-Type': file.type || 'image/png', 'x-upsert': 'true'},
+    body: file
+  });
+  if(!res.ok){ const t = await res.text(); throw new Error('Upload falhou: ' + t); }
+  return `${SUPA_URL}/storage/v1/object/public/logos/${nomeFicheiro}`;
+}
+async function apagarParceiro(id){
+  if(!confirm('Remover este parceiro?')) return;
+  try{
+    await supaFetch('parceiros?id=eq.'+id, 'DELETE');
+    toast('Parceiro removido');
+    renderConfigParcerias();
+  }catch(e){ console.error(e); toast('Erro ao remover', false); }
+}
+  // ============================================================
 // QUOTAS CONFIG
 // ============================================================
 // Cache carregada do Supabase no arranque — leitura instantânea (síncrona)
