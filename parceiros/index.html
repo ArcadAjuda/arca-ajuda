@@ -9,33 +9,35 @@
     --azul:#1B4570; --azul-d:#12314F; --azul-l:#E6F1FB;
     --laranja:#D85A30; --laranja-d:#B8481F;
     --texto:#1a1a1a; --texto-2:#555; --texto-3:#888;
-    --bg:#EEF1F5; --card:#fff; --linha:#e2e2e2;
-    --radius:14px; --sombra:0 4px 20px rgba(0,0,0,.08);
+    --bg:#F4F6F9; --card:#fff; --linha:#eaeaea;
+    --radius:16px; --sombra:0 2px 16px rgba(20,49,79,.07);
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--texto);line-height:1.5}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--texto);line-height:1.5;-webkit-font-smoothing:antialiased}
 
   /* ===== CABEÇALHO ===== */
-  .topo{background:linear-gradient(135deg,var(--azul-d),var(--azul));color:#fff;padding:34px 20px;text-align:center;border-bottom:4px solid var(--laranja)}
-  .topo h1{font-size:26px;font-weight:800;letter-spacing:.5px}
-  .topo p{font-size:15px;opacity:.9;margin-top:6px}
-  .intro{max-width:760px;margin:0 auto;padding:22px 20px;text-align:center;color:var(--texto-2);font-size:14.5px}
+  .topo{background:linear-gradient(135deg,var(--azul-d),var(--azul));color:#fff;padding:44px 20px 40px;text-align:center;position:relative}
+  .topo::after{content:"";position:absolute;bottom:0;left:0;right:0;height:4px;background:var(--laranja)}
+  .topo h1{font-size:30px;font-weight:800;letter-spacing:.3px}
+  .topo p{font-size:15px;opacity:.88;margin-top:8px;font-weight:500}
+  .intro{max-width:720px;margin:0 auto;padding:26px 20px 8px;text-align:center;color:var(--texto-2);font-size:15px;line-height:1.65}
 
   /* ===== GRELHA DE PARCEIROS (público) ===== */
-  .lista{max-width:760px;margin:0 auto;padding:0 16px 40px}
-  .parceiro{background:var(--card);border-radius:var(--radius);box-shadow:var(--sombra);border-left:5px solid var(--azul);margin-bottom:16px;padding:20px 22px;display:flex;gap:18px;align-items:flex-start}
-  .parceiro-logo{width:90px;height:90px;flex-shrink:0;border-radius:10px;background:#f4f4f4;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .lista{max-width:720px;margin:0 auto;padding:16px 16px 40px}
+  .parceiro{background:var(--card);border-radius:var(--radius);box-shadow:var(--sombra);margin-bottom:16px;padding:22px 24px;display:flex;gap:20px;align-items:flex-start;transition:transform .15s,box-shadow .15s}
+  .parceiro:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(20,49,79,.12)}
+  .parceiro-logo{width:96px;height:96px;flex-shrink:0;border-radius:12px;background:#f7f8fa;border:1px solid var(--linha);display:flex;align-items:center;justify-content:center;overflow:hidden;padding:8px}
   .parceiro-logo img{max-width:100%;max-height:100%;object-fit:contain}
-  .parceiro-logo .sem-logo{font-size:30px;color:#bbb}
+  .parceiro-logo .sem-logo{font-size:32px;color:#ccc}
   .parceiro-info{flex:1;min-width:0}
-  .parceiro-nome{font-size:18px;font-weight:700;color:var(--azul-d)}
-  .parceiro-cat{font-size:11.5px;font-weight:700;color:var(--laranja);text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
-  .parceiro-vantagens{margin-top:10px}
-  .parceiro-vantagens .v{font-size:14px;color:var(--texto);margin-bottom:3px;padding-left:2px}
-  .parceiro-contactos{margin-top:12px;padding-top:10px;border-top:1px solid var(--linha);font-size:12.5px;color:var(--texto-3);display:flex;flex-wrap:wrap;gap:4px 14px}
+  .parceiro-nome{font-size:19px;font-weight:800;color:var(--azul-d);letter-spacing:-.2px}
+  .parceiro-cat{display:inline-block;font-size:11px;font-weight:700;color:var(--laranja-d);background:#FBEDE7;text-transform:uppercase;letter-spacing:.5px;margin-top:6px;padding:3px 10px;border-radius:20px}
+  .parceiro-vantagens{margin-top:12px}
+  .parceiro-vantagens .v{font-size:14.5px;color:var(--texto);margin-bottom:4px;padding-left:2px}
+  .parceiro-contactos{margin-top:14px;padding-top:12px;border-top:1px solid var(--linha);font-size:12.5px;color:var(--texto-3);display:flex;flex-wrap:wrap;gap:6px 16px}
   .parceiro-contactos span{white-space:nowrap}
 
-  .rodape{text-align:center;padding:24px 20px 40px;color:var(--texto-3);font-size:12px}
+  .rodape{text-align:center;padding:24px 20px 44px;color:var(--texto-3);font-size:12px}
   .vazio{text-align:center;padding:50px 20px;color:var(--texto-3)}
 
   /* ===== BOTÃO GESTÃO (canto) ===== */
@@ -95,14 +97,12 @@
 <div class="gestao-overlay" id="gestao-overlay">
   <div class="gestao-box">
 
-    <!-- LOGIN -->
+    <!-- LOGIN (PIN) -->
     <div id="gestao-login">
       <div class="gestao-titulo">🔒 Gestão de Parceiros <button class="gestao-fechar" onclick="fecharGestao()">×</button></div>
-      <p style="color:var(--texto-2);font-size:13.5px;margin-top:6px">Introduz as credenciais de administração (as mesmas da app de sócios).</p>
-      <label>Email</label>
-      <input type="email" id="login-email" placeholder="email@arcadajuda.pt" autocomplete="username">
-      <label>Password</label>
-      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')fazerLogin()">
+      <p style="color:var(--texto-2);font-size:13.5px;margin-top:6px">Introduz o código de acesso.</p>
+      <label>Código (PIN)</label>
+      <input type="password" id="login-pin" inputmode="numeric" placeholder="••••" autocomplete="off" onkeydown="if(event.key==='Enter')fazerLogin()" style="text-align:center;font-size:22px;letter-spacing:6px">
       <button class="btn" id="btn-login" onclick="fazerLogin()">Entrar</button>
       <div class="erro" id="login-erro"></div>
     </div>
@@ -163,7 +163,10 @@ const SUPA_URL = 'https://yfsyifypsrqnwkqkfrnm.supabase.co';
 const SUPA_KEY = 'sb_publishable_AkzlMeHlYHDyl0HzeC7_qg__j_Y6C9W';
 
 let sessao = null;
-try{ sessao = JSON.parse(localStorage.getItem('arca_parc_sessao')||'null'); }catch(e){}
+try{
+  const s = JSON.parse(localStorage.getItem('arca_parc_sessao')||'null');
+  if(s && s.pin_ok === true) sessao = s; else localStorage.removeItem('arca_parc_sessao');
+}catch(e){ localStorage.removeItem('arca_parc_sessao'); }
 
 // ---------- Helpers Supabase ----------
 async function supaFetch(path, method='GET', body=null, extraHeaders=null){
@@ -231,22 +234,22 @@ function abrirGestao(){
 function fecharGestao(){ document.getElementById('gestao-overlay').classList.remove('aberto'); }
 
 async function fazerLogin(){
-  const email = document.getElementById('login-email').value.trim();
-  const pass = document.getElementById('login-pass').value;
+  const pin = document.getElementById('login-pin').value.trim();
   const erro = document.getElementById('login-erro');
   const btn = document.getElementById('btn-login');
   erro.style.display='none';
-  if(!email || !pass){ erro.textContent='Preenche email e password.'; erro.style.display='block'; return; }
-  btn.disabled=true; btn.textContent='A entrar…';
+  if(!pin){ erro.textContent='Introduz o código.'; erro.style.display='block'; return; }
+  btn.disabled=true; btn.textContent='A verificar…';
   try{
-    const res = await fetch(`${SUPA_URL}/auth/v1/token?grant_type=password`, {
-      method:'POST', headers:{'Content-Type':'application/json','apikey':SUPA_KEY},
-      body: JSON.stringify({email,password:pass})
-    });
-    const data = await res.json();
-    if(!res.ok) throw new Error(data.error_description||data.msg||'Credenciais incorretas.');
-    sessao = data;
+    const rows = await fetch(`${SUPA_URL}/rest/v1/config_app?chave=eq.pin_gestao&select=valor`, {
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    }).then(r=>r.json());
+    const pinCerto = (rows && rows.length) ? String(rows[0].valor) : null;
+    if(!pinCerto){ throw new Error('PIN não configurado. Contacta o administrador.'); }
+    if(pin !== pinCerto){ throw new Error('Código incorreto.'); }
+    sessao = {pin_ok:true, ts:Date.now()};
     localStorage.setItem('arca_parc_sessao', JSON.stringify(sessao));
+    document.getElementById('login-pin').value='';
     mostrarConteudoGestao();
   }catch(e){
     erro.textContent = e.message || 'Erro ao entrar.';
