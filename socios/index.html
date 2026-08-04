@@ -5020,7 +5020,6 @@ async function setDirecaoEstaIsenta(valor){
     await supaFetch('config_app?chave=eq.direcao_isenta', 'PATCH', {valor: valor ? 'true' : 'false'});
   }catch(e){ console.error('Falha ao guardar interruptor da Direção no Supabase:', e); }
 }
-function setDirecaoEstaIsenta(valor){ LS.set('arca_direcao_isenta', !!valor); }
 // Conjunto efetivo a usar nas verificações de isenção (vazio se a regra estiver desligada)
 function numsEmDireccaoIsentos(){
   return direcaoEstaIsenta() ? numsEmDireccao() : new Set();
