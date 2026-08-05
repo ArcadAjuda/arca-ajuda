@@ -452,13 +452,27 @@ function comprimirImagem(file, maxLado=400, qualidade=0.82){
         const canvas = document.createElement('canvas');
         canvas.width=width; canvas.height=height;
         const ctx = canvas.getContext('2d');
-        // fundo branco (para logos PNG transparentes não ficarem pretos em JPEG)
-        ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,width,height);
-        ctx.drawImage(img,0,0,width,height);
-        canvas.toBlob(blob=>{
-          if(!blob){ reject(new Error('Falha ao comprimir')); return; }
-          resolve(blob);
-        }, 'image/jpeg', qualidade);
+        // Detetar se a imagem original é PNG (pode ter transparência)
+        const ehPng = /^data:image\/png/i.test(e.target.result);
+        if(ehPng){
+          // PNG → preservar transparência (fundo transparente, guardar como PNG)
+          ctx.clearRect(0,0,width,height);
+          ctx.drawImage(img,0,0,width,height);
+          canvas.toBlob(blob=>{
+            if(!blob){ reject(new Error('Falha ao comprimir')); return; }
+            blob._tipo = 'image/png'; blob._ext = 'png';
+            resolve(blob);
+          }, 'image/png');
+        }else{
+          // Outras (JPG, etc) → fundo branco + JPEG comprimido
+          ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,width,height);
+          ctx.drawImage(img,0,0,width,height);
+          canvas.toBlob(blob=>{
+            if(!blob){ reject(new Error('Falha ao comprimir')); return; }
+            blob._tipo = 'image/jpeg'; blob._ext = 'jpg';
+            resolve(blob);
+          }, 'image/jpeg', qualidade);
+        }
       };
       img.onerror = ()=>reject(new Error('Imagem inválida'));
       img.src = e.target.result;
@@ -470,10 +484,12 @@ function comprimirImagem(file, maxLado=400, qualidade=0.82){
 
 async function uploadLogo(file){
   const blob = await comprimirImagem(file);
-  const nomeFicheiro = 'parceiro_' + Date.now() + '.jpg';
+  const tipo = blob._tipo || 'image/jpeg';
+  const ext = blob._ext || 'jpg';
+  const nomeFicheiro = 'parceiro_' + Date.now() + '.' + ext;
   const res = await fetch(`${SUPA_URL}/storage/v1/object/logos/${nomeFicheiro}`, {
     method:'POST',
-    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+(sessao?.access_token||SUPA_KEY),'Content-Type':'image/jpeg','x-upsert':'true'},
+    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+(sessao?.access_token||SUPA_KEY),'Content-Type':tipo,'x-upsert':'true'},
     body: blob
   });
   if(!res.ok){ const t=await res.text(); throw new Error('Upload falhou: '+t); }
