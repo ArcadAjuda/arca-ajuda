@@ -46,7 +46,7 @@
   .parceiro:nth-child(3n+3)::before{background:linear-gradient(90deg,var(--azul),var(--celeste-d))}
   .parceiro:hover{transform:translateY(-4px);box-shadow:0 14px 36px rgba(24,62,98,.18)}
   .parceiro-topo{display:flex;gap:16px;align-items:center}
-  .parceiro-logo{min-width:70px;max-width:130px;height:80px;flex-shrink:0;border-radius:14px;background:linear-gradient(145deg,#f2f9fd,#e8f3f9);border:1px solid var(--linha);display:flex;align-items:center;justify-content:center;overflow:hidden;padding:8px 10px}
+  .parceiro-logo{width:100px;height:88px;flex-shrink:0;border-radius:14px;background:linear-gradient(145deg,#f2f9fd,#e8f3f9);border:1px solid var(--linha);display:flex;align-items:center;justify-content:center;overflow:hidden;padding:8px}
   .parceiro-logo img{max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain}
   .parceiro-logo .sem-logo{font-size:30px;opacity:.35}
   .parceiro-cab{flex:1;min-width:0}
@@ -166,7 +166,11 @@
       <div class="link-publico">
         <b>🔗 Link público (para partilhar / enviar aos sócios)</b>
         <span id="link-publico-url"></span>
-        <button class="btn" style="margin-top:10px;padding:9px" onclick="copiarLink()">📋 Copiar link</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+          <button class="btn" style="margin-top:0;padding:9px;flex:1;min-width:120px" onclick="copiarLink()">📋 Copiar link</button>
+          <button class="btn" style="margin-top:0;padding:9px;flex:1;min-width:120px;background:var(--celeste-d)" onclick="imprimirApoios()">🖨️ Imprimir</button>
+          <button class="btn" style="margin-top:0;padding:9px;flex:1;min-width:120px;background:var(--laranja)" onclick="gerarPDF()">📄 PDF</button>
+        </div>
       </div>
 
       <div id="gestao-lista"></div>
@@ -411,11 +415,91 @@ function copiarLink(){
   navigator.clipboard.writeText(url)
     .then(()=>alert('✅ Link copiado! Já podes colá-lo para enviar aos sócios.'))
     .catch(()=>{
-      // Alternativa se o clipboard falhar
       const t = document.createElement('textarea'); t.value = url; document.body.appendChild(t);
       t.select(); document.execCommand('copy'); document.body.removeChild(t);
       alert('✅ Link copiado!');
     });
+}
+
+// Gera o HTML dos apoios para impressão / PDF
+async function construirFolhaApoios(){
+  let parceiros = [];
+  try{ parceiros = await supaFetch('parceiros?ativo=eq.true&order=ordem.asc,nome.asc') || []; }
+  catch(e){ console.warn(e); }
+  // logo da associação
+  let logoArca = '';
+  try{
+    const rows = await supaFetch('config_app?chave=eq.logo_arca&select=valor');
+    if(rows && rows.length && rows[0].valor) logoArca = rows[0].valor;
+  }catch(e){}
+
+  const cards = parceiros.map(p=>{
+    const vantagens = (p.vantagem||'').split('\n').filter(v=>v.trim()).map(v=>`<div class="v">✓ ${v.trim()}</div>`).join('');
+    const contactos = [];
+    if(p.morada) contactos.push(`📍 ${p.morada}`);
+    if(p.tel) contactos.push(`📞 ${p.tel}`);
+    if(p.email) contactos.push(`✉️ ${p.email}`);
+    return `
+      <div class="pcard">
+        <div class="plogo">${p.logo_url?`<img src="${p.logo_url}">`:'🏢'}</div>
+        <div class="pinfo">
+          <div class="pnome">${p.nome||''}</div>
+          ${p.categoria?`<div class="pcat">${p.categoria}</div>`:''}
+          <div class="pvant">${vantagens}</div>
+          ${contactos.length?`<div class="pcont">${contactos.join(' &nbsp;|&nbsp; ')}</div>`:''}
+        </div>
+      </div>`;
+  }).join('');
+
+  return `
+    <html><head><meta charset="utf-8"><title>Benefícios para Associados — ARCA d'Ajuda</title>
+    <style>
+      *{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif}
+      body{padding:24px;color:#16232E}
+      .cab{text-align:center;border-bottom:3px solid #37A7C8;padding-bottom:16px;margin-bottom:20px}
+      .cab img{max-height:80px;margin-bottom:8px}
+      .cab h1{color:#1B4164;font-size:24px}
+      .cab p{color:#666;font-size:13px;margin-top:4px}
+      .pcard{display:flex;gap:14px;border:1px solid #ddd;border-left:4px solid #37A7C8;border-radius:8px;padding:14px;margin-bottom:12px;page-break-inside:avoid}
+      .plogo{width:80px;height:70px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#f4f8fb;border-radius:6px;font-size:26px;overflow:hidden}
+      .plogo img{max-width:100%;max-height:100%;object-fit:contain}
+      .pnome{font-size:16px;font-weight:bold;color:#12314F}
+      .pcat{display:inline-block;font-size:10px;font-weight:bold;color:#fff;background:#37A7C8;text-transform:uppercase;padding:2px 8px;border-radius:10px;margin-top:4px}
+      .pvant{margin-top:8px}
+      .pvant .v{font-size:13px;margin-bottom:2px}
+      .pcont{margin-top:8px;font-size:11px;color:#777;border-top:1px dashed #ddd;padding-top:6px}
+      .rodape{text-align:center;font-size:11px;color:#999;margin-top:20px}
+      @media print{body{padding:10px}}
+    </style></head>
+    <body>
+      <div class="cab">
+        ${logoArca?`<img src="${logoArca}"><br>`:''}
+        <h1>ARCA d'Ajuda — Benefícios para Associados</h1>
+        <p>Associação Recreativa e Cultural da Ajuda · Rede de Parceiros</p>
+      </div>
+      ${cards}
+      <div class="rodape">Documento gerado em ${new Date().toLocaleDateString('pt-PT')}</div>
+    </body></html>`;
+}
+
+async function imprimirApoios(){
+  const html = await construirFolhaApoios();
+  const w = window.open('', '_blank');
+  if(!w){ alert('Permite pop-ups para imprimir.'); return; }
+  w.document.write(html);
+  w.document.close();
+  // Esperar as imagens carregarem antes de imprimir
+  setTimeout(()=>{ w.focus(); w.print(); }, 800);
+}
+
+async function gerarPDF(){
+  // Usa a impressão do browser → "Guardar como PDF" (funciona em todos os dispositivos)
+  const html = await construirFolhaApoios();
+  const w = window.open('', '_blank');
+  if(!w){ alert('Permite pop-ups para gerar o PDF.'); return; }
+  w.document.write(html + `<script>setTimeout(function(){window.print();},800);<\/script>`);
+  w.document.close();
+  setTimeout(()=>alert('💡 Na janela que abriu, escolhe "Guardar como PDF" no destino da impressão.'), 300);
 }
 
 async function carregarLogoArca(){
