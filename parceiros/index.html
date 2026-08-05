@@ -79,6 +79,9 @@
   .gestao-box{background:#fff;border-radius:16px;max-width:640px;width:100%;padding:26px;margin:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)}
   .gestao-titulo{font-size:19px;font-weight:800;color:var(--azul-d);margin-bottom:4px;display:flex;justify-content:space-between;align-items:center}
   .gestao-fechar{background:none;border:none;font-size:24px;cursor:pointer;color:#999;line-height:1}
+  .gestao-fechar-flutuante{position:fixed;top:16px;right:16px;z-index:200;width:44px;height:44px;border-radius:50%;background:rgba(18,48,80,.92);color:#fff;border:none;font-size:24px;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,.35);transition:background .15s}
+  .gestao-fechar-flutuante:hover{background:#123050}
+  .gestao-overlay.aberto .gestao-fechar-flutuante{display:flex}
   label{display:block;font-size:12.5px;font-weight:600;color:var(--texto-2);margin:14px 0 4px}
   input,select,textarea{width:100%;padding:10px 12px;border:1.5px solid var(--linha);border-radius:8px;font-size:14px;font-family:inherit;background:#fafafa}
   input:focus,select:focus,textarea:focus{outline:none;border-color:var(--azul)}
@@ -140,6 +143,7 @@
 
 <!-- ===================== PAINEL DE GESTÃO ===================== -->
 <div class="gestao-overlay" id="gestao-overlay">
+  <button class="gestao-fechar-flutuante" onclick="fecharGestao()" title="Fechar">×</button>
   <div class="gestao-box">
 
     <!-- LOGIN (PIN) -->
@@ -191,7 +195,11 @@
       <input type="text" id="p-morada" placeholder="Rua, nº, localidade">
       <label>Logótipo</label>
       <input type="file" id="p-logo" accept="image/*" style="background:none;border:none;padding:6px 0">
-      <div class="compress-info">As imagens são otimizadas automaticamente para carregarem rápido.</div>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-weight:500;cursor:pointer">
+        <input type="checkbox" id="p-remover-fundo" style="width:16px;height:16px;cursor:pointer">
+        <span>🪄 Remover fundo branco (deixa o logo transparente)</span>
+      </label>
+      <div class="compress-info">Liga se o logo do parceiro tiver um quadrado branco à volta.</div>
       <div id="logo-preview" style="margin-top:8px"></div>
 
       <button class="btn" id="btn-guardar" onclick="guardarParceiro()">Guardar parceiro</button>
@@ -563,8 +571,8 @@ function comprimirImagem(file, maxLado=400, qualidade=0.82){
   });
 }
 
-async function uploadLogo(file){
-  const blob = await comprimirImagem(file);
+async function uploadLogo(file, removerFundo=false){
+  const blob = removerFundo ? await removerFundoBranco(file) : await comprimirImagem(file);
   const tipo = blob._tipo || 'image/jpeg';
   const ext = blob._ext || 'jpg';
   const nomeFicheiro = 'parceiro_' + Date.now() + '.' + ext;
@@ -606,7 +614,8 @@ async function guardarParceiro(){
     let logo_url;
     if(fileInput.files && fileInput.files[0]){
       btn.textContent='A otimizar imagem…';
-      logo_url = await uploadLogo(fileInput.files[0]);
+      const removerFundo = document.getElementById('p-remover-fundo').checked;
+      logo_url = await uploadLogo(fileInput.files[0], removerFundo);
     }
     const dados = {nome, categoria:categoria||null, vantagem:vantagem||null, tel:tel||null, email:email||null, morada:morada||null, ativo:true};
     if(logo_url!==undefined) dados.logo_url = logo_url;
@@ -653,6 +662,7 @@ function cancelarEdicao(){
   document.getElementById('p-email').value='';
   document.getElementById('p-morada').value='';
   document.getElementById('p-logo').value='';
+  const rf=document.getElementById('p-remover-fundo'); if(rf) rf.checked=false;
   document.getElementById('logo-preview').innerHTML='';
   document.getElementById('form-titulo').textContent='➕ Adicionar Parceiro';
   document.getElementById('btn-cancelar-edit').style.display='none';
