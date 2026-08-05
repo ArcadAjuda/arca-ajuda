@@ -24,7 +24,7 @@
   .topo::after{content:"";position:absolute;bottom:0;left:0;right:0;height:5px;background:linear-gradient(90deg,var(--celeste),var(--laranja),var(--dourado))}
   .topo-inner{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap}
   .topo h1{font-family:'Mistral',cursive;font-size:52px;font-weight:normal;letter-spacing:.5px;line-height:1;text-shadow:0 2px 12px rgba(0,0,0,.2)}
-  #logo-arca-topo img{max-height:96px;max-width:200px;object-fit:contain;background:#fff;padding:10px 14px;border-radius:16px;box-shadow:0 6px 20px rgba(0,0,0,.18)}
+  #logo-arca-topo img{max-height:110px;max-width:200px;object-fit:contain;filter:drop-shadow(0 4px 12px rgba(0,0,0,.25))}
   .topo p{font-size:15px;opacity:.92;margin-top:12px;font-weight:500;position:relative;z-index:1}
   .intro{max-width:720px;margin:0 auto;padding:26px 20px 8px;text-align:center;color:var(--texto-2);font-size:15px;line-height:1.65}
 
@@ -56,7 +56,7 @@
   @media(max-width:680px){
     .lista{grid-template-columns:1fr;gap:14px}
     .topo h1{font-size:44px}
-    #logo-arca-topo img{max-height:76px}
+    #logo-arca-topo img{max-height:88px}
   }
 
   /* ===== BOTÃO GESTÃO (canto) ===== */
@@ -388,7 +388,7 @@ async function carregarLogoArca(){
     const rows = await supaFetch('config_app?chave=eq.logo_arca&select=valor');
     const el = document.getElementById('logo-arca-atual');
     if(rows && rows.length && rows[0].valor){
-      el.innerHTML = `<img src="${rows[0].valor}" style="max-height:60px;max-width:180px;border-radius:8px;border:1px solid #ddd;padding:4px;background:#fff"> <small style="color:#888">(logo atual)</small>`;
+      el.innerHTML = `<img src="${rows[0].valor}" style="max-height:70px;max-width:180px;object-fit:contain"> <small style="color:#888">(logo atual)</small>`;
     }else{
       el.innerHTML = '<small style="color:#888">Ainda não há logótipo.</small>';
     }
