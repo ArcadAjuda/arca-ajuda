@@ -20,6 +20,7 @@
   .topo{background:linear-gradient(135deg,var(--azul-d),var(--azul));color:#fff;padding:44px 20px 40px;text-align:center;position:relative}
   .topo::after{content:"";position:absolute;bottom:0;left:0;right:0;height:4px;background:var(--laranja)}
   .topo h1{font-family:'Mistral',cursive;font-size:46px;font-weight:normal;letter-spacing:.5px}
+  #logo-arca-topo img{max-height:90px;max-width:220px;object-fit:contain;margin-bottom:12px;background:#fff;padding:8px 14px;border-radius:12px}
   .topo p{font-size:15px;opacity:.88;margin-top:8px;font-weight:500}
   .intro{max-width:720px;margin:0 auto;padding:26px 20px 8px;text-align:center;color:var(--texto-2);font-size:15px;line-height:1.65}
 
@@ -78,6 +79,7 @@
 
 <!-- ===================== PÁGINA PÚBLICA ===================== -->
 <div class="topo">
+  <div id="logo-arca-topo"></div>
   <h1>ARCA d'Ajuda</h1>
   <p>Benefícios para Associados</p>
 </div>
@@ -118,6 +120,7 @@
       <div class="link-publico">
         <b>🔗 Link público (para partilhar / enviar aos sócios)</b>
         <span id="link-publico-url"></span>
+        <button class="btn" style="margin-top:10px;padding:9px" onclick="copiarLink()">📋 Copiar link</button>
       </div>
 
       <div id="gestao-lista"></div>
@@ -155,7 +158,14 @@
 
       <hr style="margin:20px 0;border:none;border-top:1px solid var(--linha)">
       <div class="gestao-titulo" style="font-size:16px">⚙️ Configurações</div>
-      <label>Email de recuperação (para reaver o PIN caso o esqueças)</label>
+
+      <label>Logótipo da associação (aparece no topo da página)</label>
+      <div id="logo-arca-atual" style="margin:6px 0"></div>
+      <input type="file" id="arca-logo" accept="image/*" style="background:none;border:none;padding:6px 0">
+      <div class="compress-info">A imagem é otimizada automaticamente. Recomenda-se um logo em fundo transparente ou branco.</div>
+      <button class="btn" style="margin-top:10px" onclick="guardarLogoArca()">Guardar logótipo</button>
+
+      <label style="margin-top:18px">Email de recuperação (para reaver o PIN caso o esqueças)</label>
       <input type="email" id="cfg-email-recup" placeholder="email@arcadajuda.pt">
       <div class="compress-info">Quando o sistema de email estiver ativo, poderás pedir o PIN para este endereço.</div>
       <button class="btn" style="margin-top:12px" onclick="guardarEmailRecup()">Guardar email de recuperação</button>
@@ -196,6 +206,16 @@ async function supaFetch(path, method='GET', body=null, extraHeaders=null){
 // ==========================================================
 async function carregarPublico(){
   const box = document.getElementById('lista-publica');
+  // Carregar logo da associação no topo
+  try{
+    const rows = await fetch(`${SUPA_URL}/rest/v1/config_app?chave=eq.logo_arca&select=valor`, {
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    }).then(r=>r.json());
+    if(rows && rows.length && rows[0].valor){
+      const el = document.getElementById('logo-arca-topo');
+      if(el) el.innerHTML = `<img src="${rows[0].valor}" alt="ARCA d'Ajuda">`;
+    }
+  }catch(e){ console.warn('logo arca:', e); }
   try{
     const parceiros = await fetch(`${SUPA_URL}/rest/v1/parceiros?ativo=eq.true&order=ordem.asc,nome.asc`, {
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
@@ -303,6 +323,7 @@ function mostrarConteudoGestao(){
   cancelarEdicao();
   carregarListaGestao();
   carregarEmailRecup();
+  carregarLogoArca();
 }
 
 async function carregarEmailRecup(){
@@ -326,6 +347,51 @@ async function guardarEmailRecup(){
   }catch(e){
     console.error(e);
     alert('Erro ao guardar: ' + e.message);
+  }
+}
+
+function copiarLink(){
+  const url = document.getElementById('link-publico-url').textContent;
+  navigator.clipboard.writeText(url)
+    .then(()=>alert('✅ Link copiado! Já podes colá-lo para enviar aos sócios.'))
+    .catch(()=>{
+      // Alternativa se o clipboard falhar
+      const t = document.createElement('textarea'); t.value = url; document.body.appendChild(t);
+      t.select(); document.execCommand('copy'); document.body.removeChild(t);
+      alert('✅ Link copiado!');
+    });
+}
+
+async function carregarLogoArca(){
+  try{
+    const rows = await supaFetch('config_app?chave=eq.logo_arca&select=valor');
+    const el = document.getElementById('logo-arca-atual');
+    if(rows && rows.length && rows[0].valor){
+      el.innerHTML = `<img src="${rows[0].valor}" style="max-height:60px;max-width:180px;border-radius:8px;border:1px solid #ddd;padding:4px;background:#fff"> <small style="color:#888">(logo atual)</small>`;
+    }else{
+      el.innerHTML = '<small style="color:#888">Ainda não há logótipo.</small>';
+    }
+  }catch(e){ console.warn('carregar logo arca:', e); }
+}
+
+async function guardarLogoArca(){
+  const fileInput = document.getElementById('arca-logo');
+  if(!fileInput.files || !fileInput.files[0]){ alert('Escolhe primeiro uma imagem.'); return; }
+  try{
+    const url = await uploadLogo(fileInput.files[0]);
+    const existe = await supaFetch('config_app?chave=eq.logo_arca');
+    if(existe && existe.length){
+      await supaFetch('config_app?chave=eq.logo_arca', 'PATCH', {valor: url});
+    }else{
+      await supaFetch('config_app', 'POST', {chave:'logo_arca', valor: url});
+    }
+    alert('✅ Logótipo guardado!');
+    fileInput.value = '';
+    carregarLogoArca();
+    carregarPublico();
+  }catch(e){
+    console.error(e);
+    alert('Erro ao guardar logótipo: ' + e.message);
   }
 }
 
