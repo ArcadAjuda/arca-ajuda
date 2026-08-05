@@ -491,30 +491,40 @@ async function carregarListaGestao(){
 }
 
 // ---------- Compressão de imagem ----------
-// Remove fundo branco/claro de uma imagem e devolve um blob PNG transparente
-function removerFundoBranco(file, maxLado=500, tolerancia=28){
+// Remove fundo branco SÓ a partir das bordas (flood fill) — preserva o interior do logo
+function removerFundoBranco(file, maxLado=500, tol=45){
   return new Promise((resolve, reject)=>{
     const reader = new FileReader();
     reader.onload = e=>{
       const img = new Image();
       img.onload = ()=>{
-        let {width, height} = img;
-        if(width > height){ if(width>maxLado){ height=Math.round(height*maxLado/width); width=maxLado; } }
-        else { if(height>maxLado){ width=Math.round(width*maxLado/height); height=maxLado; } }
+        let {width:w, height:h} = img;
+        if(w > h){ if(w>maxLado){ h=Math.round(h*maxLado/w); w=maxLado; } }
+        else { if(h>maxLado){ w=Math.round(w*maxLado/h); h=maxLado; } }
         const canvas = document.createElement('canvas');
-        canvas.width=width; canvas.height=height;
+        canvas.width=w; canvas.height=h;
         const ctx = canvas.getContext('2d');
-        ctx.drawImage(img,0,0,width,height);
-        const dados = ctx.getImageData(0,0,width,height);
-        const d = dados.data;
-        for(let i=0;i<d.length;i+=4){
-          const r=d[i], g=d[i+1], b=d[i+2];
-          // se o pixel é quase branco → torna transparente
-          if(r>255-tolerancia-30 && g>255-tolerancia-30 && b>255-tolerancia-30 && Math.abs(r-g)<tolerancia && Math.abs(g-b)<tolerancia){
-            d[i+3]=0;
-          }
+        ctx.drawImage(img,0,0,w,h);
+        const imgData = ctx.getImageData(0,0,w,h);
+        const d = imgData.data;
+        const ehBranco=(i)=>{ const r=d[i],g=d[i+1],b=d[i+2]; return r>255-tol && g>255-tol && b>255-tol; };
+        const visitado = new Uint8Array(w*h);
+        const pilha = [];
+        // Semear a partir de toda a moldura (bordas)
+        for(let x=0;x<w;x++){ pilha.push([x,0]); pilha.push([x,h-1]); }
+        for(let y=0;y<h;y++){ pilha.push([0,y]); pilha.push([w-1,y]); }
+        while(pilha.length){
+          const [x,y] = pilha.pop();
+          if(x<0||y<0||x>=w||y>=h) continue;
+          const p = y*w+x;
+          if(visitado[p]) continue;
+          const i = p*4;
+          if(!ehBranco(i)) continue;
+          visitado[p]=1;
+          d[i+3]=0; // transparente
+          pilha.push([x+1,y]); pilha.push([x-1,y]); pilha.push([x,y+1]); pilha.push([x,y-1]);
         }
-        ctx.putImageData(dados,0,0);
+        ctx.putImageData(imgData,0,0);
         canvas.toBlob(blob=>{
           if(!blob){ reject(new Error('Falha ao processar')); return; }
           blob._tipo='image/png'; blob._ext='png';
