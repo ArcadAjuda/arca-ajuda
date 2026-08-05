@@ -232,7 +232,7 @@ async function carregarPublico(){
     }).then(r=>r.json());
     if(rows && rows.length && rows[0].valor){
       const el = document.getElementById('logo-arca-topo');
-      if(el) el.innerHTML = `<img src="${rows[0].valor}" alt="ARCA d'Ajuda">`;
+      if(el) el.innerHTML = `<img src="${rows[0].valor}?v=${Date.now()}" alt="ARCA d'Ajuda">`;
     }
   }catch(e){ console.warn('logo arca:', e); }
   try{
@@ -388,7 +388,7 @@ async function carregarLogoArca(){
     const rows = await supaFetch('config_app?chave=eq.logo_arca&select=valor');
     const el = document.getElementById('logo-arca-atual');
     if(rows && rows.length && rows[0].valor){
-      el.innerHTML = `<img src="${rows[0].valor}" style="max-height:70px;max-width:180px;object-fit:contain"> <small style="color:#888">(logo atual)</small>`;
+      el.innerHTML = `<img src="${rows[0].valor}?v=${Date.now()}" style="max-height:70px;max-width:180px;object-fit:contain"> <small style="color:#888">(logo atual)</small>`;
     }else{
       el.innerHTML = '<small style="color:#888">Ainda não há logótipo.</small>';
     }
