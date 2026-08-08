@@ -2510,26 +2510,47 @@ async function renderConfigEmail(){
   const box = document.getElementById('config-email-content');
   if(!box) return;
   box.innerHTML = '<div style="color:var(--text-2);font-size:13px;padding:8px">A carregar…</div>';
-  let cfg = {email_recepcao:'', email_remetente:'', modelo_email_socio:'', envio_automatico:'false'};
+  let cfg = {email_recepcao:'', email_remetente:'', envio_automatico:'false',
+    modelo_boasvindas:'', modelo_avencer:'', modelo_vencida:''};
   try{
-    const rows = await supaFetch('config_app?chave=in.(email_recepcao,email_remetente,modelo_email_socio,envio_automatico)');
+    const rows = await supaFetch('config_app?chave=in.(email_recepcao,email_remetente,envio_automatico,modelo_boasvindas,modelo_avencer,modelo_vencida,modelo_email_socio)');
     (rows||[]).forEach(r=>{ cfg[r.chave] = r.valor; });
   }catch(e){ console.warn('Falha a ler config de email:', e); }
+  // Migração: se havia o modelo antigo e não há boas-vindas, usa-o
+  if(!cfg.modelo_boasvindas && cfg.modelo_email_socio) cfg.modelo_boasvindas = cfg.modelo_email_socio;
   const autoOn = String(cfg.envio_automatico)==='true';
+  const esc = s => (s||'').replace(/</g,'&lt;');
+
   box.innerHTML = `
     <div class="card" style="margin-bottom:14px">
       <div class="card-title">📧 Endereços de Email</div>
-      <div style="font-size:13px;color:var(--text-2);margin-bottom:14px;line-height:1.6">Define os emails usados pelo sistema. Podes mudá-los a qualquer momento — não ficam presos no código.</div>
+      <div style="font-size:13px;color:var(--text-2);margin-bottom:14px;line-height:1.6">Define os emails usados pelo sistema. Podes mudá-los a qualquer momento.</div>
       <label style="display:block;font-size:12.5px;font-weight:600;color:var(--text-2);margin:10px 0 4px">Email de receção (recebe avisos de novos sócios)</label>
-      <input type="email" id="cfg-email-recepcao" value="${cfg.email_recepcao||''}" placeholder="ex: geral@arcadajuda.pt" style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:14px;background:var(--card)">
-      <label style="display:block;font-size:12.5px;font-weight:600;color:var(--text-2);margin:14px 0 4px">Email remetente (aparece como "de" nos emails enviados)</label>
-      <input type="email" id="cfg-email-remetente" value="${cfg.email_remetente||''}" placeholder="ex: avisos@arcadajuda.pt" style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:14px;background:var(--card)">
+      <input type="email" id="cfg-email-recepcao" value="${(cfg.email_recepcao||'').replace(/"/g,'&quot;')}" placeholder="ex: geral@arcadajuda.pt" style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:14px;background:var(--card)">
+      <label style="display:block;font-size:12.5px;font-weight:600;color:var(--text-2);margin:14px 0 4px">Email remetente (aparece como "de")</label>
+      <input type="email" id="cfg-email-remetente" value="${(cfg.email_remetente||'').replace(/"/g,'&quot;')}" placeholder="ex: avisos@arcadajuda.pt" style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:14px;background:var(--card)">
     </div>
+
     <div class="card" style="margin-bottom:14px">
-      <div class="card-title">✉️ Modelo do Email ao Sócio</div>
-      <div style="font-size:13px;color:var(--text-2);margin-bottom:14px;line-height:1.6">Texto base do email enviado ao sócio. Podes usar <b>{nome}</b> e <b>{num}</b> — serão substituídos pelos dados do sócio.</div>
-      <textarea id="cfg-modelo-email" rows="6" placeholder="Bem-vindo(a) {nome}!" style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:14px;background:var(--card);font-family:inherit;resize:vertical">${cfg.modelo_email_socio||''}</textarea>
+      <div class="card-title">✉️ Modelos de Mensagem</div>
+      <div style="font-size:13px;color:var(--text-2);margin-bottom:8px;line-height:1.6">
+        Escreve só o texto principal de cada situação. Podes usar <b>{nome}</b> e <b>{num}</b>.
+        Os <b>contactos, formas de pagamento, redes sociais e link dos parceiros</b> são adicionados automaticamente no fim de cada email.
+      </div>
+
+      <label style="display:block;font-size:12.5px;font-weight:700;color:#1B4164;margin:14px 0 4px">🎉 Boas-vindas (sócio novo)</label>
+      <textarea id="cfg-modelo-boasvindas" rows="4" placeholder="Bem-vindo(a) {nome}! O teu número de sócio é o {num}." style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:14px;background:var(--card);font-family:inherit;resize:vertical">${esc(cfg.modelo_boasvindas)}</textarea>
+      <button class="btn-secondary" style="margin-top:8px;font-size:13px" onclick="previewEmail('boasvindas')">👁️ Pré-visualizar</button>
+
+      <label style="display:block;font-size:12.5px;font-weight:700;color:#D24E0A;margin:18px 0 4px">⏰ Quota a vencer (aviso antecipado)</label>
+      <textarea id="cfg-modelo-avencer" rows="4" placeholder="Olá {nome}, a tua quota está prestes a vencer. Renova para continuares a usufruir das vantagens de sócio." style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:14px;background:var(--card);font-family:inherit;resize:vertical">${esc(cfg.modelo_avencer)}</textarea>
+      <button class="btn-secondary" style="margin-top:8px;font-size:13px" onclick="previewEmail('avencer')">👁️ Pré-visualizar</button>
+
+      <label style="display:block;font-size:12.5px;font-weight:700;color:#C0392B;margin:18px 0 4px">🔴 Quota vencida (em atraso)</label>
+      <textarea id="cfg-modelo-vencida" rows="4" placeholder="Olá {nome}, a tua quota encontra-se em atraso. Regulariza a tua situação através de uma das formas abaixo." style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:14px;background:var(--card);font-family:inherit;resize:vertical">${esc(cfg.modelo_vencida)}</textarea>
+      <button class="btn-secondary" style="margin-top:8px;font-size:13px" onclick="previewEmail('vencida')">👁️ Pré-visualizar</button>
     </div>
+
     <div class="card" style="margin-bottom:14px">
       <div class="card-title">⚙️ Envio Automático</div>
       <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-top:6px">
@@ -2538,22 +2559,118 @@ async function renderConfigEmail(){
       </label>
       <div style="font-size:12px;color:var(--text-2);margin-top:8px;line-height:1.5">Se desligado, os emails ficam preparados mas só são enviados quando confirmares.</div>
     </div>
+
     <button class="btn-primary" onclick="guardarConfigEmail()">💾 Guardar configurações de email</button>
+
+    <div id="email-preview-area" style="display:none;margin-top:18px"></div>
   `;
 }
+
 async function guardarConfigEmail(){
   const recepcao = (document.getElementById('cfg-email-recepcao')?.value||'').trim();
   const remetente = (document.getElementById('cfg-email-remetente')?.value||'').trim();
-  const modelo = (document.getElementById('cfg-modelo-email')?.value||'').trim();
   const auto = document.getElementById('cfg-envio-auto')?.checked ? 'true' : 'false';
+  const mBoas = (document.getElementById('cfg-modelo-boasvindas')?.value||'').trim();
+  const mAvencer = (document.getElementById('cfg-modelo-avencer')?.value||'').trim();
+  const mVencida = (document.getElementById('cfg-modelo-vencida')?.value||'').trim();
   try{
     await guardarChaveConfig('email_recepcao', recepcao);
     await guardarChaveConfig('email_remetente', remetente);
-    await guardarChaveConfig('modelo_email_socio', modelo);
     await guardarChaveConfig('envio_automatico', auto);
+    await guardarChaveConfig('modelo_boasvindas', mBoas);
+    await guardarChaveConfig('modelo_avencer', mAvencer);
+    await guardarChaveConfig('modelo_vencida', mVencida);
     toast('Configurações de email guardadas');
   }catch(e){ console.error(e); toast('Erro ao guardar', false); }
 }
+
+// Lê os dados da associação da config_app
+async function getDadosAssociacao(){
+  const chaves = 'assoc_nome,assoc_nif,assoc_email,assoc_tel,assoc_morada,assoc_iban,assoc_mbway,assoc_entidade,assoc_referencia,assoc_pagamentos,assoc_site,assoc_facebook,assoc_instagram,assoc_youtube,assoc_outras';
+  const dados = {};
+  try{
+    const rows = await supaFetch('config_app?chave=in.('+chaves+')');
+    (rows||[]).forEach(r=>{ dados[r.chave] = r.valor||''; });
+  }catch(e){ console.warn('Falha a ler dados da associação:', e); }
+  return dados;
+}
+
+// Monta o corpo completo do email (texto do modelo + base comum)
+function montarCorpoEmail(textoModelo, socio, dados){
+  const linkParceiros = 'https://arca-ajuda.github.io/arca-ajuda/parceiros/';
+  let txt = (textoModelo||'')
+    .replace(/\{nome\}/g, socio?.nome||'')
+    .replace(/\{num\}/g, socio?.num||'');
+
+  let html = `<div style="font-size:14px;line-height:1.7;color:#16232E">${txt.replace(/\n/g,'<br>')}</div>`;
+
+  // Formas de pagamento
+  const temPagamento = dados.assoc_iban||dados.assoc_mbway||dados.assoc_entidade||dados.assoc_pagamentos;
+  if(temPagamento){
+    let pg = '';
+    if(dados.assoc_pagamentos) pg += `<div style="color:#444;margin-bottom:6px">${dados.assoc_pagamentos.replace(/\n/g,'<br>')}</div>`;
+    const linhas = [];
+    if(dados.assoc_iban) linhas.push(`<b>Transferência (IBAN):</b> ${dados.assoc_iban}`);
+    if(dados.assoc_mbway) linhas.push(`<b>MB WAY:</b> ${dados.assoc_mbway}`);
+    if(dados.assoc_entidade&&dados.assoc_referencia) linhas.push(`<b>Multibanco:</b> Entidade ${dados.assoc_entidade} · Referência ${dados.assoc_referencia}`);
+    if(linhas.length) pg += `<div style="color:#444">${linhas.join('<br>')}</div>`;
+    html += `<hr style="border:none;border-top:1px dashed #dde5ec;margin:18px 0"><div style="font-weight:700;color:#1B4164;margin-bottom:6px">💳 Como pagar a quota</div>${pg}`;
+  }
+
+  // Parceiros
+  html += `<div style="margin-top:18px;font-weight:700;color:#1B4164;margin-bottom:6px">🤝 Parceiros e vantagens</div><div style="color:#444">Enquanto sócio tens descontos nos nossos parceiros: <a href="${linkParceiros}" style="color:#37A7C8;font-weight:600">${linkParceiros}</a></div>`;
+
+  // Contactos
+  const cont = [];
+  if(dados.assoc_email) cont.push(`✉️ ${dados.assoc_email}`);
+  if(dados.assoc_tel) cont.push(`📞 ${dados.assoc_tel}`);
+  if(dados.assoc_morada) cont.push(`📍 ${dados.assoc_morada}`);
+  if(cont.length){
+    html += `<div style="margin-top:18px;font-weight:700;color:#1B4164;margin-bottom:6px">📞 Contactos</div><div style="color:#444">${cont.join('<br>')}</div>`;
+  }
+
+  // Redes sociais
+  const redes = [];
+  if(dados.assoc_site) redes.push(`<a href="${dados.assoc_site}" style="color:#1B4164">🌐 Site</a>`);
+  if(dados.assoc_facebook) redes.push(`<a href="${dados.assoc_facebook}" style="color:#1877F2">Facebook</a>`);
+  if(dados.assoc_instagram) redes.push(`<a href="${dados.assoc_instagram}" style="color:#E4405F">Instagram</a>`);
+  if(dados.assoc_youtube) redes.push(`<a href="${dados.assoc_youtube}" style="color:#FF0000">YouTube</a>`);
+  if(dados.assoc_outras) redes.push(dados.assoc_outras);
+  if(redes.length){
+    html += `<div style="margin-top:16px;padding-top:14px;border-top:1px solid #eef0f3;font-size:13px;color:#666">Segue-nos: ${redes.join(' &nbsp;·&nbsp; ')}</div>`;
+  }
+
+  // Rodapé
+  const nome = dados.assoc_nome||"ARCA d'Ajuda";
+  const nif = dados.assoc_nif ? ` · NIF ${dados.assoc_nif}` : '';
+  html += `<div style="margin-top:16px;padding-top:12px;border-top:1px solid #eef0f3;font-size:11px;color:#8894a0;text-align:center">${nome}${nif} · Recebes este email porque és sócio e aceitaste receber comunicações.</div>`;
+
+  return html;
+}
+
+async function previewEmail(tipo){
+  const idModelo = {boasvindas:'cfg-modelo-boasvindas', avencer:'cfg-modelo-avencer', vencida:'cfg-modelo-vencida'}[tipo];
+  const texto = document.getElementById(idModelo)?.value||'';
+  const dados = await getDadosAssociacao();
+  const socioExemplo = {nome:'Maria Silva', num: 525};
+  const corpo = montarCorpoEmail(texto, socioExemplo, dados);
+  const titulos = {boasvindas:'🎉 Boas-vindas', avencer:'⏰ Quota a vencer', vencida:'🔴 Quota vencida'};
+  const area = document.getElementById('email-preview-area');
+  area.style.display = 'block';
+  area.innerHTML = `
+    <div class="card">
+      <div class="card-title">👁️ Pré-visualização — ${titulos[tipo]}</div>
+      <div style="font-size:12px;color:var(--text-2);margin-bottom:12px">Exemplo com o sócio "Maria Silva" (nº 525). Campos vazios são omitidos.</div>
+      <div style="border:1px solid #e8eef3;border-radius:12px;overflow:hidden;background:#fff">
+        <div style="background:linear-gradient(120deg,#12314F,#1B4164,#37A7C8);padding:18px 22px;color:#fff">
+          <div style="font-size:18px;font-weight:800">${dados.assoc_nome||"ARCA d'Ajuda"}</div>
+        </div>
+        <div style="padding:22px">${corpo}</div>
+      </div>
+    </div>`;
+  area.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
 async function guardarChaveConfig(chave, valor){
   const existentes = await supaFetch('config_app?chave=eq.'+encodeURIComponent(chave));
   if(existentes && existentes.length){
