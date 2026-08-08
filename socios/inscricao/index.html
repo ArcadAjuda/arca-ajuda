@@ -101,6 +101,11 @@
     <label>Observações</label>
     <input type="text" id="f-obs" placeholder="Ex: quero inscrever-me na modalidade X">
 
+    <label style="display:flex;align-items:center;gap:8px;margin-top:16px;cursor:pointer">
+      <input type="checkbox" id="f-aceita-email" checked style="width:16px;height:16px;cursor:pointer;flex-shrink:0;margin:0">
+      <span style="font-weight:500;color:#444">📧 Aceito receber emails da associação (avisos, informações, etc.)</span>
+    </label>
+
     <button id="btn-submeter" onclick="submeterInscricao()">Submeter Inscrição</button>
     <div class="erro" id="erro-msg"></div>
   </div>
@@ -230,6 +235,7 @@ async function submeterInscricao(){
     p_cp: cp || null,
     p_email: document.getElementById('f-email').value.trim() || null,
     p_obs: obsFinal || null,
+    p_aceita_email: document.getElementById('f-aceita-email').checked,
     p_data_inscricao: dataInscricao,
     p_data_pagamento: dataPagamento,
     p_periodo_quota: periodo,
@@ -251,11 +257,13 @@ async function submeterInscricao(){
       const txt = await res.text();
       throw new Error(txt || ('Erro '+res.status));
     }
-    const novoSocio = await res.json();
+    const resultado = await res.json();
+    // A função devolve uma tabela → o PostgREST envia um array. Ler o primeiro elemento.
+    const novoSocio = Array.isArray(resultado) ? resultado[0] : resultado;
     document.getElementById('form-area').style.display = 'none';
     document.getElementById('sucesso-area').style.display = 'block';
-    document.getElementById('sucesso-num').textContent = 'Nº ' + novoSocio.num;
-    if(novoSocio.codigo_verificacao){
+    document.getElementById('sucesso-num').textContent = novoSocio && novoSocio.num ? ('Nº ' + novoSocio.num) : '';
+    if(novoSocio && novoSocio.codigo_verificacao){
       document.getElementById('link-cartao').href =
         `https://arca-ajuda.github.io/arca-ajuda/socios/verificar/?c=${novoSocio.codigo_verificacao}`;
     } else {
