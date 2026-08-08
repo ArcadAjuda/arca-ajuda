@@ -536,10 +536,10 @@ tbody tr:hover td{background:var(--bg2)}
         <label>Preferências de contacto</label>
         <div style="display:flex;gap:22px;margin-top:6px">
           <label style="display:flex;align-items:center;gap:7px;font-weight:normal;cursor:pointer">
-            <input type="checkbox" id="s-aceita-email" checked style="width:16px;height:16px;cursor:pointer"> 📧 Aceita email
+            <input type="checkbox" id="s-aceita-email" style="width:16px;height:16px;cursor:pointer"> 📧 Aceita email
           </label>
           <label style="display:flex;align-items:center;gap:7px;font-weight:normal;cursor:pointer">
-            <input type="checkbox" id="s-aceita-sms" checked style="width:16px;height:16px;cursor:pointer"> 📱 Aceita SMS
+            <input type="checkbox" id="s-aceita-sms" style="width:16px;height:16px;cursor:pointer"> 📱 Aceita SMS
           </label>
         </div>
       </div>
@@ -1191,7 +1191,7 @@ function socioToRow(s){
     estado: s.estado||'ATIVO', tel: s.tel||null, morada: s.morada||null, cp: s.cp||null,
     email: s.email||null, quota: s.quota?parseFloat(s.quota):null,
     situacao: s.situacao||'EM DIA', obs: s.obs||null, isento: !!s.isento,
-    aceita_email: s.aceitaEmail!==false, aceita_sms: s.aceitaSms!==false
+    aceita_email: s.aceitaEmail===true, aceita_sms: s.aceitaSms===true
   };
 }
 function rowToSocio(r){
@@ -1202,7 +1202,7 @@ function rowToSocio(r){
     estado:r.estado, tel:r.tel||'', morada:r.morada||'', cp:r.cp||'', email:r.email||'',
     quota:r.quota||'', situacao:r.situacao, obs:r.obs||'', diasRestantes:0, isento: !!r.isento,
     codigoVerificacao: r.codigo_verificacao||'',
-    aceitaEmail: r.aceita_email!==false, aceitaSms: r.aceita_sms!==false
+    aceitaEmail: r.aceita_email===true, aceitaSms: r.aceita_sms===true
   };
 }
 async function carregarSociosSupabase(){
@@ -9193,8 +9193,8 @@ function openModalSocio(){
   editingSocioId=null;
   document.getElementById('socio-modal-title').textContent='Novo Sócio';
   document.getElementById('s-num').value=nextNumSocio();
-  const _ae=document.getElementById('s-aceita-email');if(_ae)_ae.checked=true;
-  const _as=document.getElementById('s-aceita-sms');if(_as)_as.checked=true;
+  const _ae=document.getElementById('s-aceita-email');if(_ae)_ae.checked=false;
+  const _as=document.getElementById('s-aceita-sms');if(_as)_as.checked=false;
   ['s-nome','s-nif','s-tel','s-morada','s-cp','s-email','s-quota','s-obs'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   document.getElementById('s-tipo').value='EFETIVO';
   document.getElementById('s-sexo').value='M';
@@ -9228,8 +9228,8 @@ function editSocio(id){
   document.getElementById('s-data-pagamento').value=s.dataPagamento||'';
   const pp=document.getElementById('s-periodo-quota');if(pp)pp.value=s.periodoQuota||'1ano';
   const sv=document.getElementById('s-validade');if(sv)sv.value=s.validadeQuota||'';
-  const ae=document.getElementById('s-aceita-email');if(ae)ae.checked=s.aceitaEmail!==false;
-  const as=document.getElementById('s-aceita-sms');if(as)as.checked=s.aceitaSms!==false;
+  const ae=document.getElementById('s-aceita-email');if(ae)ae.checked=s.aceitaEmail===true;
+  const as=document.getElementById('s-aceita-sms');if(as)as.checked=s.aceitaSms===true;
   openModal('modal-socio');
 }
 
@@ -9265,7 +9265,7 @@ async function saveSocio(){
   else if(vq){ sit=getSituacaoFromValidade(new Date(vq+'T12:00:00')); }
   else { sit=document.getElementById('s-situacao').value; }
   const sitEl=document.getElementById('s-situacao'); if(sitEl) sitEl.value=sit;
-  const obj={id:editingSocioId||null,num:parseInt(document.getElementById('s-num').value)||nextNumSocio(),nome,sexo:document.getElementById('s-sexo').value,nif:document.getElementById('s-nif').value.trim(),tipo,dataInscricao:document.getElementById('s-data-inscricao').value,dataPagamento:dp,periodoQuota:periodo,validadeQuota:vq,estado:document.getElementById('s-estado').value,tel:document.getElementById('s-tel').value.trim(),morada:document.getElementById('s-morada').value.trim(),cp:document.getElementById('s-cp').value.trim(),email:document.getElementById('s-email').value.trim(),quota:document.getElementById('s-quota').value.trim(),situacao:sit,obs:document.getElementById('s-obs').value.trim(),diasRestantes:0,isento,aceitaEmail:document.getElementById('s-aceita-email')?.checked!==false,aceitaSms:document.getElementById('s-aceita-sms')?.checked!==false};
+  const obj={id:editingSocioId||null,num:parseInt(document.getElementById('s-num').value)||nextNumSocio(),nome,sexo:document.getElementById('s-sexo').value,nif:document.getElementById('s-nif').value.trim(),tipo,dataInscricao:document.getElementById('s-data-inscricao').value,dataPagamento:dp,periodoQuota:periodo,validadeQuota:vq,estado:document.getElementById('s-estado').value,tel:document.getElementById('s-tel').value.trim(),morada:document.getElementById('s-morada').value.trim(),cp:document.getElementById('s-cp').value.trim(),email:document.getElementById('s-email').value.trim(),quota:document.getElementById('s-quota').value.trim(),situacao:sit,obs:document.getElementById('s-obs').value.trim(),diasRestantes:0,isento,aceitaEmail:document.getElementById('s-aceita-email')?.checked===true,aceitaSms:document.getElementById('s-aceita-sms')?.checked===true};
   try{
     if(editingSocioId){
       const row = await supaFetch('socios?id=eq.'+editingSocioId, 'PATCH', socioToRow(obj));
