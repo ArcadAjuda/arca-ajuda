@@ -552,12 +552,14 @@ tbody tr:hover td{background:var(--bg2)}
     <button class="inner-tab" onclick="showInner('config','dados',this)">💾 Dados</button>
     <button class="inner-tab" onclick="showInner('config','email',this)">📧 Email</button>
     <button class="inner-tab" onclick="showInner('config','parcerias',this)">🤝 Parcerias</button>
+    <button class="inner-tab" onclick="showInner('config','associacao',this)">🏢 Associação</button>
   </div>
   <div class="inner-panel active" id="config-inner-quotas"><div id="config-quotas-content"></div></div>
   <div class="inner-panel" id="config-inner-direccao"><div id="config-direccao-content"></div></div>
   <div class="inner-panel" id="config-inner-acessos"><div id="config-acessos-content"></div></div>
   <div class="inner-panel" id="config-inner-email"><div id="config-email-content"></div></div>
     <div class="inner-panel" id="config-inner-parcerias"><div id="config-parcerias-content"></div></div>
+  <div class="inner-panel" id="config-inner-associacao"><div id="config-associacao-content"></div></div>
   <div class="inner-panel" id="config-inner-dados">
     <div class="card" style="margin-bottom:14px">
       <div class="card-title">🔒 Código de Acesso</div>
@@ -2472,6 +2474,7 @@ function renderConfig(tab){
   if(tab==='dados'){ renderPinStatus(); atualizarEstadoDrive(); carregarAtividade(); }
   if(tab==='email') renderConfigEmail();
     if(tab==='parcerias') renderConfigParcerias();
+if(tab==='associacao') renderConfigAssociacao();
 }
 
 // ============================================================
@@ -2531,6 +2534,79 @@ async function guardarChaveConfig(chave, valor){
     await supaFetch('config_app?chave=eq.'+encodeURIComponent(chave), 'PATCH', {valor: valor});
   }else{
     await supaFetch('config_app', 'POST', {chave: chave, valor: valor});
+  }
+}async function renderConfigAssociacao(){
+  const box = document.getElementById('config-associacao-content');
+  if(!box) return;
+  box.innerHTML = '<div style="color:var(--text-2);font-size:13px;padding:8px">A carregar…</div>';
+  let cfg = {
+    assoc_nome:'', assoc_email:'', assoc_tel:'', assoc_morada:'',
+    assoc_nif:'', assoc_iban:'', assoc_mbway:'', assoc_pagamentos:''
+  };
+  try{
+    const chaves = Object.keys(cfg).join(',');
+    const rows = await supaFetch('config_app?chave=in.('+chaves+')');
+    (rows||[]).forEach(r=>{ cfg[r.chave] = r.valor; });
+  }catch(e){ console.warn('Falha a ler dados da associação:', e); }
+
+  box.innerHTML = `
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-title">🏢 Identificação</div>
+      <div style="font-size:13px;color:var(--text-2);margin-bottom:14px;line-height:1.6">
+        Estes dados são usados automaticamente nos emails e documentos. Atualiza aqui e fica tudo certo em todo o lado.
+      </div>
+      <label style="display:block;font-size:12.5px;font-weight:600;color:var(--text-2);margin:10px 0 4px">Nome da associação</label>
+      <input type="text" id="assoc-nome" value="${(cfg.assoc_nome||'').replace(/"/g,'&quot;')}" placeholder="Associação Recreativa e Cultural da Ajuda" style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:14px;background:var(--card)">
+      <label style="display:block;font-size:12.5px;font-weight:600;color:var(--text-2);margin:14px 0 4px">NIF</label>
+      <input type="text" id="assoc-nif" value="${(cfg.assoc_nif||'').replace(/"/g,'&quot;')}" placeholder="500 000 000" style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:14px;background:var(--card)">
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-title">📞 Contactos</div>
+      <label style="display:block;font-size:12.5px;font-weight:600;color:var(--text-2);margin:10px 0 4px">Email da associação (aparece nos emails aos sócios)</label>
+      <input type="email" id="assoc-email" value="${(cfg.assoc_email||'').replace(/"/g,'&quot;')}" placeholder="geral@arcadajuda.pt" style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:14px;background:var(--card)">
+      <label style="display:block;font-size:12.5px;font-weight:600;color:var(--text-2);margin:14px 0 4px">Telefone</label>
+      <input type="text" id="assoc-tel" value="${(cfg.assoc_tel||'').replace(/"/g,'&quot;')}" placeholder="291 000 000" style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:14px;background:var(--card)">
+      <label style="display:block;font-size:12.5px;font-weight:600;color:var(--text-2);margin:14px 0 4px">Morada</label>
+      <input type="text" id="assoc-morada" value="${(cfg.assoc_morada||'').replace(/"/g,'&quot;')}" placeholder="Rua..., Funchal" style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:14px;background:var(--card)">
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-title">💳 Formas de Pagamento</div>
+      <div style="font-size:13px;color:var(--text-2);margin-bottom:14px;line-height:1.6">
+        Estes dados podem ser incluídos no email para o sócio saber como pagar a quota.
+      </div>
+      <label style="display:block;font-size:12.5px;font-weight:600;color:var(--text-2);margin:10px 0 4px">IBAN (transferência)</label>
+      <input type="text" id="assoc-iban" value="${(cfg.assoc_iban||'').replace(/"/g,'&quot;')}" placeholder="PT50 0000 0000 0000 0000 0000 0" style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:14px;background:var(--card)">
+      <label style="display:block;font-size:12.5px;font-weight:600;color:var(--text-2);margin:14px 0 4px">MB WAY</label>
+      <input type="text" id="assoc-mbway" value="${(cfg.assoc_mbway||'').replace(/"/g,'&quot;')}" placeholder="9XX XXX XXX" style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:14px;background:var(--card)">
+      <label style="display:block;font-size:12.5px;font-weight:600;color:var(--text-2);margin:14px 0 4px">Outras formas / notas de pagamento</label>
+      <textarea id="assoc-pagamentos" rows="3" placeholder="Ex: Pagamento em numerário na sede, aos sábados das 10h às 12h." style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:14px;background:var(--card);font-family:inherit;resize:vertical">${(cfg.assoc_pagamentos||'')}</textarea>
+    </div>
+
+    <button class="btn-primary" onclick="guardarConfigAssociacao()">💾 Guardar dados da associação</button>
+  `;
+}
+
+async function guardarConfigAssociacao(){
+  const dados = {
+    assoc_nome: (document.getElementById('assoc-nome')?.value||'').trim(),
+    assoc_nif: (document.getElementById('assoc-nif')?.value||'').trim(),
+    assoc_email: (document.getElementById('assoc-email')?.value||'').trim(),
+    assoc_tel: (document.getElementById('assoc-tel')?.value||'').trim(),
+    assoc_morada: (document.getElementById('assoc-morada')?.value||'').trim(),
+    assoc_iban: (document.getElementById('assoc-iban')?.value||'').trim(),
+    assoc_mbway: (document.getElementById('assoc-mbway')?.value||'').trim(),
+    assoc_pagamentos: (document.getElementById('assoc-pagamentos')?.value||'').trim()
+  };
+  try{
+    for(const chave in dados){
+      await guardarChaveConfig(chave, dados[chave]);
+    }
+    toast('Dados da associação guardados');
+  }catch(e){
+    console.error(e);
+    toast('Erro ao guardar', false);
   }
 }
 async function renderConfigParcerias(){
