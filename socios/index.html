@@ -369,6 +369,7 @@ tbody tr:hover td{background:var(--bg2)}
     <button class="inner-tab" id="stab-cartao" onclick="showSociosTab('cartao',this)">🪪 Cartão</button>
     <button class="inner-tab" id="stab-verificar" onclick="showSociosTab('verificar',this)">📷 Verificar QR</button>
     <button class="inner-tab" id="stab-importar" onclick="showSociosTab('importar',this)">⬆ Importar</button>
+    <button class="inner-tab" id="stab-parcerias" onclick="showSociosTab('parcerias',this)">🤝 Parcerias</button>
   </div>
   <!-- LISTA -->
   <div id="socios-panel-lista">
@@ -469,6 +470,19 @@ tbody tr:hover td{background:var(--bg2)}
       </div>
     </div>
   </div>
+
+  <div id="socios-panel-parcerias" style="display:none">
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:6px">
+        <div class="card-title" style="margin:0">🤝 Parceiros da Associação</div>
+        <button class="btn-secondary" onclick="copiarLinkParcerias()">📋 Copiar link dos parceiros</button>
+      </div>
+      <div style="font-size:13px;color:var(--text-2);margin-bottom:14px;line-height:1.6">
+        Lista gerida na aplicação de Parcerias. Atualiza-se automaticamente. O link pode ser incluído nos emails/SMS aos sócios.
+      </div>
+      <div id="socios-parcerias-lista"><div style="color:var(--text-2);font-size:13px;padding:8px">A carregar…</div></div>
+    </div>
+  </div>
 </div>
 
 <!-- MODAL SÓCIO -->
@@ -562,7 +576,6 @@ tbody tr:hover td{background:var(--bg2)}
     <button class="inner-tab" onclick="showInner('config','acessos',this)">🔐 Acessos</button>
     <button class="inner-tab" onclick="showInner('config','dados',this)">💾 Dados</button>
     <button class="inner-tab" onclick="showInner('config','email',this)">📧 Email</button>
-    <button class="inner-tab" onclick="showInner('config','parcerias',this)">🤝 Parcerias</button>
     <button class="inner-tab" onclick="showInner('config','associacao',this)">🏢 Associação</button>
   </div>
   <div class="inner-panel active" id="config-inner-quotas"><div id="config-quotas-content"></div></div>
@@ -9197,10 +9210,47 @@ function renderSociosList(){
 }
 
 function showSociosTab(tab,btn){
-  ['lista','cartao','verificar','importar'].forEach(t=>{const p=document.getElementById('socios-panel-'+t);if(p)p.style.display='none';const b=document.getElementById('stab-'+t);if(b)b.classList.remove('active');});
+  ['lista','cartao','verificar','importar','parcerias'].forEach(t=>{const p=document.getElementById('socios-panel-'+t);if(p)p.style.display='none';const b=document.getElementById('stab-'+t);if(b)b.classList.remove('active');});
   const p=document.getElementById('socios-panel-'+tab);if(p)p.style.display='block';
   const b=btn||document.getElementById('stab-'+tab);if(b)b.classList.add('active');
   if(tab==='cartao')populateCartaoSelect();
+  if(tab==='parcerias')carregarParceirosSocios();
+}
+
+const LINK_PARCERIAS = 'https://arca-ajuda.github.io/arca-ajuda/parceiros/';
+
+async function carregarParceirosSocios(){
+  const box = document.getElementById('socios-parcerias-lista');
+  if(!box) return;
+  box.innerHTML = '<div style="color:var(--text-2);font-size:13px;padding:8px">A carregar…</div>';
+  let parceiros = [];
+  try{ parceiros = await supaFetch('parceiros?ativo=eq.true&order=ordem.asc,nome.asc') || []; }
+  catch(e){ console.warn('Falha a ler parceiros:', e); box.innerHTML='<div style="color:var(--coral);font-size:13px;padding:8px">Não foi possível carregar os parceiros.</div>'; return; }
+  if(parceiros.length===0){
+    box.innerHTML = '<div style="color:var(--text-2);font-size:13px;padding:12px;text-align:center">Ainda não há parceiros. Adiciona-os na aplicação de Parcerias.</div>';
+    return;
+  }
+  box.innerHTML = parceiros.map(p=>`
+    <div style="display:flex;align-items:center;gap:12px;padding:10px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:var(--card)">
+      <div style="width:52px;height:52px;border-radius:8px;background:var(--bg-2,#f0f0f0);flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden">
+        ${p.logo_url ? `<img src="${p.logo_url}" style="max-width:100%;max-height:100%;object-fit:contain">` : '<span style="font-size:20px">🏷️</span>'}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:14px;color:var(--text)">${p.nome||'—'}</div>
+        <div style="font-size:12.5px;color:var(--text-2)">${p.categoria?('<b>'+p.categoria+'</b> · '):''}${(p.vantagem||'').split('\n')[0]||'—'}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function copiarLinkParcerias(){
+  navigator.clipboard.writeText(LINK_PARCERIAS)
+    .then(()=>toast('✓ Link dos parceiros copiado!'))
+    .catch(()=>{
+      const t=document.createElement('textarea');t.value=LINK_PARCERIAS;document.body.appendChild(t);
+      t.select();document.execCommand('copy');document.body.removeChild(t);
+      toast('✓ Link copiado!');
+    });
 }
 
 function openModalSocio(){
