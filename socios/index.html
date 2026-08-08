@@ -2648,27 +2648,80 @@ function montarCorpoEmail(textoModelo, socio, dados){
   return html;
 }
 
+// Monta SÓ a base automática (sem o texto do modelo)
+function montarBaseAutomatica(dados){
+  const linkParceiros = 'https://arca-ajuda.github.io/arca-ajuda/parceiros/';
+  let html = '';
+  const temPagamento = dados.assoc_iban||dados.assoc_mbway||dados.assoc_entidade||dados.assoc_pagamentos;
+  if(temPagamento){
+    let pg = '';
+    if(dados.assoc_pagamentos) pg += `<div style="color:#444;margin-bottom:6px">${dados.assoc_pagamentos.replace(/\n/g,'<br>')}</div>`;
+    const linhas = [];
+    if(dados.assoc_iban) linhas.push(`<b>Transferência (IBAN):</b> ${dados.assoc_iban}`);
+    if(dados.assoc_mbway) linhas.push(`<b>MB WAY:</b> ${dados.assoc_mbway}`);
+    if(dados.assoc_entidade&&dados.assoc_referencia){ linhas.push(`<b>Multibanco:</b> Entidade ${dados.assoc_entidade} · Referência ${dados.assoc_referencia} <i>(apenas valores inteiros, sem cêntimos)</i>`); }
+    if(linhas.length) pg += `<div style="color:#444">${linhas.join('<br>')}</div>`;
+    html += `<div style="font-weight:700;color:#1B4164;margin-bottom:6px">💳 Como pagar a quota</div>${pg}`;
+  }
+  html += `<div style="margin-top:18px;font-weight:700;color:#1B4164;margin-bottom:6px">🤝 Parceiros e vantagens</div><div style="color:#444">Enquanto sócio tens descontos nos nossos parceiros: <a href="${linkParceiros}" style="color:#37A7C8;font-weight:600">${linkParceiros}</a></div>`;
+  const cont = [];
+  if(dados.assoc_email) cont.push(`✉️ ${dados.assoc_email}`);
+  if(dados.assoc_tel) cont.push(`📞 ${dados.assoc_tel}`);
+  if(dados.assoc_morada) cont.push(`📍 ${dados.assoc_morada}`);
+  if(cont.length) html += `<div style="margin-top:18px;font-weight:700;color:#1B4164;margin-bottom:6px">📞 Contactos</div><div style="color:#444">${cont.join('<br>')}</div>`;
+  const redes = [];
+  if(dados.assoc_site) redes.push(`<a href="${dados.assoc_site}" style="color:#1B4164">🌐 Site</a>`);
+  if(dados.assoc_facebook) redes.push(`<a href="${dados.assoc_facebook}" style="color:#1877F2">Facebook</a>`);
+  if(dados.assoc_instagram) redes.push(`<a href="${dados.assoc_instagram}" style="color:#E4405F">Instagram</a>`);
+  if(dados.assoc_youtube) redes.push(`<a href="${dados.assoc_youtube}" style="color:#FF0000">YouTube</a>`);
+  if(dados.assoc_outras) redes.push(dados.assoc_outras);
+  if(redes.length) html += `<div style="margin-top:16px;padding-top:14px;border-top:1px solid #eef0f3;font-size:13px;color:#666">Segue-nos: ${redes.join(' &nbsp;·&nbsp; ')}</div>`;
+  const nome = dados.assoc_nome||"ARCA d'Ajuda";
+  const nif = dados.assoc_nif ? ` · NIF ${dados.assoc_nif}` : '';
+  html += `<div style="margin-top:16px;padding-top:12px;border-top:1px solid #eef0f3;font-size:11px;color:#8894a0;text-align:center">${nome}${nif} · Recebes este email porque és sócio e aceitaste receber comunicações.</div>`;
+  return html;
+}
+
 async function previewEmail(tipo){
   const idModelo = {boasvindas:'cfg-modelo-boasvindas', avencer:'cfg-modelo-avencer', vencida:'cfg-modelo-vencida'}[tipo];
+  const chaveModelo = {boasvindas:'modelo_boasvindas', avencer:'modelo_avencer', vencida:'modelo_vencida'}[tipo];
   const texto = document.getElementById(idModelo)?.value||'';
   const dados = await getDadosAssociacao();
-  const socioExemplo = {nome:'Maria Silva', num: 525};
-  const corpo = montarCorpoEmail(texto, socioExemplo, dados);
+  const baseAuto = montarBaseAutomatica(dados);
   const titulos = {boasvindas:'🎉 Boas-vindas', avencer:'⏰ Quota a vencer', vencida:'🔴 Quota vencida'};
   const area = document.getElementById('email-preview-area');
   area.style.display = 'block';
   area.innerHTML = `
     <div class="card">
       <div class="card-title">👁️ Pré-visualização — ${titulos[tipo]}</div>
-      <div style="font-size:12px;color:var(--text-2);margin-bottom:12px">Exemplo com o sócio "Maria Silva" (nº 525). Campos vazios são omitidos.</div>
+      <div style="font-size:12px;color:var(--text-2);margin-bottom:12px;line-height:1.5">Exemplo com o sócio "Maria Silva" (nº 525). Só a tua mensagem é editável; a parte de baixo vem dos dados e atualiza-se sozinha.</div>
       <div style="border:1px solid #e8eef3;border-radius:12px;overflow:hidden;background:#fff">
         <div style="background:linear-gradient(120deg,#12314F,#1B4164,#37A7C8);padding:18px 22px;color:#fff">
           <div style="font-size:18px;font-weight:800">${dados.assoc_nome||"ARCA d'Ajuda"}</div>
         </div>
-        <div style="padding:22px">${corpo}</div>
+        <div style="padding:22px">
+          <div style="font-size:11px;font-weight:700;color:#37A7C8;text-transform:uppercase;margin-bottom:6px">✏️ A tua mensagem (editável)</div>
+          <textarea id="preview-texto-edit" rows="5" style="width:100%;padding:12px;border:1.5px solid #37A7C8;border-radius:8px;font-size:14px;font-family:inherit;line-height:1.6;resize:vertical;background:#f7fcff">${(texto||'').replace(/</g,'&lt;')}</textarea>
+          <div style="font-size:11px;color:#888;margin-top:4px">Podes usar {nome} e {num}.</div>
+          <button class="btn-primary" style="margin-top:10px" onclick="guardarTextoPreview('${chaveModelo}','${idModelo}')">💾 Guardar esta mensagem</button>
+
+          <div style="margin-top:22px;font-size:11px;font-weight:700;color:#8894a0;text-transform:uppercase;margin-bottom:8px">🔒 Parte automática (dos dados da associação)</div>
+          <div style="opacity:.8;border:1px dashed #cbd5e0;border-radius:8px;padding:14px;background:#fafbfc;font-size:14px;line-height:1.6">${baseAuto}</div>
+          <div style="font-size:11px;color:#888;margin-top:6px;line-height:1.5">ℹ️ Contactos, pagamentos, redes e parceiros são montados automaticamente e atualizam-se sozinhos quando mudas os dados na aba 🏢 Associação. Não precisas (nem podes) editar aqui.</div>
+        </div>
       </div>
     </div>`;
   area.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+async function guardarTextoPreview(chave, idModelo){
+  const novoTexto = document.getElementById('preview-texto-edit')?.value||'';
+  const campo = document.getElementById(idModelo);
+  if(campo) campo.value = novoTexto;
+  try{
+    await guardarChaveConfig(chave, novoTexto.trim());
+    toast('Mensagem guardada!');
+  }catch(e){ console.error(e); toast('Erro ao guardar', false); }
 }
 
 async function guardarChaveConfig(chave, valor){
