@@ -2568,7 +2568,8 @@ async function renderConfigAssociacao(){
   box.innerHTML = '<div style="color:var(--text-2);font-size:13px;padding:8px">A carregar…</div>';
   let cfg = {
     assoc_nome:'', assoc_email:'', assoc_tel:'', assoc_morada:'',
-    assoc_nif:'', assoc_iban:'', assoc_mbway:'', assoc_entidade:'', assoc_referencia:'', assoc_pagamentos:''
+    assoc_nif:'', assoc_iban:'', assoc_mbway:'', assoc_entidade:'', assoc_referencia:'', assoc_pagamentos:'',
+    assoc_site:'', assoc_facebook:'', assoc_instagram:'', assoc_youtube:'', assoc_outras:''
   };
   try{
     const chaves = Object.keys(cfg).join(',');
@@ -2621,6 +2622,23 @@ async function renderConfigAssociacao(){
       <textarea id="assoc-pagamentos" rows="3" placeholder="Ex: Quota anual — 10€. Pagamento por transferência, MB WAY ou Multibanco. Indicar o nome do sócio." style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:14px;background:var(--card);font-family:inherit;resize:vertical">${(cfg.assoc_pagamentos||'')}</textarea>
     </div>
 
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-title">🌐 Redes Sociais e Site</div>
+      <div style="font-size:13px;color:var(--text-2);margin-bottom:14px;line-height:1.6">
+        Estes links podem ser incluídos nos emails aos sócios.
+      </div>
+      <label style="display:block;font-size:12.5px;font-weight:600;color:var(--text-2);margin:10px 0 4px">Site</label>
+      <input type="text" id="assoc-site" value="${(cfg.assoc_site||'').replace(/"/g,'&quot;')}" placeholder="https://www.arcadajuda.pt" style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:14px;background:var(--card)">
+      <label style="display:block;font-size:12.5px;font-weight:600;color:var(--text-2);margin:14px 0 4px">Facebook</label>
+      <input type="text" id="assoc-facebook" value="${(cfg.assoc_facebook||'').replace(/"/g,'&quot;')}" placeholder="https://facebook.com/arcadajuda" style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:14px;background:var(--card)">
+      <label style="display:block;font-size:12.5px;font-weight:600;color:var(--text-2);margin:14px 0 4px">Instagram</label>
+      <input type="text" id="assoc-instagram" value="${(cfg.assoc_instagram||'').replace(/"/g,'&quot;')}" placeholder="https://instagram.com/arcadajuda" style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:14px;background:var(--card)">
+      <label style="display:block;font-size:12.5px;font-weight:600;color:var(--text-2);margin:14px 0 4px">YouTube</label>
+      <input type="text" id="assoc-youtube" value="${(cfg.assoc_youtube||'').replace(/"/g,'&quot;')}" placeholder="https://youtube.com/@arcadajuda" style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:14px;background:var(--card)">
+      <label style="display:block;font-size:12.5px;font-weight:600;color:var(--text-2);margin:14px 0 4px">Outras (opcional)</label>
+      <input type="text" id="assoc-outras" value="${(cfg.assoc_outras||'').replace(/"/g,'&quot;')}" placeholder="Ex: TikTok, LinkedIn..." style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:14px;background:var(--card)">
+    </div>
+
     <button class="btn-primary" onclick="guardarConfigAssociacao()">💾 Guardar dados da associação</button>
   `;
 }
@@ -2636,7 +2654,12 @@ async function guardarConfigAssociacao(){
     assoc_mbway: (document.getElementById('assoc-mbway')?.value||'').trim(),
     assoc_entidade: (document.getElementById('assoc-entidade')?.value||'').trim(),
     assoc_referencia: (document.getElementById('assoc-referencia')?.value||'').trim(),
-    assoc_pagamentos: (document.getElementById('assoc-pagamentos')?.value||'').trim()
+    assoc_pagamentos: (document.getElementById('assoc-pagamentos')?.value||'').trim(),
+    assoc_site: (document.getElementById('assoc-site')?.value||'').trim(),
+    assoc_facebook: (document.getElementById('assoc-facebook')?.value||'').trim(),
+    assoc_instagram: (document.getElementById('assoc-instagram')?.value||'').trim(),
+    assoc_youtube: (document.getElementById('assoc-youtube')?.value||'').trim(),
+    assoc_outras: (document.getElementById('assoc-outras')?.value||'').trim()
   };
   try{
     for(const chave in dados){
