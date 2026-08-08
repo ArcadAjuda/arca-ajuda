@@ -56,7 +56,7 @@
     </div>
 
     <label>Tipo de sócio pretendido</label>
-    <select id="f-tipo" onchange="atualizarValorQuota()"><option value="EFETIVO">Efetivo</option><option value="ATLETA">Atleta</option><option value="PARCEIRO/EMPRESA">Parceiro/Empresa</option></select>
+    <select id="f-tipo" onchange="atualizarValorQuota()"><option value="">A carregar…</option></select>
 
     <label>Telemóvel</label>
     <input type="tel" id="f-tel" placeholder="9XXXXXXXX">
@@ -147,7 +147,30 @@ function atualizarValidade(){
   // apenas para referência interna, a validade real é calculada no envio
 }
 
+let tiposCache = [];
+
 async function carregarPrecos(){
+  // Carregar tipos inscritíveis
+  try{
+    const resT = await fetch(`${SUPA_URL}/rest/v1/socios_tipos_publico`, {
+      headers: {'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY}
+    });
+    if(resT.ok) tiposCache = await resT.json();
+  }catch(e){ console.warn('Não foi possível carregar tipos:', e); }
+
+  // Preencher o dropdown de tipos
+  const sel = document.getElementById('f-tipo');
+  if(tiposCache.length){
+    sel.innerHTML = tiposCache.map(t=>{
+      const nomeBonito = t.nome.charAt(0) + t.nome.slice(1).toLowerCase();
+      return `<option value="${t.nome}">${nomeBonito}</option>`;
+    }).join('');
+  }else{
+    // Alternativa se a vista falhar
+    sel.innerHTML = '<option value="EFETIVO">Efetivo</option><option value="ATLETA">Atleta</option><option value="PARCEIRO/EMPRESA">Parceiro/Empresa</option>';
+  }
+
+  // Carregar preços
   try{
     const res = await fetch(`${SUPA_URL}/rest/v1/socios_precos_publico`, {
       headers: {'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY}
@@ -157,16 +180,29 @@ async function carregarPrecos(){
   atualizarValorQuota();
 }
 
+function tipoEhIsento(tipo){
+  const t = tiposCache.find(x=>x.nome===tipo);
+  return t ? !!t.isento : false;
+}
+
 function getPrecoAtual(){
   const tipo = document.getElementById('f-tipo').value;
   const periodo = document.getElementById('f-periodo').value;
+  if(tipoEhIsento(tipo)) return 0;
   const p = precosCache.find(x=>x.tipo===tipo && x.periodo===periodo);
   return p ? parseFloat(p.valor)||0 : 0;
 }
 
 function atualizarValorQuota(){
+  const tipo = document.getElementById('f-tipo').value;
+  const isento = tipoEhIsento(tipo);
   const valor = getPrecoAtual();
-  document.getElementById('quota-ref-valor').textContent = '€ ' + valor.toFixed(2);
+  const refEl = document.getElementById('quota-ref-valor');
+  if(isento){
+    refEl.textContent = 'Isento';
+  }else{
+    refEl.textContent = '€ ' + valor.toFixed(2);
+  }
   const campoValor = document.getElementById('f-valor-pago');
   if(!campoValor.dataset.editadoManual) campoValor.value = valor.toFixed(2);
   calcularDonativo();
@@ -257,13 +293,11 @@ async function submeterInscricao(){
       const txt = await res.text();
       throw new Error(txt || ('Erro '+res.status));
     }
-    const resultado = await res.json();
-    // A função devolve uma tabela → o PostgREST envia um array. Ler o primeiro elemento.
-    const novoSocio = Array.isArray(resultado) ? resultado[0] : resultado;
+    const novoSocio = await res.json();
     document.getElementById('form-area').style.display = 'none';
     document.getElementById('sucesso-area').style.display = 'block';
-    document.getElementById('sucesso-num').textContent = novoSocio && novoSocio.num ? ('Nº ' + novoSocio.num) : '';
-    if(novoSocio && novoSocio.codigo_verificacao){
+    document.getElementById('sucesso-num').textContent = 'Nº ' + novoSocio.num;
+    if(novoSocio.codigo_verificacao){
       document.getElementById('link-cartao').href =
         `https://arca-ajuda.github.io/arca-ajuda/socios/verificar/?c=${novoSocio.codigo_verificacao}`;
     } else {
