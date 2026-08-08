@@ -2535,13 +2535,14 @@ async function guardarChaveConfig(chave, valor){
   }else{
     await supaFetch('config_app', 'POST', {chave: chave, valor: valor});
   }
-}async function renderConfigAssociacao(){
+}
+async function renderConfigAssociacao(){
   const box = document.getElementById('config-associacao-content');
   if(!box) return;
   box.innerHTML = '<div style="color:var(--text-2);font-size:13px;padding:8px">A carregar…</div>';
   let cfg = {
     assoc_nome:'', assoc_email:'', assoc_tel:'', assoc_morada:'',
-    assoc_nif:'', assoc_iban:'', assoc_mbway:'', assoc_pagamentos:''
+    assoc_nif:'', assoc_iban:'', assoc_mbway:'', assoc_entidade:'', assoc_referencia:'', assoc_pagamentos:''
   };
   try{
     const chaves = Object.keys(cfg).join(',');
@@ -2580,8 +2581,18 @@ async function guardarChaveConfig(chave, valor){
       <input type="text" id="assoc-iban" value="${(cfg.assoc_iban||'').replace(/"/g,'&quot;')}" placeholder="PT50 0000 0000 0000 0000 0000 0" style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:14px;background:var(--card)">
       <label style="display:block;font-size:12.5px;font-weight:600;color:var(--text-2);margin:14px 0 4px">MB WAY</label>
       <input type="text" id="assoc-mbway" value="${(cfg.assoc_mbway||'').replace(/"/g,'&quot;')}" placeholder="9XX XXX XXX" style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:14px;background:var(--card)">
-      <label style="display:block;font-size:12.5px;font-weight:600;color:var(--text-2);margin:14px 0 4px">Outras formas / notas de pagamento</label>
-      <textarea id="assoc-pagamentos" rows="3" placeholder="Ex: Pagamento em numerário na sede, aos sábados das 10h às 12h." style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:14px;background:var(--card);font-family:inherit;resize:vertical">${(cfg.assoc_pagamentos||'')}</textarea>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <label style="display:block;font-size:12.5px;font-weight:600;color:var(--text-2);margin:14px 0 4px">Entidade (Multibanco)</label>
+          <input type="text" id="assoc-entidade" value="${(cfg.assoc_entidade||'').replace(/"/g,'&quot;')}" placeholder="12345" style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:14px;background:var(--card)">
+        </div>
+        <div>
+          <label style="display:block;font-size:12.5px;font-weight:600;color:var(--text-2);margin:14px 0 4px">Referência</label>
+          <input type="text" id="assoc-referencia" value="${(cfg.assoc_referencia||'').replace(/"/g,'&quot;')}" placeholder="123 456 789" style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:14px;background:var(--card)">
+        </div>
+      </div>
+      <label style="display:block;font-size:12.5px;font-weight:600;color:var(--text-2);margin:14px 0 4px">Nota / valores exatos</label>
+      <textarea id="assoc-pagamentos" rows="3" placeholder="Ex: Quota anual — 10€. Pagamento por transferência, MB WAY ou Multibanco. Indicar o nome do sócio." style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:14px;background:var(--card);font-family:inherit;resize:vertical">${(cfg.assoc_pagamentos||'')}</textarea>
     </div>
 
     <button class="btn-primary" onclick="guardarConfigAssociacao()">💾 Guardar dados da associação</button>
@@ -2597,6 +2608,8 @@ async function guardarConfigAssociacao(){
     assoc_morada: (document.getElementById('assoc-morada')?.value||'').trim(),
     assoc_iban: (document.getElementById('assoc-iban')?.value||'').trim(),
     assoc_mbway: (document.getElementById('assoc-mbway')?.value||'').trim(),
+    assoc_entidade: (document.getElementById('assoc-entidade')?.value||'').trim(),
+    assoc_referencia: (document.getElementById('assoc-referencia')?.value||'').trim(),
     assoc_pagamentos: (document.getElementById('assoc-pagamentos')?.value||'').trim()
   };
   try{
@@ -2609,6 +2622,7 @@ async function guardarConfigAssociacao(){
     toast('Erro ao guardar', false);
   }
 }
+
 async function renderConfigParcerias(){
   const box = document.getElementById('config-parcerias-content');
   if(!box) return;
