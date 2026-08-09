@@ -9510,7 +9510,15 @@ async function enviarEmailSocio(id, tipo){
       const rows = await supaFetch('config_app?chave=eq.'+chave+'&select=valor');
       if(rows && rows.length) textoModelo = rows[0].valor||'';
     }catch(e){ console.warn(e); }
-    if(!textoModelo) textoModelo = 'Olá {nome},';
+    if(!textoModelo){
+      // Mensagens por defeito (as mesmas da aba Email)
+      const padrao = {
+        boasvindas: `Bem-vindo(a) à ${nomeAssoc}, {nome}! 🎉\n\nÉ com muito gosto que te damos as boas-vindas como sócio(a) nº {num}. A partir de agora fazes parte de uma associação dedicada à cultura, ao desporto e à comunidade da Ajuda.\n\nEm baixo encontras as formas de pagamento da quota e todas as vantagens de que passas a usufruir. Qualquer dúvida, estamos ao teu dispor.\n\nObrigado por te juntares a nós!`,
+        avencer: `Olá {nome},\n\nLembramos que a tua quota de sócio(a) nº {num} está prestes a vencer. Para continuares a usufruir de todas as vantagens e a apoiar a nossa associação, pedimos que procedas à renovação.\n\nPodes efetuar o pagamento através de qualquer uma das formas indicadas em baixo. É rápido e simples.\n\nContamos contigo!`,
+        vencida: `Olá {nome},\n\nVerificámos que a quota de sócio(a) nº {num} se encontra em atraso. Para regularizares a tua situação e manteres o teu estatuto de sócio(a) ativo(a), pedimos que efetues o pagamento assim que possível.\n\nEm baixo tens todas as formas de pagamento disponíveis. Se já efetuaste o pagamento, por favor ignora esta mensagem.\n\nObrigado pela tua colaboração.`
+      };
+      textoModelo = padrao[tipo] || 'Olá {nome},';
+    }
   }
 
   // Substituir {nome} e {num}
