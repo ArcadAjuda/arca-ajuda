@@ -3410,11 +3410,14 @@ function checkQuotaAlerts(){
       const emailBtn = (s.email && s.aceitaEmail)
         ? `<button onclick="document.getElementById('quota-alert-popup')?.remove();abrirMenuEmail('${s.id}')" style="border:1px solid #37A7C8;background:#eef7fb;color:#1B4164;border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;margin-top:4px">@ Enviar email</button>`
         : `<span style="font-size:11px;color:var(--text-3)">✉ ${s.email||'sem email'}</span>`;
+      const smsBtn = (s.tel && s.aceitaSms)
+        ? `<button onclick="document.getElementById('quota-alert-popup')?.remove();abrirMenuSms('${s.id}')" style="border:1px solid #37A7C8;background:#eef7fb;color:#1B4164;border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;margin-top:4px;margin-left:4px">💬 SMS</button>`
+        : '';
       return `<div style="padding:7px 0;border-bottom:0.5px solid #f5d5d5">
         <div style="font-weight:600;font-size:12px">Nº${s.num} — ${s.nome}</div>
         <div style="font-size:11px;color:var(--text-2);margin-top:2px">📞 ${s.tel||'—'}</div>
         <div style="font-size:11px;color:var(--coral-d);margin-top:2px;font-weight:500">${label}</div>
-        ${emailBtn}
+        ${emailBtn}${smsBtn}
       </div>`;
     }).join('');
     if(alertas15.length > 6) body += `<div style="font-size:11px;color:var(--text-3);padding:6px 0">... e mais ${alertas15.length-6} sócio(s)</div>`;
@@ -3426,12 +3429,15 @@ function checkQuotaAlerts(){
       const emailBtn = (s.email && s.aceitaEmail)
         ? `<button onclick="document.getElementById('quota-alert-popup')?.remove();abrirMenuEmail('${s.id}')" style="border:1px solid #37A7C8;background:#eef7fb;color:#1B4164;border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;margin-top:4px">@ Enviar email</button>`
         : `<span style="font-size:11px;color:var(--text-3)">✉ ${s.email||'sem email'}</span>`;
+      const smsBtn = (s.tel && s.aceitaSms)
+        ? `<button onclick="document.getElementById('quota-alert-popup')?.remove();abrirMenuSms('${s.id}')" style="border:1px solid #37A7C8;background:#eef7fb;color:#1B4164;border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;margin-top:4px;margin-left:4px">💬 SMS</button>`
+        : '';
       return `
       <div style="padding:7px 0;border-bottom:0.5px solid #f5e8c0">
         <div style="font-weight:600;font-size:12px">Nº${s.num} — ${s.nome}</div>
         <div style="font-size:11px;color:var(--text-2);margin-top:2px">📞 ${s.tel||'—'}</div>
         <div style="font-size:11px;color:var(--amber);margin-top:2px;font-weight:500">Vence em ${s.diff} dia(s)</div>
-        ${emailBtn}
+        ${emailBtn}${smsBtn}
       </div>`;
     }).join('');
     if(alertas30.length > 4) body += `<div style="font-size:11px;color:var(--text-3);padding:6px 0">... e mais ${alertas30.length-4} sócio(s)</div>`;
@@ -9424,6 +9430,21 @@ function renderSociosList(){
         }
         return `<button class="btn-secondary" style="padding:4px 8px;font-size:13px;font-weight:700;color:${cor};border-color:${borda};background:#fff;box-shadow:0 1px 4px ${sombra}" onclick="abrirMenuEmail('${s.id}')" title="Enviar email">@</button>`;
       })() : ''}
+      ${(s.tel && s.aceitaSms) ? (()=>{
+        const sit=getSituacaoSocio(s);
+        const inativo = s.estado==='INATIVO'||s.estado==='FALECEU';
+        let cor='#37A7C8', borda='#B9E0EC', sombra='rgba(55,167,200,.18)';
+        if(!inativo){
+          if(sit==='VENCIDO'){ cor='#C0392B'; borda='#E8A5A0'; sombra='rgba(192,57,43,.22)'; }
+          else if(sit==='A TERMINAR'){ cor='#B9770E'; borda='#F0CE8E'; sombra='rgba(185,119,14,.22)'; }
+          else {
+            let recente=false;
+            if(s.dataInscricao){ const d=(Date.now()-new Date(s.dataInscricao).getTime())/(864e5); if(d>=0&&d<=30) recente=true; }
+            if(recente){ cor='#1E8449'; borda='#A9D9BB'; sombra='rgba(30,132,73,.20)'; }
+          }
+        }
+        return `<button class="btn-secondary" style="padding:4px 7px;font-size:12px;color:${cor};border-color:${borda};background:#fff;box-shadow:0 1px 4px ${sombra}" onclick="abrirMenuSms('${s.id}')" title="Enviar SMS">💬</button>`;
+      })() : ''}
       ${btnInativar}
       <button class="btn-print" onclick="abrirCartaoSocio('${s.id}')" title="Cartão">🪪</button>
       <button class="btn-danger" onclick="deleteSocio('${s.id}')" title="Eliminar">🗑</button>
@@ -9432,6 +9453,77 @@ function renderSociosList(){
 }
 
 // ===== ENVIO DE EMAIL (abre o programa de email com tudo preenchido) =====
+// ===== ENVIO DE SMS (abre a app de mensagens com o texto) =====
+function abrirMenuSms(id){
+  const s = socios.find(x=>String(x.id)===String(id));
+  if(!s){ toast('Sócio não encontrado', false); return; }
+  if(!s.tel){ toast('Este sócio não tem telemóvel', false); return; }
+  const antigo = document.getElementById('menu-email-flutuante');
+  if(antigo) antigo.remove();
+
+  let sugerido = '';
+  const sit = getSituacaoSocio(s);
+  if(sit==='VENCIDO') sugerido = 'vencida';
+  else if(sit==='A TERMINAR') sugerido = 'avencer';
+  else {
+    if(s.dataInscricao){ const dias=(Date.now()-new Date(s.dataInscricao).getTime())/(864e5); if(dias>=0&&dias<=30) sugerido='boasvindas'; }
+  }
+
+  const destaque = 'border:2px solid #37A7C8;background:linear-gradient(135deg,#eef7fb,#f7fcff);box-shadow:0 3px 12px rgba(55,167,200,.25);font-weight:700';
+  const normal = 'border:1.5px solid var(--line,#e8eef3);background:var(--card,#fff)';
+  const tag = '<span style="float:right;font-size:10px;font-weight:700;color:#fff;background:#37A7C8;padding:2px 8px;border-radius:10px">sugerido</span>';
+  const est = (op)=> (op===sugerido ? destaque : normal);
+  const t = (op)=> (op===sugerido ? tag : '');
+
+  const menu = document.createElement('div');
+  menu.id = 'menu-email-flutuante';
+  menu.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;padding:20px';
+  menu.onclick = (e)=>{ if(e.target===menu) menu.remove(); };
+  menu.innerHTML = `
+    <div style="background:var(--card,#fff);border-radius:16px;max-width:400px;width:100%;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+      <div style="font-size:16px;font-weight:800;color:var(--text,#16232E);margin-bottom:4px">📱 Enviar SMS a ${s.nome}</div>
+      <div style="font-size:12px;color:var(--text-2,#667);margin-bottom:16px">${s.tel}${sit&&sit!=='EM DIA'?' · <b>'+sit+'</b>':''}</div>
+      <button onclick="enviarSmsSocio('${id}','boasvindas')" style="width:100%;text-align:left;padding:12px 14px;margin-bottom:8px;border-radius:10px;cursor:pointer;font-size:14px;${est('boasvindas')}">🎉 &nbsp;Novo sócio (boas-vindas)${t('boasvindas')}</button>
+      <button onclick="enviarSmsSocio('${id}','avencer')" style="width:100%;text-align:left;padding:12px 14px;margin-bottom:8px;border-radius:10px;cursor:pointer;font-size:14px;${est('avencer')}">⏰ &nbsp;Para pagamento (quota a vencer)${t('avencer')}</button>
+      <button onclick="enviarSmsSocio('${id}','vencida')" style="width:100%;text-align:left;padding:12px 14px;margin-bottom:8px;border-radius:10px;cursor:pointer;font-size:14px;${est('vencida')}">🔴 &nbsp;Quota fora de prazo${t('vencida')}</button>
+      <button onclick="enviarSmsSocio('${id}','geral')" style="width:100%;text-align:left;padding:12px 14px;margin-bottom:8px;border-radius:10px;cursor:pointer;font-size:14px;${est('geral')}">✉️ &nbsp;SMS geral (mensagem pontual)</button>
+      <button onclick="document.getElementById('menu-email-flutuante').remove()" style="width:100%;padding:10px;margin-top:6px;border:none;background:none;color:var(--text-2,#888);cursor:pointer;font-size:13px">Cancelar</button>
+    </div>`;
+  document.body.appendChild(menu);
+}
+
+async function enviarSmsSocio(id, tipo){
+  const menu = document.getElementById('menu-email-flutuante'); if(menu) menu.remove();
+  const s = socios.find(x=>String(x.id)===String(id));
+  if(!s||!s.tel){ toast('Sócio sem telemóvel', false); return; }
+  const dados = await getDadosAssociacao();
+  const nomeAssoc = dados.assoc_nome || "ARCA d'Ajuda";
+  const linkParceiros = 'https://arca-ajuda.github.io/arca-ajuda/parceiros/';
+
+  // Formas de pagamento resumidas (uma linha)
+  const pg = [];
+  if(dados.assoc_iban) pg.push('IBAN '+dados.assoc_iban);
+  if(dados.assoc_mbway) pg.push('MB WAY '+dados.assoc_mbway);
+  if(dados.assoc_entidade&&dados.assoc_referencia) pg.push('MB Ent.'+dados.assoc_entidade+' Ref.'+dados.assoc_referencia);
+  const pagamento = pg.length ? ('Pagamento: '+pg.join(' | ')+'. ') : '';
+
+  let msg = '';
+  if(tipo==='geral'){
+    const m = prompt('Escreve o SMS para '+s.nome+':', '');
+    if(m===null) return;
+    msg = m;
+  }else if(tipo==='boasvindas'){
+    msg = `Ola ${s.nome}! Bem-vindo(a) a ${nomeAssoc} como socio(a) n${s.num}. Obrigado por te juntares a nos! Vantagens: ${linkParceiros}`;
+  }else if(tipo==='avencer'){
+    msg = `Ola ${s.nome}, a tua quota de socio(a) n${s.num} da ${nomeAssoc} esta prestes a vencer. ${pagamento}Obrigado!`;
+  }else if(tipo==='vencida'){
+    msg = `Ola ${s.nome}, a tua quota de socio(a) n${s.num} da ${nomeAssoc} esta em atraso. Regulariza p.f. ${pagamento}Obrigado!`;
+  }
+
+  const sms = `sms:${s.tel}?body=${encodeURIComponent(msg)}`;
+  window.location.href = sms;
+}
+
 function abrirMenuEmail(id){
   const s = socios.find(x=>String(x.id)===String(id));
   if(!s){ toast('Sócio não encontrado', false); return; }
