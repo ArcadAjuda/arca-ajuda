@@ -9412,17 +9412,17 @@ function renderSociosList(){
       ${(s.email && s.aceitaEmail) ? (()=>{
         const sit=(s.situacao||'').toUpperCase();
         const inativo = s.estado==='INATIVO'||s.estado==='FALECEU';
-        let cor='#37A7C8', borda='#B9E0EC';
+        let cor='#37A7C8', borda='#B9E0EC', sombra='rgba(55,167,200,.18)';
         if(!inativo){
-          if(sit==='VENCIDO'){ cor='#C0392B'; borda='#E8A5A0'; }
-          else if(sit==='A TERMINAR'){ cor='#B9770E'; borda='#F0CE8E'; }
+          if(sit==='VENCIDO'){ cor='#C0392B'; borda='#E8A5A0'; sombra='rgba(192,57,43,.22)'; }
+          else if(sit==='A TERMINAR'){ cor='#B9770E'; borda='#F0CE8E'; sombra='rgba(185,119,14,.22)'; }
           else {
             let recente=false;
             if(s.dataInscricao){ const d=(Date.now()-new Date(s.dataInscricao).getTime())/(864e5); if(d>=0&&d<=30) recente=true; }
-            if(recente){ cor='#1E8449'; borda='#A9D9BB'; }
+            if(recente){ cor='#1E8449'; borda='#A9D9BB'; sombra='rgba(30,132,73,.20)'; }
           }
         }
-        return `<button class="btn-secondary" style="padding:4px 8px;font-size:13px;font-weight:700;color:${cor};border-color:${borda};background:#fff" onclick="abrirMenuEmail('${s.id}')" title="Enviar email">@</button>`;
+        return `<button class="btn-secondary" style="padding:4px 8px;font-size:13px;font-weight:700;color:${cor};border-color:${borda};background:#fff;box-shadow:0 1px 4px ${sombra}" onclick="abrirMenuEmail('${s.id}')" title="Enviar email">@</button>`;
       })() : ''}
       ${btnInativar}
       <button class="btn-print" onclick="abrirCartaoSocio('${s.id}')" title="Cartão">🪪</button>
