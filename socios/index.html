@@ -9400,11 +9400,88 @@ function renderSociosList(){
     <td data-label="Obs." style="font-size:11px;color:var(--text-2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.obs||'—'}</td>
     <td data-label=""><div class="td-actions">
       <button class="btn-edit" onclick="editSocio('${s.id}')" title="Editar">✏</button>
+      ${(s.email && s.aceitaEmail) ? `<button class="btn-secondary" style="padding:4px 7px;font-size:11px;color:#1B4164;border-color:#37A7C8" onclick="abrirMenuEmail('${s.id}')" title="Enviar email">📨</button>` : ''}
       ${btnInativar}
       <button class="btn-print" onclick="abrirCartaoSocio('${s.id}')" title="Cartão">🪪</button>
       <button class="btn-danger" onclick="deleteSocio('${s.id}')" title="Eliminar">🗑</button>
     </div></td>
   </tr>`;}).join('')}</tbody></table>`;
+}
+
+// ===== ENVIO DE EMAIL (abre o programa de email com tudo preenchido) =====
+function abrirMenuEmail(id){
+  const s = socios.find(x=>String(x.id)===String(id));
+  if(!s){ toast('Sócio não encontrado', false); return; }
+  if(!s.email){ toast('Este sócio não tem email', false); return; }
+  // Remover menu anterior se existir
+  const antigo = document.getElementById('menu-email-flutuante');
+  if(antigo) antigo.remove();
+  const menu = document.createElement('div');
+  menu.id = 'menu-email-flutuante';
+  menu.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;padding:20px';
+  menu.onclick = (e)=>{ if(e.target===menu) menu.remove(); };
+  menu.innerHTML = `
+    <div style="background:var(--card,#fff);border-radius:16px;max-width:400px;width:100%;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+      <div style="font-size:16px;font-weight:800;color:var(--text,#16232E);margin-bottom:4px">📨 Enviar email a ${s.nome}</div>
+      <div style="font-size:12px;color:var(--text-2,#667);margin-bottom:16px">${s.email}</div>
+      <button class="email-op" onclick="enviarEmailSocio('${id}','boasvindas')" style="width:100%;text-align:left;padding:12px 14px;margin-bottom:8px;border:1.5px solid var(--line,#e8eef3);border-radius:10px;background:var(--card,#fff);cursor:pointer;font-size:14px">🎉 &nbsp;Novo sócio (boas-vindas)</button>
+      <button class="email-op" onclick="enviarEmailSocio('${id}','avencer')" style="width:100%;text-align:left;padding:12px 14px;margin-bottom:8px;border:1.5px solid var(--line,#e8eef3);border-radius:10px;background:var(--card,#fff);cursor:pointer;font-size:14px">⏰ &nbsp;Para pagamento (quota a vencer)</button>
+      <button class="email-op" onclick="enviarEmailSocio('${id}','vencida')" style="width:100%;text-align:left;padding:12px 14px;margin-bottom:8px;border:1.5px solid var(--line,#e8eef3);border-radius:10px;background:var(--card,#fff);cursor:pointer;font-size:14px">🔴 &nbsp;Quota fora de prazo</button>
+      <button class="email-op" onclick="enviarEmailSocio('${id}','geral')" style="width:100%;text-align:left;padding:12px 14px;margin-bottom:8px;border:1.5px solid var(--line,#e8eef3);border-radius:10px;background:var(--card,#fff);cursor:pointer;font-size:14px">✉️ &nbsp;Email geral (mensagem pontual)</button>
+      <button onclick="document.getElementById('menu-email-flutuante').remove()" style="width:100%;padding:10px;margin-top:6px;border:none;background:none;color:var(--text-2,#888);cursor:pointer;font-size:13px">Cancelar</button>
+    </div>`;
+  document.body.appendChild(menu);
+}
+
+// Converte HTML simples em texto (para o email)
+function htmlParaTexto(html){
+  return html
+    .replace(/<hr[^>]*>/gi,'\n----------------------------------------\n')
+    .replace(/<br\s*\/?>/gi,'\n')
+    .replace(/<\/div>/gi,'\n')
+    .replace(/<[^>]+>/g,'')
+    .replace(/&nbsp;/g,' ').replace(/&middot;|·/g,'·')
+    .replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>')
+    .replace(/\n{3,}/g,'\n\n').trim();
+}
+
+async function enviarEmailSocio(id, tipo){
+  const menu = document.getElementById('menu-email-flutuante'); if(menu) menu.remove();
+  const s = socios.find(x=>String(x.id)===String(id));
+  if(!s||!s.email){ toast('Sócio sem email', false); return; }
+  const dados = await getDadosAssociacao();
+
+  // Buscar o texto do modelo (ou pedir para o email geral)
+  let textoModelo = '';
+  let assunto = '';
+  const nomeAssoc = dados.assoc_nome || "ARCA d'Ajuda";
+  if(tipo==='geral'){
+    textoModelo = prompt('Escreve a mensagem para '+s.nome+':\n(podes usar {nome} e {num})',
+      `Olá {nome},\n\n`);
+    if(textoModelo===null) return; // cancelou
+    assunto = 'Mensagem da ' + nomeAssoc;
+  }else{
+    const chave = {boasvindas:'modelo_boasvindas', avencer:'modelo_avencer', vencida:'modelo_vencida'}[tipo];
+    const assuntos = {boasvindas:'Bem-vindo(a) à '+nomeAssoc, avencer:'A tua quota está a vencer — '+nomeAssoc, vencida:'Quota em atraso — '+nomeAssoc};
+    assunto = assuntos[tipo];
+    try{
+      const rows = await supaFetch('config_app?chave=eq.'+chave+'&select=valor');
+      if(rows && rows.length) textoModelo = rows[0].valor||'';
+    }catch(e){ console.warn(e); }
+    if(!textoModelo) textoModelo = 'Olá {nome},';
+  }
+
+  // Substituir {nome} e {num}
+  textoModelo = textoModelo.replace(/\{nome\}/g, s.nome||'').replace(/\{num\}/g, s.num||'');
+
+  // Montar o corpo em texto (mensagem + base automática)
+  const baseHtml = montarBaseAutomatica(dados);
+  const baseTexto = htmlParaTexto(baseHtml);
+  const corpo = textoModelo + '\n\n' + baseTexto;
+
+  // Abrir o programa de email (mailto)
+  const mailto = `mailto:${encodeURIComponent(s.email)}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
+  window.location.href = mailto;
 }
 
 function showSociosTab(tab,btn){
