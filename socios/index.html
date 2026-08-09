@@ -3407,10 +3407,14 @@ function checkQuotaAlerts(){
     body += `<div style="font-size:11px;font-weight:700;color:var(--coral-d);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">🚨 Urgente — quota a vencer em menos de 15 dias</div>`;
     body += alertas15.slice(0,6).map(s => {
       const label = s.diff < 0 ? `venceu há ${Math.abs(s.diff)} dia(s)` : s.diff === 0 ? 'vence hoje' : `vence em ${s.diff} dia(s)`;
+      const emailBtn = (s.email && s.aceitaEmail)
+        ? `<button onclick="document.getElementById('quota-alert-popup')?.remove();abrirMenuEmail('${s.id}')" style="border:1px solid #37A7C8;background:#eef7fb;color:#1B4164;border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;margin-top:4px">📨 Enviar email</button>`
+        : `<span style="font-size:11px;color:var(--text-3)">✉ ${s.email||'sem email'}</span>`;
       return `<div style="padding:7px 0;border-bottom:0.5px solid #f5d5d5">
         <div style="font-weight:600;font-size:12px">Nº${s.num} — ${s.nome}</div>
-        <div style="font-size:11px;color:var(--text-2);margin-top:2px">📞 ${s.tel||'—'} &nbsp;·&nbsp; ✉ ${s.email||'—'}</div>
+        <div style="font-size:11px;color:var(--text-2);margin-top:2px">📞 ${s.tel||'—'}</div>
         <div style="font-size:11px;color:var(--coral-d);margin-top:2px;font-weight:500">${label}</div>
+        ${emailBtn}
       </div>`;
     }).join('');
     if(alertas15.length > 6) body += `<div style="font-size:11px;color:var(--text-3);padding:6px 0">... e mais ${alertas15.length-6} sócio(s)</div>`;
@@ -3418,12 +3422,18 @@ function checkQuotaAlerts(){
 
   if(alertas30.length > 0){
     body += `<div style="font-size:11px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.4px;margin:${alertas15.length?'14px':0} 0 8px">⏳ Atenção — quota a vencer em 30 dias</div>`;
-    body += alertas30.slice(0,4).map(s => `
+    body += alertas30.slice(0,4).map(s => {
+      const emailBtn = (s.email && s.aceitaEmail)
+        ? `<button onclick="document.getElementById('quota-alert-popup')?.remove();abrirMenuEmail('${s.id}')" style="border:1px solid #37A7C8;background:#eef7fb;color:#1B4164;border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;margin-top:4px">📨 Enviar email</button>`
+        : `<span style="font-size:11px;color:var(--text-3)">✉ ${s.email||'sem email'}</span>`;
+      return `
       <div style="padding:7px 0;border-bottom:0.5px solid #f5e8c0">
         <div style="font-weight:600;font-size:12px">Nº${s.num} — ${s.nome}</div>
-        <div style="font-size:11px;color:var(--text-2);margin-top:2px">📞 ${s.tel||'—'} &nbsp;·&nbsp; ✉ ${s.email||'—'}</div>
+        <div style="font-size:11px;color:var(--text-2);margin-top:2px">📞 ${s.tel||'—'}</div>
         <div style="font-size:11px;color:var(--amber);margin-top:2px;font-weight:500">Vence em ${s.diff} dia(s)</div>
-      </div>`).join('');
+        ${emailBtn}
+      </div>`;
+    }).join('');
     if(alertas30.length > 4) body += `<div style="font-size:11px;color:var(--text-3);padding:6px 0">... e mais ${alertas30.length-4} sócio(s)</div>`;
   }
 
@@ -3450,7 +3460,6 @@ function showAlertPopup(title, body, sociosAlerta){
     ${body}
     <div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap">
       <button class="btn-primary" style="font-size:11px;padding:5px 10px" onclick="showPage('socios',document.querySelector('.nav-item:nth-child(5))');document.getElementById('quota-alert-popup').remove()">Ver sócios</button>
-      <button class="btn-secondary" style="font-size:11px;padding:5px 10px" onclick="gerarMsgRenovacaoFromPopup()">✉ Gerar mensagens</button>
       <button class="btn-secondary" style="font-size:11px;padding:5px 10px" onclick="document.getElementById('quota-alert-popup').remove()">Fechar</button>
     </div>`;
   document.body.appendChild(div);
@@ -9413,9 +9422,28 @@ function abrirMenuEmail(id){
   const s = socios.find(x=>String(x.id)===String(id));
   if(!s){ toast('Sócio não encontrado', false); return; }
   if(!s.email){ toast('Este sócio não tem email', false); return; }
-  // Remover menu anterior se existir
   const antigo = document.getElementById('menu-email-flutuante');
   if(antigo) antigo.remove();
+
+  // Descobrir a opção sugerida conforme a situação
+  let sugerido = '';
+  const sit = (s.situacao||'').toUpperCase();
+  if(sit==='VENCIDO') sugerido = 'vencida';
+  else if(sit==='A TERMINAR') sugerido = 'avencer';
+  else {
+    // Sócio recente (inscrito há menos de 30 dias) → boas-vindas
+    if(s.dataInscricao){
+      const dias = (Date.now() - new Date(s.dataInscricao).getTime())/(1000*60*60*24);
+      if(dias>=0 && dias<=30) sugerido = 'boasvindas';
+    }
+  }
+
+  const destaque = 'border:2px solid #37A7C8;background:linear-gradient(135deg,#eef7fb,#f7fcff);box-shadow:0 3px 12px rgba(55,167,200,.25);font-weight:700';
+  const normal = 'border:1.5px solid var(--line,#e8eef3);background:var(--card,#fff)';
+  const tag = '<span style="float:right;font-size:10px;font-weight:700;color:#fff;background:#37A7C8;padding:2px 8px;border-radius:10px">sugerido</span>';
+  const est = (op)=> (op===sugerido ? destaque : normal);
+  const t = (op)=> (op===sugerido ? tag : '');
+
   const menu = document.createElement('div');
   menu.id = 'menu-email-flutuante';
   menu.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;padding:20px';
@@ -9423,11 +9451,11 @@ function abrirMenuEmail(id){
   menu.innerHTML = `
     <div style="background:var(--card,#fff);border-radius:16px;max-width:400px;width:100%;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.3)">
       <div style="font-size:16px;font-weight:800;color:var(--text,#16232E);margin-bottom:4px">📨 Enviar email a ${s.nome}</div>
-      <div style="font-size:12px;color:var(--text-2,#667);margin-bottom:16px">${s.email}</div>
-      <button class="email-op" onclick="enviarEmailSocio('${id}','boasvindas')" style="width:100%;text-align:left;padding:12px 14px;margin-bottom:8px;border:1.5px solid var(--line,#e8eef3);border-radius:10px;background:var(--card,#fff);cursor:pointer;font-size:14px">🎉 &nbsp;Novo sócio (boas-vindas)</button>
-      <button class="email-op" onclick="enviarEmailSocio('${id}','avencer')" style="width:100%;text-align:left;padding:12px 14px;margin-bottom:8px;border:1.5px solid var(--line,#e8eef3);border-radius:10px;background:var(--card,#fff);cursor:pointer;font-size:14px">⏰ &nbsp;Para pagamento (quota a vencer)</button>
-      <button class="email-op" onclick="enviarEmailSocio('${id}','vencida')" style="width:100%;text-align:left;padding:12px 14px;margin-bottom:8px;border:1.5px solid var(--line,#e8eef3);border-radius:10px;background:var(--card,#fff);cursor:pointer;font-size:14px">🔴 &nbsp;Quota fora de prazo</button>
-      <button class="email-op" onclick="enviarEmailSocio('${id}','geral')" style="width:100%;text-align:left;padding:12px 14px;margin-bottom:8px;border:1.5px solid var(--line,#e8eef3);border-radius:10px;background:var(--card,#fff);cursor:pointer;font-size:14px">✉️ &nbsp;Email geral (mensagem pontual)</button>
+      <div style="font-size:12px;color:var(--text-2,#667);margin-bottom:16px">${s.email}${sit?' · <b>'+sit+'</b>':''}</div>
+      <button class="email-op" onclick="enviarEmailSocio('${id}','boasvindas')" style="width:100%;text-align:left;padding:12px 14px;margin-bottom:8px;border-radius:10px;cursor:pointer;font-size:14px;${est('boasvindas')}">🎉 &nbsp;Novo sócio (boas-vindas)${t('boasvindas')}</button>
+      <button class="email-op" onclick="enviarEmailSocio('${id}','avencer')" style="width:100%;text-align:left;padding:12px 14px;margin-bottom:8px;border-radius:10px;cursor:pointer;font-size:14px;${est('avencer')}">⏰ &nbsp;Para pagamento (quota a vencer)${t('avencer')}</button>
+      <button class="email-op" onclick="enviarEmailSocio('${id}','vencida')" style="width:100%;text-align:left;padding:12px 14px;margin-bottom:8px;border-radius:10px;cursor:pointer;font-size:14px;${est('vencida')}">🔴 &nbsp;Quota fora de prazo${t('vencida')}</button>
+      <button class="email-op" onclick="enviarEmailSocio('${id}','geral')" style="width:100%;text-align:left;padding:12px 14px;margin-bottom:8px;border-radius:10px;cursor:pointer;font-size:14px;${est('geral')}">✉️ &nbsp;Email geral (mensagem pontual)</button>
       <button onclick="document.getElementById('menu-email-flutuante').remove()" style="width:100%;padding:10px;margin-top:6px;border:none;background:none;color:var(--text-2,#888);cursor:pointer;font-size:13px">Cancelar</button>
     </div>`;
   document.body.appendChild(menu);
