@@ -10310,6 +10310,28 @@ function abrirCartaoSocio(id){
 
 // INIT
 // ============================================================
+function avisarDriveDesligada(){
+  if(gdriveValid()) return;
+  if(document.getElementById('aviso-drive-off')) return;
+  const div = document.createElement('div');
+  div.id = 'aviso-drive-off';
+  div.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:9998;background:#fff;border:1.5px solid #FAC775;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.18);padding:16px 18px;max-width:420px;width:calc(100% - 40px)';
+  div.innerHTML = `
+    <div style="display:flex;align-items:flex-start;gap:12px">
+      <div style="font-size:22px;line-height:1">☁️</div>
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:14px;color:#B9770E;margin-bottom:4px">Google Drive desligada</div>
+        <div style="font-size:12.5px;color:#555;line-height:1.5">Os teus dados estão seguros na cloud, mas a <b>cópia de segurança em Excel na Drive</b> não está a ser guardada. Liga a Drive para não perderes nada.</div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button onclick="document.getElementById('aviso-drive-off').remove();gdriveConnectInteractive()" style="background:#37A7C8;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer">🔗 Ligar Drive agora</button>
+          <button onclick="document.getElementById('aviso-drive-off').remove()" style="background:none;border:none;color:#888;font-size:13px;cursor:pointer">Agora não</button>
+        </div>
+      </div>
+      <button onclick="document.getElementById('aviso-drive-off').remove()" style="background:none;border:none;font-size:18px;color:#bbb;cursor:pointer;line-height:1">×</button>
+    </div>`;
+  document.body.appendChild(div);
+}
+
 async function iniciarAppSocios(){
   try{ updateYearSelector(); }catch(e){ console.warn('init:',e); }
   try{ updateSidebarGreeting(); }catch(e){ console.warn('init:',e); }
@@ -10325,6 +10347,8 @@ async function iniciarAppSocios(){
   try{ startMotivacional(); }catch(e){ console.warn('init:',e); }
   try{ checkRoleLogin(); }catch(e){ console.warn('init:',e); }
   try{ gdriveAutoConnect(); }catch(e){ console.warn('init:',e); }
+  // Aviso se a Drive não estiver ligada (backups de segurança não são feitos)
+  setTimeout(()=>{ try{ avisarDriveDesligada(); }catch(e){ console.warn(e); } }, 3500);
   (function(){
     const el=document.getElementById('login-logo-area');
     if(el&&currentLogoData) el.innerHTML=`<img src="${currentLogoData}" style="height:64px;max-width:160px;object-fit:contain;border-radius:8px">`;
