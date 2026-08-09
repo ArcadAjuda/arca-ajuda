@@ -9410,7 +9410,7 @@ function renderSociosList(){
     <td data-label=""><div class="td-actions">
       <button class="btn-edit" onclick="editSocio('${s.id}')" title="Editar">✏</button>
       ${(s.email && s.aceitaEmail) ? (()=>{
-        const sit=(s.situacao||'').toUpperCase();
+        const sit=getSituacaoSocio(s);
         const inativo = s.estado==='INATIVO'||s.estado==='FALECEU';
         let cor='#37A7C8', borda='#B9E0EC', sombra='rgba(55,167,200,.18)';
         if(!inativo){
@@ -9439,9 +9439,9 @@ function abrirMenuEmail(id){
   const antigo = document.getElementById('menu-email-flutuante');
   if(antigo) antigo.remove();
 
-  // Descobrir a opção sugerida conforme a situação
+  // Descobrir a opção sugerida conforme a situação REAL (calculada pela validade)
   let sugerido = '';
-  const sit = (s.situacao||'').toUpperCase();
+  const sit = getSituacaoSocio(s);
   if(sit==='VENCIDO') sugerido = 'vencida';
   else if(sit==='A TERMINAR') sugerido = 'avencer';
   else {
@@ -9465,7 +9465,7 @@ function abrirMenuEmail(id){
   menu.innerHTML = `
     <div style="background:var(--card,#fff);border-radius:16px;max-width:400px;width:100%;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.3)">
       <div style="font-size:16px;font-weight:800;color:var(--text,#16232E);margin-bottom:4px">@ Enviar email a ${s.nome}</div>
-      <div style="font-size:12px;color:var(--text-2,#667);margin-bottom:16px">${s.email}${sit?' · <b>'+sit+'</b>':''}</div>
+      <div style="font-size:12px;color:var(--text-2,#667);margin-bottom:16px">${s.email}${sit&&sit!=='EM DIA'?' · <b>'+sit+'</b>':''}</div>
       <button class="email-op" onclick="enviarEmailSocio('${id}','boasvindas')" style="width:100%;text-align:left;padding:12px 14px;margin-bottom:8px;border-radius:10px;cursor:pointer;font-size:14px;${est('boasvindas')}">🎉 &nbsp;Novo sócio (boas-vindas)${t('boasvindas')}</button>
       <button class="email-op" onclick="enviarEmailSocio('${id}','avencer')" style="width:100%;text-align:left;padding:12px 14px;margin-bottom:8px;border-radius:10px;cursor:pointer;font-size:14px;${est('avencer')}">⏰ &nbsp;Para pagamento (quota a vencer)${t('avencer')}</button>
       <button class="email-op" onclick="enviarEmailSocio('${id}','vencida')" style="width:100%;text-align:left;padding:12px 14px;margin-bottom:8px;border-radius:10px;cursor:pointer;font-size:14px;${est('vencida')}">🔴 &nbsp;Quota fora de prazo${t('vencida')}</button>
