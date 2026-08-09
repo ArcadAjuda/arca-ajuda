@@ -9409,7 +9409,21 @@ function renderSociosList(){
     <td data-label="Obs." style="font-size:11px;color:var(--text-2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.obs||'—'}</td>
     <td data-label=""><div class="td-actions">
       <button class="btn-edit" onclick="editSocio('${s.id}')" title="Editar">✏</button>
-      ${(s.email && s.aceitaEmail) ? `<button class="btn-secondary" style="padding:4px 7px;font-size:11px;color:#1B4164;border-color:#37A7C8" onclick="abrirMenuEmail('${s.id}')" title="Enviar email">📨</button>` : ''}
+      ${(s.email && s.aceitaEmail) ? (()=>{
+        const sit=(s.situacao||'').toUpperCase();
+        const inativo = s.estado==='INATIVO'||s.estado==='FALECEU';
+        let cor='#1B4164', borda='#37A7C8', fundo='';
+        if(!inativo){
+          if(sit==='VENCIDO'){ cor='#fff'; borda='#C0392B'; fundo='background:#E74C3C;'; }
+          else if(sit==='A TERMINAR'){ cor='#fff'; borda='#D68910'; fundo='background:#F39C12;'; }
+          else {
+            let recente=false;
+            if(s.dataInscricao){ const d=(Date.now()-new Date(s.dataInscricao).getTime())/(864e5); if(d>=0&&d<=30) recente=true; }
+            if(recente){ cor='#fff'; borda='#1E8449'; fundo='background:#27AE60;'; }
+          }
+        }
+        return `<button class="btn-secondary" style="padding:4px 7px;font-size:11px;color:${cor};border-color:${borda};${fundo}" onclick="abrirMenuEmail('${s.id}')" title="Enviar email">📨</button>`;
+      })() : ''}
       ${btnInativar}
       <button class="btn-print" onclick="abrirCartaoSocio('${s.id}')" title="Cartão">🪪</button>
       <button class="btn-danger" onclick="deleteSocio('${s.id}')" title="Eliminar">🗑</button>
