@@ -2518,6 +2518,10 @@ async function renderConfigEmail(){
   }catch(e){ console.warn('Falha a ler config de email:', e); }
   // Migração: se havia o modelo antigo e não há boas-vindas, usa-o
   if(!cfg.modelo_boasvindas && cfg.modelo_email_socio) cfg.modelo_boasvindas = cfg.modelo_email_socio;
+  // Mensagens por defeito (se ainda não houver nada guardado)
+  if(!cfg.modelo_boasvindas) cfg.modelo_boasvindas = `Bem-vindo(a) à ARCA d'Ajuda, {nome}! 🎉\n\nÉ com muito gosto que te damos as boas-vindas como sócio(a) nº {num}. A partir de agora fazes parte de uma associação dedicada à cultura, ao desporto e à comunidade da Ajuda.\n\nEm baixo encontras as formas de pagamento da quota e todas as vantagens de que passas a usufruir. Qualquer dúvida, estamos ao teu dispor.\n\nObrigado por te juntares a nós!`;
+  if(!cfg.modelo_avencer) cfg.modelo_avencer = `Olá {nome},\n\nLembramos que a tua quota de sócio(a) nº {num} está prestes a vencer. Para continuares a usufruir de todas as vantagens e a apoiar a nossa associação, pedimos que procedas à renovação.\n\nPodes efetuar o pagamento através de qualquer uma das formas indicadas em baixo. É rápido e simples.\n\nContamos contigo!`;
+  if(!cfg.modelo_vencida) cfg.modelo_vencida = `Olá {nome},\n\nVerificámos que a quota de sócio(a) nº {num} se encontra em atraso. Para regularizares a tua situação e manteres o teu estatuto de sócio(a) ativo(a), pedimos que efetues o pagamento assim que possível.\n\nEm baixo tens todas as formas de pagamento disponíveis. Se já efetuaste o pagamento, por favor ignora esta mensagem.\n\nObrigado pela tua colaboração.`;
   const autoOn = String(cfg.envio_automatico)==='true';
   const esc = s => (s||'').replace(/</g,'&lt;');
 
