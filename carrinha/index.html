@@ -24,16 +24,38 @@ body{
   user-select:none;
 }
 @keyframes gradShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
-#progress-track{position:fixed;top:0;left:0;width:100%;height:5px;background:rgba(255,255,255,.28);z-index:50}
-#progress-bar{height:100%;width:0%;background:#fff;box-shadow:0 0 8px rgba(255,255,255,.7)}
-#progress-track.dark{background:rgba(27,65,100,.15)}
-#progress-track.dark #progress-bar{background:var(--celeste-d)}
+/* Separadores no topo — mostram o que há em cada página */
+#tabs{
+  position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:50;
+  display:flex;gap:6px;background:rgba(0,0,0,.22);padding:5px;border-radius:26px;
+  backdrop-filter:blur(4px);
+}
+#tabs.dark{background:rgba(27,65,100,.14)}
+#tabs .tab{
+  font-size:12px;font-weight:800;letter-spacing:.2px;color:rgba(255,255,255,.85);
+  padding:7px 14px;border-radius:20px;cursor:pointer;white-space:nowrap;
+  transition:background .25s,color .25s;
+}
+#tabs.dark .tab{color:var(--azul)}
+#tabs .tab.on{background:#fff;color:var(--azul-d)}
+#tabs.dark .tab.on{background:var(--azul);color:#fff}
+/* Faixa inferior — anuncia a página seguinte e avança ao toque */
+#nextBar{
+  position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:60;
+  display:flex;align-items:center;gap:8px;white-space:nowrap;
+  background:var(--azul-d);color:#fff;font-size:14px;font-weight:800;
+  padding:13px 22px;border-radius:30px;cursor:pointer;border:0;
+  box-shadow:0 6px 18px rgba(0,0,0,.3);
+  animation:nextPulse 1.8s ease infinite;
+}
+@keyframes nextPulse{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.05)}}
+#nextBar.hide{display:none}
 
 #stage{position:relative;width:100%;height:100%}
 .slide{
   position:absolute;inset:0;display:flex;flex-direction:column;
   opacity:0;pointer-events:none;transition:opacity .55s ease;
-  padding:34px 22px 26px;overflow-y:auto;
+  padding:34px 22px 92px;overflow-y:auto;
 }
 .slide.active{opacity:1;pointer-events:auto;z-index:2}
 
@@ -48,30 +70,61 @@ body{
 .slide-historial{
   background:linear-gradient(120deg,#0E2B4A 0%,#1B4164 38%,#2E86AB 72%,#37A7C8 100%);
   background-size:200% 200%;animation:gradShift 16s ease infinite;color:#fff;
-  align-items:center;text-align:center;justify-content:flex-start;padding-top:44px;
+  align-items:center;text-align:center;justify-content:flex-start;padding-top:62px;
 }
+.slide-historial .kicker{margin-bottom:10px}
 .logo-arca{
-  width:104px;height:104px;border-radius:26px;background:rgba(255,255,255,.92);
+  width:88px;height:88px;border-radius:22px;background:rgba(255,255,255,.92);
   display:flex;align-items:center;justify-content:center;overflow:hidden;
-  box-shadow:0 8px 24px rgba(0,0,0,.28);margin-bottom:14px;
+  box-shadow:0 8px 24px rgba(0,0,0,.28);margin-bottom:10px;
 }
 .logo-arca img{max-width:82%;max-height:82%;object-fit:contain}
 h1.arca-title{
   font-family:'Mistral',cursive;font-weight:normal;font-size:clamp(42px,13vw,66px);
   margin:0 0 2px;text-shadow:0 3px 16px rgba(0,0,0,.3);line-height:1;
 }
-.sub-loc{font-size:13px;opacity:.85;margin:0 0 20px;letter-spacing:.3px}
+.sub-loc{font-size:12.5px;opacity:.85;margin:0 0 14px;letter-spacing:.3px}
 .historial-texto{
-  max-width:520px;font-size:16.5px;line-height:1.65;color:#EAF3F9;
-  text-shadow:0 1px 6px rgba(0,0,0,.18);
+  max-width:520px;font-size:15px;line-height:1.55;color:#EAF3F9;
+  text-shadow:0 1px 6px rgba(0,0,0,.18);margin:0;
 }
+@media (min-width:700px){.historial-texto{font-size:16.5px;line-height:1.65}}
+.social-row{display:flex;gap:13px;margin-top:16px;justify-content:center}
+.social-row a{
+  width:46px;height:46px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 14px rgba(0,0,0,.3);text-decoration:none;
+  border:2px solid rgba(255,255,255,.85);
+}
+.social-row svg{width:23px;height:23px;fill:#fff}
+.soc-fb{background:#1877F2}
+.soc-ig{background:radial-gradient(circle at 30% 110%,#FDDC5C 0%,#F77737 30%,#E1306C 55%,#C13584 75%,#833AB4 100%)}
+.soc-yt{background:#FF0000}
+.soc-blog{background:var(--verde)}
+.contactos-row{
+  margin-top:13px;display:flex;flex-direction:column;gap:5px;align-items:center;
+  font-size:13px;line-height:1.45;
+}
+.contactos-row a{color:#fff;text-decoration:none;font-weight:600;opacity:.95}
+.contactos-row .morada{font-size:12px;opacity:.75;max-width:420px}
 
 /* ---- Slide: Parceiros (grelha única) ---- */
-.slide-parceiros{background:var(--bg);align-items:center;justify-content:flex-start;padding-top:44px}
+.slide-parceiros{background:var(--bg);align-items:center;justify-content:flex-start;padding-top:62px}
 .slide-parceiros .kicker{background:linear-gradient(135deg,var(--celeste-d),var(--azul));color:#fff;box-shadow:0 2px 8px rgba(55,167,200,.35)}
 .p-grid{
   width:100%;max-width:520px;display:grid;grid-template-columns:repeat(2,1fr);
   gap:12px;padding-bottom:64px;
+}
+/* Em ecrãs maiores (PC/tablet), os logos preenchem a página em mais colunas */
+@media (min-width:700px){
+  .p-grid{max-width:1100px;grid-template-columns:repeat(3,1fr);gap:16px}
+  .p-item-logo{height:96px}
+  .p-item-nome{font-size:14px}
+  .p-item-desc{font-size:13px}
+}
+@media (min-width:1100px){
+  .p-grid{max-width:1400px;grid-template-columns:repeat(4,1fr)}
+  .p-item-logo{height:110px}
 }
 .p-item{
   background:var(--card);border-radius:14px;box-shadow:var(--sombra);
@@ -105,16 +158,6 @@ h1.arca-title{
 }
 .cta-btn:active{transform:scale(.96)}
 
-/* ---- Floating persistent CTA pill ---- */
-#fab-socio{
-  position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:60;
-  background:var(--azul-d);color:#fff;font-size:13px;font-weight:700;
-  padding:11px 20px;border-radius:30px;text-decoration:none;
-  box-shadow:0 6px 18px rgba(0,0,0,.3);display:flex;align-items:center;gap:7px;
-  opacity:.95;
-}
-#fab-socio.hide{display:none}
-
 #loading{
   position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;
   justify-content:center;flex-direction:column;gap:14px;z-index:100;color:var(--azul-d);
@@ -131,7 +174,7 @@ h1.arca-title{
 
 <div id="loading"><div class="spinner"></div>A carregar…</div>
 
-<div id="progress-track"><div id="progress-bar"></div></div>
+<div id="tabs"></div>
 
 <div id="stage">
 
@@ -140,7 +183,26 @@ h1.arca-title{
     <div class="logo-arca" id="logoArcaBox"><img id="logoArca" alt="ARCA d'Ajuda" style="display:none"></div>
     <h1 class="arca-title">ARCA d'Ajuda</h1>
     <p class="sub-loc">Ajuda · São Martinho · Funchal, Madeira</p>
-    <p class="historial-texto">A ARCA d'Ajuda nasceu da tradição da Festa de Nossa Senhora da Ajuda, uma das mais animadas da Freguesia de São Martinho até aos anos 60. Depois de décadas de interrupção, uma comissão de moradores reergueu as festividades nos anos 80, e entre 2009 e 2010 uma renovação profunda levou à formalização da associação a 29 de junho de 2011. Desde então, a ARCA d'Ajuda é uma associação sem fins lucrativos dedicada à cultura, ao desporto e ao lazer — dos altares e romarias tradicionais a modalidades desportivas como atletismo, voleibol, esgrima e judo, passando pelo ATL de verão para crianças, o ARCAKIDS. A missão mantém-se: levar a Ajuda mais além — São Martinho, Funchal, Madeira, Portugal e o mundo.</p>
+    <p class="historial-texto" id="txtHistorial"></p>
+    <div class="social-row">
+      <a id="lnkFacebook" class="soc-fb" href="#" target="_blank" rel="noopener" aria-label="Facebook">
+        <svg viewBox="0 0 24 24"><path d="M13.5 21v-8.2h2.8l.4-3.2h-3.2V7.6c0-.9.3-1.6 1.6-1.6h1.7V3.1c-.3 0-1.3-.1-2.5-.1-2.5 0-4.2 1.5-4.2 4.3v2.3H7.3v3.2h2.8V21h3.4z"/></svg>
+      </a>
+      <a id="lnkInstagram" class="soc-ig" href="#" target="_blank" rel="noopener" aria-label="Instagram">
+        <svg viewBox="0 0 24 24"><path d="M12 4.3c2.5 0 2.8 0 3.8.1 1 0 1.5.2 1.8.3.5.2.8.4 1.1.7.3.3.5.7.7 1.1.1.3.3.9.3 1.8 0 1 .1 1.3.1 3.8s0 2.8-.1 3.8c0 1-.2 1.5-.3 1.8-.2.5-.4.8-.7 1.1-.3.3-.7.5-1.1.7-.3.1-.9.3-1.8.3-1 0-1.3.1-3.8.1s-2.8 0-3.8-.1c-1 0-1.5-.2-1.8-.3-.5-.2-.8-.4-1.1-.7-.3-.3-.5-.7-.7-1.1-.1-.3-.3-.9-.3-1.8 0-1-.1-1.3-.1-3.8s0-2.8.1-3.8c0-1 .2-1.5.3-1.8.2-.5.4-.8.7-1.1.3-.3.7-.5 1.1-.7.3-.1.9-.3 1.8-.3 1-.1 1.3-.1 3.8-.1M12 2.6c-2.6 0-2.9 0-3.9.1-1 0-1.7.2-2.3.4-.6.3-1.2.6-1.7 1.1-.5.5-.9 1.1-1.1 1.7-.2.6-.4 1.3-.4 2.3-.1 1-.1 1.3-.1 3.9s0 2.9.1 3.9c0 1 .2 1.7.4 2.3.3.6.6 1.2 1.1 1.7.5.5 1.1.9 1.7 1.1.6.2 1.3.4 2.3.4 1 .1 1.3.1 3.9.1s2.9 0 3.9-.1c1 0 1.7-.2 2.3-.4.6-.3 1.2-.6 1.7-1.1.5-.5.9-1.1 1.1-1.7.2-.6.4-1.3.4-2.3.1-1 .1-1.3.1-3.9s0-2.9-.1-3.9c0-1-.2-1.7-.4-2.3-.3-.6-.6-1.2-1.1-1.7-.5-.5-1.1-.9-1.7-1.1-.6-.2-1.3-.4-2.3-.4-1-.1-1.3-.1-3.9-.1zm0 4.6a4.8 4.8 0 1 0 0 9.6 4.8 4.8 0 0 0 0-9.6zm0 7.9a3.1 3.1 0 1 1 0-6.2 3.1 3.1 0 0 1 0 6.2zM18 6.9a1.1 1.1 0 1 1-2.2 0 1.1 1.1 0 0 1 2.2 0z"/></svg>
+      </a>
+      <a id="lnkYoutube" class="soc-yt" href="#" target="_blank" rel="noopener" aria-label="YouTube">
+        <svg viewBox="0 0 24 24"><path d="M21.6 7.2s-.2-1.4-.8-2c-.7-.8-1.5-.8-1.9-.8C16.2 4.2 12 4.2 12 4.2s-4.2 0-6.9.2c-.4 0-1.2 0-1.9.8-.6.6-.8 2-.8 2S2.2 8.9 2.2 10.5v1.5c0 1.6.2 3.3.2 3.3s.2 1.4.8 2c.7.8 1.7.7 2.1.8 1.5.1 6.7.2 6.7.2s4.2 0 6.9-.2c.4 0 1.2 0 1.9-.8.6-.6.8-2 .8-2s.2-1.6.2-3.3v-1.5c0-1.6-.2-3.3-.2-3.3zM9.9 14.7V8.9l5.4 2.9-5.4 2.9z"/></svg>
+      </a>
+      <a id="lnkBlog" class="soc-blog" href="#" target="_blank" rel="noopener" aria-label="Blog">
+        <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm7.4 9h-3.1a15 15 0 0 0-1.1-5.3A8 8 0 0 1 19.4 11zM12 4.1c.9 1.1 1.9 3.1 2.2 6.9H9.8c.3-3.8 1.3-5.8 2.2-6.9zM4.6 13h3.1c.1 1.9.5 3.7 1.1 5.3A8 8 0 0 1 4.6 13zm3.1-2H4.6a8 8 0 0 1 4.2-5.3A15 15 0 0 0 7.7 11zM12 19.9c-.9-1.1-1.9-3.1-2.2-6.9h4.4c-.3 3.8-1.3 5.8-2.2 6.9zm3.2-1.6a15 15 0 0 0 1.1-5.3h3.1a8 8 0 0 1-4.2 5.3z"/></svg>
+      </a>
+    </div>
+    <div class="contactos-row">
+      <div><a id="lnkTelemovel" href="#">📱 <span></span></a> &nbsp;·&nbsp; <a id="lnkTelefone" href="#">☎️ <span></span></a></div>
+      <div><a id="lnkEmail" href="#">✉️ <span></span></a></div>
+      <div class="morada" id="txtMorada"></div>
+    </div>
   </section>
 
   <section class="slide slide-parceiros" data-slide="parceiros">
@@ -151,15 +213,45 @@ h1.arca-title{
   <section class="slide slide-cta" data-slide="cta">
     <div class="cta-emoji">🤝</div>
     <h2>Torna-te Sócio</h2>
-    <p class="cta-texto">Faça parte desta família! Ser sócio da ARCA d'Ajuda é apoiar a cultura, o desporto e a vida da nossa comunidade — e ainda beneficiar de descontos exclusivos com os nossos parceiros. A inscrição é rápida e pode ser feita aqui mesmo, online.</p>
-    <a class="cta-btn" id="ctaBtn" href="https://arca-ajuda.github.io/arca-ajuda/socios/inscricao/">✍️ Fazer inscrição de sócio</a>
+    <p class="cta-texto" id="txtConvite"></p>
+    <a class="cta-btn" id="ctaBtn" href="#">✍️ Fazer inscrição de sócio</a>
   </section>
 
 </div>
 
-<a id="fab-socio" href="https://arca-ajuda.github.io/arca-ajuda/socios/inscricao/">🤝 Torna-te Sócio</a>
+<button id="nextBar" type="button"></button>
 
 <script>
+/* ==========================================================================
+   ZONA EDITÁVEL — pode alterar os valores entre aspas e gravar (Commit).
+   Para esconder uma rede social ou contacto, deixe as aspas vazias: ""
+   NÃO apague as vírgulas nem as aspas!
+   ========================================================================== */
+var CONFIG = {
+
+  // Texto do historial (primeira página)
+  texto_historial: "Fundada a 29 de junho de 2011, a ARCA d'Ajuda nasceu da tradição da Festa de Nossa Senhora da Ajuda, em São Martinho. É uma associação sem fins lucrativos que promove a cultura, o desporto e o lazer — das festas tradicionais ao ARCAKIDS e às modalidades desportivas — levando a Ajuda mais além.",
+
+  // Texto do convite a sócio (última página)
+  texto_convite: "Faça parte desta família! Ser sócio da ARCA d'Ajuda é apoiar a cultura, o desporto e a vida da nossa comunidade — e ainda beneficiar de descontos exclusivos com os nossos parceiros. A inscrição é rápida e pode ser feita aqui mesmo, online.",
+
+  // Link do formulário de inscrição de sócio
+  link_inscricao: "https://arca-ajuda.github.io/arca-ajuda/socios/inscricao/",
+
+  // Redes sociais
+  facebook:  "https://www.facebook.com/ArcaDajuda",
+  instagram: "https://www.instagram.com/arcadajuda/",
+  youtube:   "https://www.youtube.com/channel/UCw9ttQA2z4UGWPDLla-zTgg",
+  blog:      "https://arcadajuda.blogspot.com",
+
+  // Contactos
+  telemovel: "932 341 062",
+  telefone:  "291 617 298",
+  email:     "arcadajuda@gmail.com",
+  morada:    "Rua Velha da Ajuda n.º 89, Edifício Vale da Ajuda, 9000-749 Funchal"
+};
+/* ========================= FIM DA ZONA EDITÁVEL ========================= */
+
 (function(){
   var SUPA_URL = 'https://yfsyifypsrqnwkqkfrnm.supabase.co';
   var SUPA_KEY = 'sb_publishable_AkzlMeHlYHDyl0HzeC7_qg__j_Y6C9W';
@@ -167,48 +259,106 @@ h1.arca-title{
 
   var stage = document.getElementById('stage');
   var loading = document.getElementById('loading');
-  var progressTrack = document.getElementById('progress-track');
-  var progressBar = document.getElementById('progress-bar');
-  var fab = document.getElementById('fab-socio');
+  var tabsBox = document.getElementById('tabs');
+  var nextBar = document.getElementById('nextBar');
   var slideHistorial = document.querySelector('.slide-historial');
   var slideParceiros = document.querySelector('.slide-parceiros');
   var pGrid = document.getElementById('pGrid');
   var slideCta = document.querySelector('.slide-cta');
 
-  function escapeHtml(s){
-    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
-      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  /* ---- Aplicar a ZONA EDITÁVEL (CONFIG) à página ---- */
+  function aplicarConfig(){
+    document.getElementById('txtHistorial').textContent = CONFIG.texto_historial || '';
+    document.getElementById('txtConvite').textContent = CONFIG.texto_convite || '';
+    document.getElementById('ctaBtn').href = CONFIG.link_inscricao || '#';
+
+    var redes = { lnkFacebook: CONFIG.facebook, lnkInstagram: CONFIG.instagram,
+                  lnkYoutube: CONFIG.youtube, lnkBlog: CONFIG.blog };
+    Object.keys(redes).forEach(function(id){
+      var el = document.getElementById(id);
+      if (redes[id]) el.href = redes[id]; else el.style.display = 'none';
+    });
+
+    function contacto(id, valor, prefixo){
+      var el = document.getElementById(id);
+      if (!valor){ el.style.display = 'none'; return; }
+      el.href = prefixo + valor.replace(/\s+/g,'');
+      el.querySelector('span').textContent = valor;
+    }
+    contacto('lnkTelemovel', CONFIG.telemovel, 'tel:+351');
+    contacto('lnkTelefone', CONFIG.telefone, 'tel:+351');
+    contacto('lnkEmail', CONFIG.email, 'mailto:');
+    var mor = document.getElementById('txtMorada');
+    if (CONFIG.morada) mor.textContent = '📍 ' + CONFIG.morada; else mor.style.display = 'none';
+  }
+
+  /* ---- Slides e navegação por gesto (sem tempo) ---- */
+  var slides = []; // { el, dark, tab, seguinte }
+  var current = 0;
+
+  function buildTabs(){
+    tabsBox.innerHTML = '';
+    slides.forEach(function(s, idx){
+      var t = document.createElement('div');
+      t.className = 'tab';
+      t.textContent = s.tab;
+      t.addEventListener('click', function(){ showSlide(idx); });
+      tabsBox.appendChild(t);
     });
   }
 
-  // Reading-time based duration: base + per-word time + bonus for viewing an image, clamped.
-  function durationFor(text, opts){
-    opts = opts || {};
-    var words = (text || '').trim().split(/\s+/).filter(Boolean).length;
-    var ms = 4200 + words * 270 + (opts.hasImage ? 2600 : 0);
-    var min = opts.min || 6500;
-    var max = opts.max || 17000;
-    return Math.max(min, Math.min(max, ms));
+  function showSlide(i){
+    if (i < 0) i = 0;
+    if (i > slides.length - 1) i = slides.length - 1;
+    current = i;
+    slides.forEach(function(s, idx){ s.el.classList.toggle('active', idx === i); });
+    var tabs = tabsBox.children;
+    for (var k = 0; k < tabs.length; k++) tabs[k].classList.toggle('on', k === i);
+    tabsBox.classList.toggle('dark', !slides[i].dark);
+    // Faixa inferior anuncia o que vem a seguir
+    if (i < slides.length - 1){
+      nextBar.textContent = slides[i].seguinte + '  →';
+      nextBar.classList.remove('hide');
+    } else {
+      nextBar.classList.add('hide');
+    }
   }
 
-  var slides = []; // { el, duration, dark }
-  var current = -1;
-  var advanceTimer = null;
-  var paused = false;
+  nextBar.addEventListener('click', function(){ showSlide(current + 1); });
 
-  function buildHistorialSlide(){
-    var text = slideHistorial.querySelector('.historial-texto').textContent;
-    slides.push({ el: slideHistorial, duration: durationFor(text, {hasImage:true, min:9000, max:20000}), dark:true });
-  }
+  // Deslizar com o dedo (esquerda = avançar, direita = voltar)
+  var touchX = null, touchY = null;
+  stage.addEventListener('touchstart', function(e){
+    touchX = e.touches[0].clientX;
+    touchY = e.touches[0].clientY;
+  }, {passive:true});
+  stage.addEventListener('touchend', function(e){
+    if (touchX === null) return;
+    var dx = e.changedTouches[0].clientX - touchX;
+    var dy = e.changedTouches[0].clientY - touchY;
+    touchX = touchY = null;
+    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) return; // gesto vertical = scroll
+    if (dx < 0) showSlide(current + 1); else showSlide(current - 1);
+  }, {passive:true});
 
-  // Resumo curto da vantagem: primeira linha, de preferência a que tem percentagem/desconto.
+  // No computador: clique avança, setas do teclado também
+  stage.addEventListener('click', function(e){
+    if (e.target.closest('a')) return;
+    if ('ontouchstart' in window) return; // no telemóvel só o gesto navega
+    showSlide(current + 1 > slides.length - 1 ? 0 : current + 1);
+  });
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'ArrowRight') showSlide(current + 1);
+    if (e.key === 'ArrowLeft') showSlide(current - 1);
+  });
+
+  /* ---- Parceiros (em direto da base de dados) ---- */
   function vantagemCurta(v){
     if (!v) return '';
     var linhas = String(v).split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
     if (!linhas.length) return '';
     var comPct = linhas.filter(function(l){ return /%|€|desconto|oferta/i.test(l); });
     var linha = (comPct[0] || linhas[0]);
-    // encurta se for demasiado longa
     if (linha.length > 60) linha = linha.slice(0, 57).replace(/\s+\S*$/, '') + '…';
     return linha;
   }
@@ -242,63 +392,7 @@ h1.arca-title{
       }
       pGrid.appendChild(item);
     });
-    // Tempo: base + um pouco por parceiro (logos + percentagens são leitura rápida)
-    var ms = Math.max(9000, Math.min(24000, 6000 + parceiros.length * 1400));
-    slides.push({ el: slideParceiros, duration: ms, dark:false });
   }
-
-  function buildCtaSlide(){
-    var text = slideCta.querySelector('.cta-texto').textContent;
-    slides.push({ el: slideCta, duration: durationFor(text, {hasImage:false, min:14000, max:26000}), dark:false });
-  }
-
-  function showSlide(i){
-    slides.forEach(function(s, idx){ s.el.classList.toggle('active', idx === i); });
-    var s = slides[i];
-    progressTrack.classList.toggle('dark', !s.dark);
-    // reset + animate progress bar
-    progressBar.style.transition = 'none';
-    progressBar.style.width = '0%';
-    // force reflow so the next transition actually runs
-    void progressBar.offsetWidth;
-    progressBar.style.transition = 'width ' + s.duration + 'ms linear';
-    progressBar.style.width = '100%';
-    // hide the floating pill while the CTA slide itself is showing (avoid duplicate)
-    fab.classList.toggle('hide', s.el === slideCta);
-    current = i;
-    scheduleNext(s.duration);
-  }
-
-  function scheduleNext(ms){
-    clearTimeout(advanceTimer);
-    if (paused) return;
-    advanceTimer = setTimeout(function(){
-      var next = (current + 1) % slides.length;
-      showSlide(next);
-    }, ms);
-  }
-
-  function goNext(){
-    if (slides.length < 2) return;
-    var next = (current + 1) % slides.length;
-    showSlide(next);
-  }
-
-  // Tap anywhere (except real links/buttons) to skip to the next slide.
-  stage.addEventListener('click', function(e){
-    if (e.target.closest('a')) return;
-    goNext();
-  });
-
-  document.addEventListener('visibilitychange', function(){
-    if (document.hidden){
-      paused = true;
-      clearTimeout(advanceTimer);
-    } else if (paused) {
-      paused = false;
-      if (current >= 0) showSlide(current);
-    }
-  });
 
   async function fetchJson(path){
     var res = await fetch(SUPA_URL + '/rest/v1/' + path, { headers: HEADERS });
@@ -307,14 +401,14 @@ h1.arca-title{
   }
 
   async function init(){
-    buildHistorialSlide();
+    aplicarConfig();
+    slides.push({ el: slideHistorial, dark: true, tab: 'A ARCA', seguinte: '🤝 Ver Parceiros e Descontos' });
 
     // Logo institucional (ao vivo)
     try {
       var logoRows = await fetchJson('config_app?chave=eq.logo_arca&select=valor');
       if (logoRows && logoRows[0] && logoRows[0].valor){
         var logoImg = document.getElementById('logoArca');
-        logoImg.onerror = function(){ document.getElementById('logoArcaBox').style.display = 'none'; };
         logoImg.src = logoRows[0].valor + '?v=' + Date.now();
         logoImg.style.display = '';
       }
@@ -325,11 +419,15 @@ h1.arca-title{
       var parceiros = await fetchJson('parceiros?ativo=eq.true&order=ordem.asc,nome.asc&select=*');
       if (parceiros && parceiros.length){
         buildParceirosGrid(parceiros);
+        slides.push({ el: slideParceiros, dark: false, tab: 'Parceiros', seguinte: '✍️ Torna-te Sócio' });
       }
-    } catch(e){ /* sem parceiros de momento, a página segue sem essas telas */ }
+    } catch(e){ /* sem parceiros de momento, a página segue sem essa tela */ }
 
-    buildCtaSlide();
+    slides.push({ el: slideCta, dark: false, tab: 'Sê Sócio', seguinte: '' });
+    // Se não houver parceiros disponíveis, a página a seguir ao historial é o convite
+    if (slides.length === 2) slides[0].seguinte = '✍️ Torna-te Sócio';
 
+    buildTabs();
     loading.classList.add('hide');
     showSlide(0);
   }
