@@ -2620,7 +2620,7 @@ async function getDadosAssociacao(){
 
 // Monta o corpo completo do email (texto do modelo + base comum)
 function montarCorpoEmail(textoModelo, socio, dados){
-  const linkParceiros = 'https://arca-ajuda.github.io/arca-ajuda/parceiros/';
+  const linkParceiros = 'https://arcadajuda.github.io/arca-ajuda/parceiros/';
   let txt = (textoModelo||'')
     .replace(/\{nome\}/g, socio?.nome||'')
     .replace(/\{num\}/g, socio?.num||'');
@@ -2673,7 +2673,7 @@ function montarCorpoEmail(textoModelo, socio, dados){
 
 // Monta SÓ a base automática (sem o texto do modelo)
 function montarBaseAutomatica(dados){
-  const linkParceiros = 'https://arca-ajuda.github.io/arca-ajuda/parceiros/';
+  const linkParceiros = 'https://arcadajuda.github.io/arca-ajuda/parceiros/';
   let html = '';
   const temPagamento = dados.assoc_iban||dados.assoc_mbway||dados.assoc_entidade||dados.assoc_pagamentos;
   if(temPagamento){
@@ -9541,7 +9541,7 @@ async function enviarSmsSocio(id, tipo){
   if(!s||!s.tel){ toast('Sócio sem telemóvel', false); return; }
   const dados = await getDadosAssociacao();
   const nomeAssoc = dados.assoc_nome || "ARCA d'Ajuda";
-  const linkParceiros = 'https://arca-ajuda.github.io/arca-ajuda/parceiros/';
+  const linkParceiros = 'https://arcadajuda.github.io/arca-ajuda/parceiros/';
 
   // Formas de pagamento resumidas (uma linha)
   const pg = [];
@@ -9677,7 +9677,7 @@ function showSociosTab(tab,btn){
   if(tab==='parcerias')carregarParceirosSocios();
 }
 
-const LINK_PARCERIAS = 'https://arca-ajuda.github.io/arca-ajuda/parceiros/';
+const LINK_PARCERIAS = 'https://arcadajuda.github.io/arca-ajuda/parceiros/';
 
 async function carregarParceirosSocios(){
   const box = document.getElementById('socios-parcerias-lista');
@@ -9860,7 +9860,7 @@ function filterCartaoSocio(){
 }
 
 function copiarLinkInscricao(){
-  const link = `https://arca-ajuda.github.io/arca-ajuda/socios/inscricao/`;
+  const link = `https://arcadajuda.github.io/arca-ajuda/socios/inscricao/`;
   navigator.clipboard.writeText(link).then(()=>{
     toast('Link copiado! Já podes colar para partilhar (WhatsApp, redes sociais, etc.)');
   }).catch(()=>{
@@ -9868,13 +9868,13 @@ function copiarLinkInscricao(){
   });
 }
 function abrirLinkInscricao(){
-  window.open('https://arca-ajuda.github.io/arca-ajuda/socios/inscricao/', '_blank');
+  window.open('https://arcadajuda.github.io/arca-ajuda/socios/inscricao/', '_blank');
 }
 function copiarLinkVerificacao(){
   const id=document.getElementById('cartao-socio-sel').value;
   if(!id){toast('Seleciona um sócio.',false);return;}
   const s=socios.find(x=>x.id==id);if(!s)return;
-  const link = `https://arca-ajuda.github.io/arca-ajuda/socios/verificar/?c=${s.codigoVerificacao||s.num}`;
+  const link = `https://arcadajuda.github.io/arca-ajuda/socios/verificar/?c=${s.codigoVerificacao||s.num}`;
   navigator.clipboard.writeText(link).then(()=>{
     toast('Link copiado! Já podes enviar por WhatsApp/SMS/Email.');
   }).catch(()=>{
@@ -9887,7 +9887,7 @@ function renderCartaoSocio(){
   let validStr='—';
   const situacao=getSituacaoSocio(s);
   if(s.validadeQuota){const v=new Date(s.validadeQuota+'T12:00:00');validStr=v.toLocaleDateString('pt-PT');}
-  const qrData=`https://arca-ajuda.github.io/arca-ajuda/socios/verificar/?c=${s.codigoVerificacao||s.num}`;
+  const qrData=`https://arcadajuda.github.io/arca-ajuda/socios/verificar/?c=${s.codigoVerificacao||s.num}`;
   const logo=currentLogoData||LS.get('arca_logo')||'';
   const logoEl=document.getElementById('cartao-logo-area');
   if(logoEl){
@@ -9944,7 +9944,7 @@ function imprimirCartao(){
   let validStr='—';
   const situacao=getSituacaoSocio(s);
   if(s.validadeQuota){const v=new Date(s.validadeQuota+'T12:00:00');validStr=v.toLocaleDateString('pt-PT');}
-  const qrData=`https://arca-ajuda.github.io/arca-ajuda/socios/verificar/?c=${s.codigoVerificacao||s.num}`;
+  const qrData=`https://arcadajuda.github.io/arca-ajuda/socios/verificar/?c=${s.codigoVerificacao||s.num}`;
   const html=`<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>Cartão Sócio</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
   <style>*{box-sizing:border-box;margin:0;padding:0}body{background:#f5f5f5;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:Arial,sans-serif;flex-direction:column;gap:20px}
@@ -9990,7 +9990,7 @@ function downloadCartaoPNG(){
     let validStr='—';
     const situacao=getSituacaoSocio(s);
     if(s.validadeQuota){const v=new Date(s.validadeQuota+'T12:00:00');validStr=v.toLocaleDateString('pt-PT');}
-    const qrData=`https://arca-ajuda.github.io/arca-ajuda/socios/verificar/?c=${s.codigoVerificacao||s.num}`;
+    const qrData=`https://arcadajuda.github.io/arca-ajuda/socios/verificar/?c=${s.codigoVerificacao||s.num}`;
     const wrap=document.createElement('div');
     wrap.style.cssText='position:fixed;left:-9999px;top:0;width:680px;height:428px;border-radius:28px;background:linear-gradient(135deg,#1B4570 0%,#2E6199 55%,#4A85BE 100%);padding:40px 44px;color:#fff;font-family:Arial,sans-serif;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden';
     wrap.innerHTML=`
