@@ -299,7 +299,7 @@ async function submeterInscricao(){
     document.getElementById('sucesso-num').textContent = 'Nº ' + novoSocio.num;
     if(novoSocio.codigo_verificacao){
       document.getElementById('link-cartao').href =
-        `https://arca-ajuda.github.io/arca-ajuda/socios/verificar/?c=${novoSocio.codigo_verificacao}`;
+        `https://arcadajuda.github.io/arca-ajuda/socios/verificar/?c=${novoSocio.codigo_verificacao}`;
     } else {
       document.getElementById('link-cartao').style.display = 'none';
     }
