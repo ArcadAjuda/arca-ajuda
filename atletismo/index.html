@@ -124,7 +124,7 @@ tr:hover td{background:#f8fafc}
 <!-- LOGIN -->
 <div id="loginOverlay">
   <div class="loginBox">
-    <h1>🏃 ARCA d'Ajuda</h1>
+    <h1>ARCA d'Ajuda</h1>
     <p>Atletismo / Trail — Gestão por Épocas</p>
     <input type="password" id="pinInput" maxlength="4" inputmode="numeric" placeholder="••••" onkeydown="if(event.key==='Enter')verificarPin()">
     <button onclick="verificarPin()">Entrar</button>
@@ -135,9 +135,9 @@ tr:hover td{background:#f8fafc}
 <!-- APP -->
 <div id="app">
   <div class="sidebar">
-    <div class="logo" style="display:flex;align-items:center;gap:10px">
+    <div class="logo" style="display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center">
       <div id="logoSidebar"></div>
-      <div><h1>🏃 Atletismo/Trail</h1><span>ARCA d'Ajuda</span></div>
+      <div><h1>Atletismo/Trail</h1><span>ARCA d'Ajuda</span></div>
     </div>
     <div class="navLista">
       <div class="nav-item ativo" data-sec="dashboard" onclick="irPara('dashboard')">📊 Dashboard</div>
@@ -908,7 +908,7 @@ async function removerDaEpoca(atletaId){
 async function abrirFicha(atletaId){
   const a = atletaPorId(atletaId);
   if(!a) return;
-  document.getElementById('fichaTitulo').textContent = '🏃 ' + (a.nome_desportivo||a.nome_completo) + ' — Época ' + epocaAtual.nome;
+  document.getElementById('fichaTitulo').textContent = (a.nome_desportivo||a.nome_completo) + ' — Época ' + epocaAtual.nome;
   const minhas = participacoes.filter(p=>p.atleta_id===atletaId)
     .map(p=>({...p, prova:provas.find(x=>x.id===p.prova_id)}))
     .filter(p=>p.prova)
@@ -1536,7 +1536,7 @@ function mostrarLogo(){
        </div>`
     : '<span style="font-size:13px;color:var(--cinza)">Ainda sem logo carregado.</span>';
   document.getElementById('logoSidebar').innerHTML = logoDataUrl
-    ? `<div class="logoCirculo" style="width:44px;height:44px;min-width:44px"><img src="${logoDataUrl}"></div>` : '';
+    ? `<div class="logoCirculo" style="width:150px;height:150px;min-width:150px"><img src="${logoDataUrl}"></div>` : '';
 }
 function prepararLogo(ficheiro){
   if(!ficheiro) return;
