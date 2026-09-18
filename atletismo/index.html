@@ -89,6 +89,25 @@ tr:hover td{background:#f8fafc}
 /* ---------- TOAST ---------- */
 #toast{position:fixed;bottom:22px;right:22px;background:#0f172a;color:#fff;padding:12px 18px;border-radius:10px;font-size:14px;display:none;z-index:900;max-width:340px}
 .vazio{text-align:center;color:var(--cinza);padding:26px;font-size:14px}
+/* ---------- RECIBO (impressão) ---------- */
+#reciboPrint{display:none}
+@media print{
+  body.aImprimir #app, body.aImprimir #loginOverlay, body.aImprimir #toast{display:none!important}
+  body.aImprimir #reciboPrint{display:block!important}
+}
+.reciboCopia{border:1.5px solid #333;border-radius:8px;padding:18px 22px;margin-bottom:14px;font-size:13px;color:#111;page-break-inside:avoid}
+.reciboTopo{display:flex;align-items:center;gap:14px;border-bottom:2px solid #333;padding-bottom:10px;margin-bottom:12px}
+.logoCirculo{width:78px;height:78px;min-width:78px;border-radius:50%;background:#fff;border:1.5px solid #333;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.logoCirculo img{max-width:82%;max-height:82%;display:block}
+.reciboTopo .tit{flex:1}
+.reciboTopo .tit h2{font-size:16px;margin:0}
+.reciboTopo .tit small{color:#444}
+.reciboNum{text-align:right;font-weight:800}
+.reciboCorpo p{margin:6px 0;line-height:1.5}
+.reciboAssin{display:flex;gap:40px;margin-top:26px}
+.reciboAssin div{flex:1;border-top:1px solid #333;text-align:center;padding-top:4px;font-size:12px}
+.reciboTipo{text-align:center;font-size:11px;font-weight:800;letter-spacing:1px;color:#555;margin-top:10px;text-transform:uppercase}
+.reciboCorte{text-align:center;color:#888;font-size:12px;margin:6px 0 14px;border-top:1px dashed #999;padding-top:4px}
 @media(max-width:820px){
   .sidebar{width:100%;height:auto;position:relative;padding:10px 0}
   .sidebar .logo{padding:0 16px 10px}
@@ -244,6 +263,19 @@ tr:hover td{background:#f8fafc}
     <!-- CONFIGURAÇÕES -->
     <div id="sec-config" class="seccao" style="display:none">
       <div class="painel">
+        <h3>🖼 Logo da ARCA (usado nos recibos)</h3>
+        <p style="font-size:13.5px;color:var(--cinza);margin-bottom:12px">
+          Carrega aqui o logo da associação. Nos recibos aparece <b>dentro de um círculo branco</b>,
+          por isso usa de preferência uma imagem <b>PNG sem fundo (transparente)</b> — se a imagem tiver
+          fundo branco também funciona, mas sem fundo fica perfeito. Fica guardado na cloud.
+        </p>
+        <div class="barraAcoes">
+          <input type="file" id="ficheiroLogo" accept="image/*" onchange="guardarLogo(this.files[0])">
+          <button class="btn sec" onclick="removerLogo()">🗑 Remover logo</button>
+        </div>
+        <div id="logoPreview" style="margin-top:8px"></div>
+      </div>
+      <div class="painel">
         <h3>☁️ Backup Google Drive</h3>
         <p style="font-size:13.5px;color:var(--cinza);margin-bottom:12px">
           Os dados vivem no Supabase (cloud). Aqui podes gravar uma cópia de segurança extra
@@ -291,16 +323,123 @@ tr:hover td{background:#f8fafc}
     <!-- AJUDA -->
     <div id="sec-ajuda" class="seccao" style="display:none">
       <div class="painel">
-        <h3>❓ Como usar a app</h3>
-        <div style="font-size:14px;line-height:1.7">
-          <p><b>1. Épocas</b> — No topo escolhes a época de trabalho. Tudo o que vês (atletas inscritos, provas, multas, conta) pertence a essa época. No fim do ano, em "Épocas" clica em "Nova Época": os atletas ativos transitam automaticamente com dorsal e chip em branco.</p>
-          <p><b>2. Importar Excel</b> — Em "Importar Excel", escolhe a época de destino e carrega o ficheiro da época (EPOCA_25-26.xlsx ou EPOCA_2026-2027.xlsx). A importação pode repetir-se sem duplicar atletas.</p>
-          <p><b>3. Atletas</b> — Ficha completa de cada atleta. Os dados pessoais são únicos; dorsal, chip, escalão e camisola pertencem à inscrição da época. Clica no nome para veres a ficha com o histórico de provas (substitui as folhas individuais do Excel).</p>
-          <p><b>4. Provas</b> — Cria a prova (com tipo: Madeira a Correr, Trail Sprint/Longo/Ultra, Sky, Outras) e clica em "Resultados" para lançar as classificações dos atletas. O pódio é marcado automaticamente quando a posição no escalão é 1º, 2º ou 3º.</p>
-          <p><b>5. Comparar Épocas</b> — Escolhe duas épocas e vê lado a lado: atletas transitados/novos/saíram, provas, participações, quilómetros, pódios, multas e contas.</p>
+        <h3>📖 Manual da App Atletismo/Trail — ARCA d'Ajuda</h3>
+        <div style="font-size:14px;line-height:1.75">
+
+          <p style="background:#eef2ff;border-left:4px solid var(--roxo);padding:10px 14px;border-radius:8px">
+          <b>Para que serve esta app?</b> Substitui o ficheiro Excel da época: gere os atletas da secção,
+          as provas e resultados, as multas e a conta, época após época — e compara épocas entre si.
+          Tudo fica guardado na cloud (Supabase): podes abrir a app em qualquer computador ou telemóvel,
+          entrar com o PIN, e está lá tudo. Nada fica preso a um só computador.</p>
+
+          <p><b>🔑 Entrar</b> — Abre a app e escreve o PIN da secção. A sessão fica válida até fechares o browser.</p>
+
+          <p><b>📅 1. Épocas — a base de tudo</b> — No canto superior direito escolhes a época de trabalho
+          (ex.: 2026-2027). <u>Tudo o que vês em todas as páginas pertence a essa época</u>: atletas inscritos,
+          provas, multas e conta. Para veres uma época antiga, basta mudar no seletor — nada se perde.
+          Na página "📅 Épocas" podes definir qual é a época <b>ativa</b> (a que abre por defeito quando alguém entra).</p>
+
+          <p><b>📅 1a. Criar a época nova (uma vez por ano)</b> — Em "📅 Épocas" clica em
+          <b>＋ Nova Época</b>. A app sugere o nome seguinte (ex.: 2027-2028) e pergunta se queres
+          <b>transitar os atletas</b> da época atual: se disseres que sim, todos os inscritos passam para a
+          época nova mantendo escalão, camisola e nº de pé, mas com <b>dorsal e chip em branco</b> para
+          preencheres quando chegarem os novos. As provas, multas e conta começam a zero — como deve ser.</p>
+
+          <p><b>👥 2. Atletas</b> — Lista dos atletas da época (adultos e formação, com filtros e pesquisa).
+          Clica no <b>nome</b> para abrir a ficha completa: dados da inscrição, totais da época (provas, km,
+          pódios, tempo total) e o histórico de todas as provas — substitui as folhas individuais do Excel.
+          No topo da ficha vês as épocas todas com ✓ verde (esteve inscrito) ou ✗ vermelho (não esteve).
+          O botão <b>✏️</b> edita tudo: dados pessoais, federação, encarregado de educação (formação) e os
+          dados da inscrição na época (dorsal, chip, escalão, camisola, nº pé).</p>
+
+          <p><b>👥 2a. Entradas e saídas de atletas (o normal de um clube)</b> —<br>
+          • <b>Sai do clube / muda de clube:</b> clica no botão <b>🚫</b> da linha dele. Sai só dessa época
+          (a inscrição é apagada), mas o histórico das épocas anteriores fica intacto. Usa isto quando
+          transitaste toda a gente para a época nova e um deles decide sair antes de fechares as inscrições.
+          Se ele já tiver resultados lançados nessa época, a app avisa antes de os apagar.<br>
+          • <b>Volta ao clube:</b> muda o filtro para "Todos os atletas" (ou pesquisa o nome), abre-o com ✏️
+          e marca "Inscrito nesta época? <b>Sim</b>" — recupera a ficha completa com todo o histórico.<br>
+          • <b>Novo atleta:</b> botão "＋ Novo Atleta".<br>
+          • <b>🗑 Apagar (dentro do ✏️):</b> SÓ para registos duplicados ou criados por engano — apaga a
+          ficha e TODO o histórico de todas as épocas, sem volta atrás.<br>
+          • <b>Pesquisa:</b> quando escreves um nome, a app procura em TODOS os atletas, mesmo fora da
+          época — esses aparecem marcados com "🚫 Não está em [época]".</p>
+
+          <p><b>🏁 3. Provas e resultados</b> — Cria a prova com "＋ Nova Prova": nome, data, tipo
+          (Madeira a Correr, Trail Sprint, Trail Longo, Trail Ultra, Sky, Outras), local e distância.
+          Depois clica em <b>📋 Resultados</b> para lançar as classificações: escolhes o atleta, posição geral,
+          posição no escalão, tempo e km, e "＋ Lançar Resultado". O <b>pódio 🏅 é marcado automaticamente</b>
+          quando a posição no escalão começa por 1º, 2º ou 3º. Para corrigir um resultado, clica no ✏️ da
+          linha — os valores sobem para o formulário, corriges e voltas a lançar (substitui o anterior).
+          O ✏️ da prova edita os dados dela; o 🗑 dentro do ✏️ apaga a prova e todos os resultados.</p>
+
+          <p><b>⚠️ 4. Multas</b> — Regista multas com "＋ Nova Multa": atleta (da lista ou nome em texto
+          livre), prova/motivo, valor e estado. Na lista, <b>clica no estado (Deve/Pago)</b> para o alternar
+          num clique. Os cartões no topo mostram o total por pagar e o já pago. Tudo editável com ✏️.</p>
+
+          <p><b>💶 5. Conta da Secção</b> — Movimentos de entradas e saídas, com o saldo acumulado
+          calculado linha a linha (como no Excel). "＋ Novo Movimento" para registar; ✏️ para editar;
+          🗑 para apagar. Os cartões mostram entradas, saídas e saldo da época.</p>
+
+          <p><b>🧾 6. Faturas, comprovativos e recibos</b> — Nas listas de Multas e da Conta:<br>
+          • <b>📎 Anexar</b> — junta a fatura ou o comprovativo de pagamento (foto ou PDF, até 8 MB),
+          guardado na cloud. Depois de anexado aparece o <b>📄</b> para o abrir a qualquer momento, e o 📎
+          passa a substituir.<br>
+          • <b>🧾 Recibo em duplicado</b> — nas multas <b>pagas</b> e nas <b>entradas</b> da conta, gera uma
+          folha A4 com duas cópias iguais separadas por linha de corte ✂: "<b>Original — para quem pagou</b>"
+          (entrega-se ao atleta) e "<b>Duplicado — para a secção</b>" (arquivo, como prova de que recebemos).
+          Leva o logo da ARCA no topo, número automático (001/2026, 002/2026…), data, nome, valor, motivo,
+          época e linhas de assinatura. Reimprimir mantém o mesmo número — a numeração nunca se repete.
+          <i>Antes do primeiro recibo, carrega o logo nas ⚙️ Configurações.</i></p>
+
+          <p><b>⚖️ 7. Comparar Épocas</b> — Escolhe duas épocas e clica em Comparar. Vês: quantos atletas
+          <b>transitaram</b>, quantos são <b>novos</b> e quantos <b>saíram</b> (com os nomes); a evolução de
+          atletas, provas por tipo, participações, km, pódios, multas e contas (com as diferenças a verde/vermelho);
+          e no fundo a tabela <b>"Presença por atleta"</b>, com pesquisa, que mostra atleta a atleta se está (✓)
+          ou não (—) em cada época e a situação: Transitou, Novo ou "🚫 Não está em…".</p>
+
+          <p><b>📥 8. Importar Excel</b> — Para carregar o ficheiro Excel de uma época (ex.: EPOCA_25-26.xlsx):
+          escolhe primeiro a <b>época de destino</b> (confirma bem!) e depois o ficheiro. A app importa os
+          atletas (Adultos + Formação), as provas com todos os resultados, as multas e a conta, e mostra o
+          progresso num registo. Pode demorar 1–3 minutos — deixa a página aberta até ao
+          "✅ IMPORTAÇÃO CONCLUÍDA!". Repetir a importação não duplica atletas. Se algum nome de atleta numa
+          prova não for reconhecido, aparece um aviso no registo para corrigires à mão.
+          <i>Se importares o ficheiro errado para uma época, usa "🧹 Limpar dados de uma época" nas Configurações
+          e importa de novo.</i></p>
+
+          <p><b>⚙️ 9. Configurações</b> —<br>
+          • <b>🖼 Logo da ARCA</b> — carrega a imagem do logo (fica na cloud). Nos recibos aparece dentro
+          de um <b>círculo branco</b>, por isso o ideal é uma imagem <b>PNG sem fundo (transparente)</b>;
+          a pré-visualização mostra logo como vai ficar. Podes substituí-la ou removê-la.<br>
+          • <b>☁️ Backup Google Drive</b> — escreve o email da conta Google e clica em "Guardar email"
+          (fica gravado para todos). "Backup para o Drive agora" pede autorização ao Google e grava lá um
+          ficheiro com TODOS os dados de TODAS as épocas. "Descarregar backup (.json)" faz o mesmo para o
+          computador, sem Google. Recomendado: fazer backup depois de grandes alterações (importações,
+          fecho de época).<br>
+          • <b>Restaurar backup</b> — escolhe um ficheiro .json de backup e repõe tudo tal como estava nesse
+          dia (substitui os dados atuais; pede confirmação escrevendo RESTAURAR).<br>
+          • <b>🧹 Limpar dados de uma época</b> — apaga inscrições, provas, resultados, multas e conta SÓ
+          dessa época; os atletas e as outras épocas não são tocados (confirmação: LIMPAR).<br>
+          • <b>💣 Eliminar todos os dados</b> — apaga tudo, de todas as épocas, para recomeçar do zero
+          (confirmação: ELIMINAR). Não há volta atrás — faz um backup antes!</p>
+
+          <p><b>🆘 Problemas comuns</b> —<br>
+          • <i>"Fiz uma alteração e não aparece"</i> → atualiza a página (Ctrl+F5).<br>
+          • <i>"Não encontro um atleta na lista"</i> → escreve o nome na pesquisa: se ele existir mas estiver
+          fora da época, aparece com "🚫 Não está em [época]"; ou muda o filtro para "Todos os atletas".<br>
+          • <i>"Importei para a época errada"</i> → Configurações → 🧹 Limpar dados dessa época → importar de novo.<br>
+          • <i>"O recibo saiu sem logo"</i> → carrega o logo nas Configurações e gera outra vez (o número mantém-se).<br>
+          • <i>"Apaguei algo por engano"</i> → restaura o último backup nas Configurações (por isso convém fazê-los!).</p>
+
+          <p style="background:#fef3c7;border-left:4px solid var(--amarelo);padding:10px 14px;border-radius:8px">
+          <b>Regra de ouro:</b> confirma sempre a <b>época selecionada no topo</b> antes de mexer nos dados —
+          é o engano mais fácil de cometer. E faz um <b>☁️ backup</b> no fim de cada mês ou depois de
+          trabalho grande.</p>
+
         </div>
       </div>
     </div>
+
   </div>
 </div>
 
@@ -442,6 +581,8 @@ tr:hover td{background:#f8fafc}
 </div>
 
 <div id="toast"></div>
+<div id="reciboPrint"></div>
+<input type="file" id="ficheiroAnexo" accept="image/*,.pdf" style="display:none" onchange="enviarAnexo(this.files[0])">
 
 <script>
 /* ============================================================
@@ -549,6 +690,7 @@ async function iniciar(){
   await carregarEpocas();
   await carregarTudo();
   carregarConfig();
+  carregarLogo();
 }
 async function carregarEpocas(){
   epocas = await sbErro(await sb.from('atl_epocas').select('*').order('nome'), 'epocas');
@@ -649,7 +791,8 @@ function renderAtletas(){
   const fIns = document.getElementById('filtroInscrito').value;
   let lista = atletas.filter(a=>{
     if(fTipo && a.tipo!==fTipo) return false;
-    if(fIns==='epoca' && !inscricaoDe(a.id)) return false;
+    // com texto na pesquisa, procura em TODOS os atletas (mesmo fora da época), marcando-os
+    if(!q && fIns==='epoca' && !inscricaoDe(a.id)) return false;
     if(q && !normalizar(a.nome_completo+' '+(a.nome_desportivo||'')).includes(q)) return false;
     return true;
   });
@@ -657,13 +800,18 @@ function renderAtletas(){
     <th>Nome desportivo</th><th>Nome completo</th><th>Tipo</th><th>Escalão</th><th>Dorsal</th><th>Chip</th><th>Camisola</th><th>Telemóvel</th><th></th>
     </tr></thead><tbody>${lista.map(a=>{
       const i = inscricaoDe(a.id) || {};
+      const fora = !inscricaoDe(a.id);
       return `<tr>
-        <td><b style="cursor:pointer;color:var(--azul)" onclick="abrirFicha('${a.id}')">${esc(a.nome_desportivo||'—')}</b></td>
+        <td><b style="cursor:pointer;color:var(--azul)" onclick="abrirFicha('${a.id}')">${esc(a.nome_desportivo||'—')}</b>
+          ${fora?`<br><span class="badge b-vermelho">🚫 Não está em ${esc(epocaAtual.nome)}</span>`:''}</td>
         <td>${esc(a.nome_completo)}</td>
         <td><span class="badge ${a.tipo==='adulto'?'b-azul':'b-roxo'}">${a.tipo==='adulto'?'Adulto':'Formação'}</span></td>
         <td>${esc(i.escalao||'—')}</td><td>${esc(i.dorsal||'—')}</td><td>${esc(i.chip||'—')}</td><td>${esc(i.camisola||'—')}</td>
         <td>${esc(a.telemovel||'—')}</td>
-        <td><button class="btn mini sec" onclick="abrirModalAtleta('${a.id}')">✏️</button></td>
+        <td style="white-space:nowrap">
+          <button class="btn mini sec" onclick="abrirModalAtleta('${a.id}')">✏️</button>
+          ${inscricaoDe(a.id)?`<button class="btn mini perigo" title="Remover desta época (mantém o histórico das outras)" onclick="removerDaEpoca('${a.id}')">🚫</button>`:''}
+        </td>
       </tr>`;
     }).join('')}</tbody></table>` : '<div class="vazio">Nenhum atleta encontrado.</div>';
 }
@@ -736,6 +884,22 @@ async function apagarAtleta(){
   await carregarTudo();
 }
 
+async function removerDaEpoca(atletaId){
+  const a = atletaPorId(atletaId);
+  if(!a) return;
+  const nome = a.nome_desportivo || a.nome_completo;
+  const minhas = participacoes.filter(p=>p.atleta_id===atletaId);
+  let msg = 'Remover '+nome+' da época '+epocaAtual.nome+'?\n\nEle sai desta época (inscrição apagada) mas o histórico das épocas anteriores mantém-se intacto.';
+  if(minhas.length) msg += '\n\n⚠️ ATENÇÃO: tem '+minhas.length+' resultado(s) lançado(s) nesta época, que também serão apagados.';
+  if(!confirm(msg)) return;
+  if(minhas.length){
+    await sbErro(await sb.from('atl_participacoes').delete().eq('atleta_id',atletaId).in('prova_id', provas.map(p=>p.id)), 'rm part epoca');
+  }
+  await sbErro(await sb.from('atl_inscricoes').delete().eq('epoca_id',epocaAtual.id).eq('atleta_id',atletaId), 'rm inscricao');
+  toast('🚫 '+nome+' removido da época '+epocaAtual.nome+'.');
+  await carregarTudo();
+}
+
 async function abrirFicha(atletaId){
   const a = atletaPorId(atletaId);
   if(!a) return;
@@ -749,7 +913,17 @@ async function abrirFicha(atletaId){
   let km=0, podios=0; const tempos=[];
   for(const p of minhas){ porTipo[p.prova.tipo]=(porTipo[p.prova.tipo]||0)+1; km+=Number(p.distancia_km)||0; if(p.podio)podios++; if(p.tempo)tempos.push(p.tempo); }
   const i = inscricaoDe(atletaId)||{};
+  // épocas em que o atleta está inscrito
+  let chipsEpocas = '';
+  try{
+    const insAll = await sbErro(await sb.from('atl_inscricoes').select('epoca_id').eq('atleta_id',atletaId),'ficha epocas');
+    const setE = new Set(insAll.map(x=>x.epoca_id));
+    chipsEpocas = epocas.map(e=> setE.has(e.id)
+      ? `<span class="chip" style="background:#dcfce7;border-color:#86efac;color:#15803d">✓ ${esc(e.nome)}</span>`
+      : `<span class="chip" style="background:#fee2e2;border-color:#fca5a5;color:#b91c1c">✗ ${esc(e.nome)}</span>`).join('');
+  }catch(e){ chipsEpocas=''; }
   document.getElementById('fichaConteudo').innerHTML = `
+    <p style="margin-bottom:10px"><b style="font-size:13px;color:var(--cinza)">Épocas:</b> ${chipsEpocas}</p>
     <div class="cards" style="margin-bottom:14px">
       <div class="card"><div class="num">${minhas.length}</div><div class="lbl">Provas</div></div>
       <div class="card verde"><div class="num">${km.toFixed(1)}</div><div class="lbl">Km</div></div>
@@ -914,6 +1088,9 @@ function renderMultas(){
         <td>${fmtEuro(m.valor)}</td>
         <td><span class="badge ${m.estado==='pago'?'b-verde':'b-vermelho'}" style="cursor:pointer" onclick="alternarMulta('${m.id}','${m.estado}')">${m.estado==='pago'?'Pago':'Deve'}</span></td>
         <td style="white-space:nowrap">
+          ${m.anexo_url?`<button class="btn mini sec" title="Ver fatura/comprovativo" onclick="window.open('${m.anexo_url}','_blank')">📄</button>`:''}
+          <button class="btn mini sec" title="${m.anexo_url?'Substituir':'Anexar'} fatura/comprovativo" onclick="pedirAnexo('atl_multas','${m.id}')">📎</button>
+          ${m.estado==='pago'?`<button class="btn mini" title="Gerar recibo (duplicado)" onclick="gerarRecibo('multa','${m.id}')">🧾</button>`:''}
           <button class="btn mini sec" onclick="abrirModalMulta('${m.id}')">✏️</button>
           <button class="btn mini perigo" onclick="apagarMulta('${m.id}')">🗑</button></td></tr>`;
     }).join('')
@@ -979,6 +1156,9 @@ function renderConta(){
         <td style="color:var(--vermelho)">${c.saida?fmtEuro(c.saida):''}</td>
         <td><b>${fmtEuro(acumulado)}</b></td><td>${esc(c.obs||'')}</td>
         <td style="white-space:nowrap">
+          ${c.anexo_url?`<button class="btn mini sec" title="Ver fatura/comprovativo" onclick="window.open('${c.anexo_url}','_blank')">📄</button>`:''}
+          <button class="btn mini sec" title="${c.anexo_url?'Substituir':'Anexar'} fatura/comprovativo" onclick="pedirAnexo('atl_conta','${c.id}')">📎</button>
+          ${Number(c.entrada)>0?`<button class="btn mini" title="Gerar recibo (duplicado)" onclick="gerarRecibo('conta','${c.id}')">🧾</button>`:''}
           <button class="btn mini sec" onclick="abrirModalMov('${c.id}')">✏️</button>
           <button class="btn mini perigo" onclick="apagarMov('${c.id}')">🗑</button></td></tr>`;
     }).join('')
@@ -1136,7 +1316,31 @@ async function compararEpocas(){
     <div class="compGrelha">
       <div class="painel compCol"><h4>🆕 Novos em ${esc(eB.nome)}</h4>${nomes(novos)}</div>
       <div class="painel compCol"><h4>👋 Saíram (estavam em ${esc(eA.nome)})</h4>${nomes(sairam)}</div>
+    </div>
+    <div class="painel"><h3>👥 Presença por atleta</h3>
+      <div class="barraAcoes"><input type="text" id="pesqPresenca" placeholder="🔍 Pesquisar atleta..." oninput="filtrarPresenca()"></div>
+      <div class="tabelaScroll"><table><thead><tr>
+        <th>Atleta</th><th>${esc(eA.nome)}</th><th>${esc(eB.nome)}</th><th>Situação</th></tr></thead>
+        <tbody id="corpoPresenca">${
+        [...new Set([...setA,...setB])].map(id=>{
+          const a = atletaPorId(id);
+          if(!a) return '';
+          const emA = setA.has(id), emB = setB.has(id);
+          const sit = emA&&emB ? '<span class="badge b-verde">Transitou</span>'
+            : (!emA&&emB ? '<span class="badge b-roxo">Novo</span>'
+            : `<span class="badge b-vermelho">🚫 Não está em ${esc(eB.nome)}</span>`);
+          return `<tr data-nome="${esc(normalizar(a.nome_completo+' '+(a.nome_desportivo||'')))}">
+            <td><b>${esc(a.nome_desportivo||a.nome_completo)}</b></td>
+            <td>${emA?'✓':'—'}</td><td>${emB?'✓':'—'}</td><td>${sit}</td></tr>`;
+        }).join('')
+      }</tbody></table></div>
     </div>`;
+}
+function filtrarPresenca(){
+  const q = normalizar(document.getElementById('pesqPresenca').value);
+  document.querySelectorAll('#corpoPresenca tr').forEach(tr=>{
+    tr.style.display = (!q || (tr.dataset.nome||'').includes(q)) ? '' : 'none';
+  });
 }
 
 /* ============================================================
@@ -1301,6 +1505,150 @@ async function restaurarBackup(ficheiro){
     estadoBackup('❌ '+(e.message||e));
     toast('❌ Erro ao restaurar.');
   }
+}
+
+/* ============================================================
+   LOGO, ANEXOS E RECIBOS
+============================================================ */
+let logoDataUrl = null;
+async function carregarLogo(){
+  try{
+    const r = await sb.from('atl_config').select('*').eq('chave','logo').maybeSingle();
+    logoDataUrl = (!r.error && r.data) ? r.data.valor : null;
+  }catch(e){ logoDataUrl = null; }
+  mostrarLogo();
+}
+function mostrarLogo(){
+  const el = document.getElementById('logoPreview');
+  el.innerHTML = logoDataUrl
+    ? `<div style="display:flex;align-items:center;gap:12px">
+         <div class="logoCirculo" style="background:#fff"><img src="${logoDataUrl}"></div>
+         <span style="font-size:12.5px;color:var(--cinza)">Assim vai aparecer no recibo (círculo branco).</span>
+       </div>`
+    : '<span style="font-size:13px;color:var(--cinza)">Ainda sem logo carregado.</span>';
+}
+function guardarLogo(ficheiro){
+  if(!ficheiro) return;
+  const img = new Image();
+  img.onload = async ()=>{
+    const escala = Math.min(1, 400/img.width, 200/img.height);
+    const cv = document.createElement('canvas');
+    cv.width = Math.round(img.width*escala);
+    cv.height = Math.round(img.height*escala);
+    cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+    logoDataUrl = cv.toDataURL('image/png');
+    await sbErro(await sb.from('atl_config').upsert({chave:'logo', valor:logoDataUrl},{onConflict:'chave'}),'guardar logo');
+    mostrarLogo();
+    toast('✅ Logo guardado — vai aparecer nos recibos.');
+    document.getElementById('ficheiroLogo').value='';
+  };
+  img.onerror = ()=>toast('❌ Não consegui ler essa imagem.');
+  img.src = URL.createObjectURL(ficheiro);
+}
+async function removerLogo(){
+  if(!confirm('Remover o logo?')) return;
+  await sbErro(await sb.from('atl_config').delete().eq('chave','logo'),'remover logo');
+  logoDataUrl = null;
+  mostrarLogo();
+  toast('🗑 Logo removido.');
+}
+
+/* -------- anexos (fatura / comprovativo) -------- */
+let anexoContexto = null;   // {tabela, id}
+function pedirAnexo(tabela, id){
+  anexoContexto = {tabela, id};
+  document.getElementById('ficheiroAnexo').click();
+}
+async function enviarAnexo(ficheiro){
+  if(!ficheiro || !anexoContexto) return;
+  try{
+    if(ficheiro.size > 8*1024*1024){ toast('❌ Ficheiro muito grande (máx. 8 MB).'); return; }
+    toast('📎 A enviar o comprovativo…');
+    const ext = (ficheiro.name.split('.').pop()||'bin').toLowerCase();
+    const caminho = 'comprovativos/'+anexoContexto.tabela+'_'+anexoContexto.id+'_'+Date.now()+'.'+ext;
+    const up = await sb.storage.from('atletismo').upload(caminho, ficheiro, {upsert:true, contentType:ficheiro.type||undefined});
+    if(up.error) throw up.error;
+    const url = sb.storage.from('atletismo').getPublicUrl(caminho).data.publicUrl;
+    await sbErro(await sb.from(anexoContexto.tabela).update({anexo_url:url}).eq('id',anexoContexto.id),'guardar anexo');
+    toast('✅ Comprovativo anexado.');
+    if(anexoContexto.tabela==='atl_multas'){
+      multas = await sbErro(await sb.from('atl_multas').select('*').eq('epoca_id',epocaAtual.id).order('criado_em'),'multas');
+      renderMultas();
+    } else {
+      conta = await sbErro(await sb.from('atl_conta').select('*').eq('epoca_id',epocaAtual.id).order('data',{ascending:true}),'conta');
+      renderConta();
+    }
+  }catch(e){
+    console.error(e);
+    toast('❌ Erro ao anexar: '+(e.message||e)+' — confirma que criaste o bucket "atletismo" no Supabase.');
+  }finally{
+    document.getElementById('ficheiroAnexo').value='';
+    anexoContexto = null;
+  }
+}
+
+/* -------- recibos em duplicado -------- */
+async function proximoNumRecibo(){
+  const r = await sb.from('atl_config').select('*').eq('chave','recibo_seq').maybeSingle();
+  const seq = (!r.error && r.data) ? (parseInt(r.data.valor)||0)+1 : 1;
+  await sbErro(await sb.from('atl_config').upsert({chave:'recibo_seq', valor:String(seq)},{onConflict:'chave'}),'recibo seq');
+  return String(seq).padStart(3,'0')+'/'+new Date().getFullYear();
+}
+async function gerarRecibo(tipo, id){
+  let registo, nome, descricao, valor;
+  if(tipo==='multa'){
+    registo = multas.find(m=>m.id===id);
+    if(!registo) return;
+    const a = registo.atleta_id ? atletaPorId(registo.atleta_id) : null;
+    nome = a ? (a.nome_desportivo||a.nome_completo) : (registo.atleta_nome||'—');
+    descricao = 'Multa'+(registo.prova?' — '+registo.prova:'');
+    valor = Number(registo.valor)||0;
+  } else {
+    registo = conta.find(c=>c.id===id);
+    if(!registo) return;
+    nome = '—';
+    descricao = registo.descricao + (registo.obs?' ('+registo.obs+')':'');
+    valor = Number(registo.entrada)||0;
+  }
+  let num = registo.recibo_num;
+  if(!num){
+    num = await proximoNumRecibo();
+    const tabela = tipo==='multa' ? 'atl_multas' : 'atl_conta';
+    await sbErro(await sb.from(tabela).update({recibo_num:num}).eq('id',id),'guardar num recibo');
+    registo.recibo_num = num;
+  }
+  const hoje = fmtData(new Date().toISOString().slice(0,10));
+  function copia(rotulo){
+    return `<div class="reciboCopia">
+      <div class="reciboTopo">
+        ${logoDataUrl?`<div class="logoCirculo"><img src="${logoDataUrl}"></div>`:''}
+        <div class="tit">
+          <h2>ARCA d'Ajuda — Associação Recreativa e Cultural da Ajuda</h2>
+          <small>Secção de Atletismo / Trail · Funchal, Madeira</small>
+        </div>
+        <div class="reciboNum">RECIBO Nº ${esc(num)}<br><small style="font-weight:400">Data: ${hoje}</small></div>
+      </div>
+      <div class="reciboCorpo">
+        ${tipo==='multa'?`<p>Recebemos de <b>${esc(nome)}</b> a quantia de <b>${fmtEuro(valor)}</b>.</p>`
+                        :`<p>Recebemos a quantia de <b>${fmtEuro(valor)}</b>.</p>`}
+        <p>Referente a: <b>${esc(descricao)}</b> · Época <b>${esc(epocaAtual.nome)}</b></p>
+      </div>
+      <div class="reciboAssin">
+        <div>Pela ARCA d'Ajuda</div>
+        <div>${tipo==='multa'?'O Atleta':'Quem entregou'}</div>
+      </div>
+      <div class="reciboTipo">${rotulo}</div>
+    </div>`;
+  }
+  document.getElementById('reciboPrint').innerHTML =
+    copia('Original — para quem pagou') +
+    '<div class="reciboCorte">✂ — — — — — — — — — — — — — — — — — — — — — — — — — — —</div>' +
+    copia('Duplicado — para a secção (arquivo)');
+  document.body.classList.add('aImprimir');
+  const limpar = ()=>{ document.body.classList.remove('aImprimir'); window.onafterprint=null; };
+  window.onafterprint = limpar;
+  window.print();
+  setTimeout(limpar, 2000);
 }
 
 /* ============================================================
