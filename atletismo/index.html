@@ -97,8 +97,8 @@ tr:hover td{background:#f8fafc}
 }
 .reciboCopia{border:1.5px solid #333;border-radius:8px;padding:18px 22px;margin-bottom:14px;font-size:13px;color:#111;page-break-inside:avoid}
 .reciboTopo{display:flex;align-items:center;gap:14px;border-bottom:2px solid #333;padding-bottom:10px;margin-bottom:12px}
-.logoCirculo{width:78px;height:78px;min-width:78px;border-radius:50%;background:#fff;border:1.5px solid #333;display:flex;align-items:center;justify-content:center;overflow:hidden}
-.logoCirculo img{max-width:82%;max-height:82%;display:block}
+.logoCirculo{width:78px;height:78px;min-width:78px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.logoCirculo img{width:100%;height:100%;object-fit:cover;display:block}
 .reciboTopo .tit{flex:1}
 .reciboTopo .tit h2{font-size:16px;margin:0}
 .reciboTopo .tit small{color:#444}
@@ -135,7 +135,10 @@ tr:hover td{background:#f8fafc}
 <!-- APP -->
 <div id="app">
   <div class="sidebar">
-    <div class="logo"><h1>🏃 Atletismo/Trail</h1><span>ARCA d'Ajuda</span></div>
+    <div class="logo" style="display:flex;align-items:center;gap:10px">
+      <div id="logoSidebar"></div>
+      <div><h1>🏃 Atletismo/Trail</h1><span>ARCA d'Ajuda</span></div>
+    </div>
     <div class="navLista">
       <div class="nav-item ativo" data-sec="dashboard" onclick="irPara('dashboard')">📊 Dashboard</div>
       <div class="nav-item" data-sec="atletas" onclick="irPara('atletas')">👥 Atletas</div>
@@ -270,7 +273,8 @@ tr:hover td{background:#f8fafc}
           fundo branco também funciona, mas sem fundo fica perfeito. Fica guardado na cloud.
         </p>
         <div class="barraAcoes">
-          <input type="file" id="ficheiroLogo" accept="image/*" onchange="guardarLogo(this.files[0])">
+          <input type="file" id="ficheiroLogo" accept="image/*" onchange="prepararLogo(this.files[0])">
+          <button class="btn" onclick="guardarLogoBtn()">💾 Guardar logo</button>
           <button class="btn sec" onclick="removerLogo()">🗑 Remover logo</button>
         </div>
         <div id="logoPreview" style="margin-top:8px"></div>
@@ -408,9 +412,10 @@ tr:hover td{background:#f8fafc}
           e importa de novo.</i></p>
 
           <p><b>⚙️ 9. Configurações</b> —<br>
-          • <b>🖼 Logo da ARCA</b> — carrega a imagem do logo (fica na cloud). Nos recibos aparece dentro
-          de um <b>círculo branco</b>, por isso o ideal é uma imagem <b>PNG sem fundo (transparente)</b>;
-          a pré-visualização mostra logo como vai ficar. Podes substituí-la ou removê-la.<br>
+          • <b>🖼 Logo da ARCA</b> — escolhe a imagem e vê a pré-visualização dentro do círculo branco
+          (o logo preenche o círculo por completo); depois clica em <b>💾 Guardar logo</b>. Fica na cloud e
+          aparece no canto superior esquerdo da app e no topo dos recibos. O ideal é uma imagem
+          <b>PNG sem fundo (transparente)</b>. Podes substituí-la ou removê-la.<br>
           • <b>☁️ Backup Google Drive</b> — escreve o email da conta Google e clica em "Guardar email"
           (fica gravado para todos). "Backup para o Drive agora" pede autorização ao Google e grava lá um
           ficheiro com TODOS os dados de TODAS as épocas. "Descarregar backup (.json)" faz o mesmo para o
@@ -1510,7 +1515,8 @@ async function restaurarBackup(ficheiro){
 /* ============================================================
    LOGO, ANEXOS E RECIBOS
 ============================================================ */
-let logoDataUrl = null;
+let logoDataUrl = null;      // logo guardado na cloud
+let logoTempDataUrl = null;  // logo escolhido mas ainda não guardado
 async function carregarLogo(){
   try{
     const r = await sb.from('atl_config').select('*').eq('chave','logo').maybeSingle();
@@ -1519,36 +1525,49 @@ async function carregarLogo(){
   mostrarLogo();
 }
 function mostrarLogo(){
+  const emUso = logoTempDataUrl || logoDataUrl;
   const el = document.getElementById('logoPreview');
-  el.innerHTML = logoDataUrl
+  el.innerHTML = emUso
     ? `<div style="display:flex;align-items:center;gap:12px">
-         <div class="logoCirculo" style="background:#fff"><img src="${logoDataUrl}"></div>
-         <span style="font-size:12.5px;color:var(--cinza)">Assim vai aparecer no recibo (círculo branco).</span>
+         <div class="logoCirculo"><img src="${emUso}"></div>
+         <span style="font-size:12.5px;color:${logoTempDataUrl?'var(--amarelo)':'var(--cinza)'}">
+           ${logoTempDataUrl?'⚠ Pré-visualização — clica em "💾 Guardar logo" para ficar guardado.':'Logo guardado. Assim aparece nos recibos e no canto da app.'}
+         </span>
        </div>`
     : '<span style="font-size:13px;color:var(--cinza)">Ainda sem logo carregado.</span>';
+  document.getElementById('logoSidebar').innerHTML = logoDataUrl
+    ? `<div class="logoCirculo" style="width:44px;height:44px;min-width:44px"><img src="${logoDataUrl}"></div>` : '';
 }
-function guardarLogo(ficheiro){
+function prepararLogo(ficheiro){
   if(!ficheiro) return;
   const img = new Image();
-  img.onload = async ()=>{
-    const escala = Math.min(1, 400/img.width, 200/img.height);
+  img.onload = ()=>{
+    const escala = Math.min(1, 500/img.width, 500/img.height);
     const cv = document.createElement('canvas');
     cv.width = Math.round(img.width*escala);
     cv.height = Math.round(img.height*escala);
     cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
-    logoDataUrl = cv.toDataURL('image/png');
-    await sbErro(await sb.from('atl_config').upsert({chave:'logo', valor:logoDataUrl},{onConflict:'chave'}),'guardar logo');
+    logoTempDataUrl = cv.toDataURL('image/png');
     mostrarLogo();
-    toast('✅ Logo guardado — vai aparecer nos recibos.');
-    document.getElementById('ficheiroLogo').value='';
+    toast('👀 Pré-visualização pronta — clica em "💾 Guardar logo".');
   };
   img.onerror = ()=>toast('❌ Não consegui ler essa imagem.');
   img.src = URL.createObjectURL(ficheiro);
 }
+async function guardarLogoBtn(){
+  if(!logoTempDataUrl){ toast('Escolhe primeiro a imagem do logo.'); return; }
+  await sbErro(await sb.from('atl_config').upsert({chave:'logo', valor:logoTempDataUrl},{onConflict:'chave'}),'guardar logo');
+  logoDataUrl = logoTempDataUrl;
+  logoTempDataUrl = null;
+  document.getElementById('ficheiroLogo').value='';
+  mostrarLogo();
+  toast('✅ Logo guardado — já aparece na app e nos recibos.');
+}
 async function removerLogo(){
   if(!confirm('Remover o logo?')) return;
   await sbErro(await sb.from('atl_config').delete().eq('chave','logo'),'remover logo');
-  logoDataUrl = null;
+  logoDataUrl = null; logoTempDataUrl = null;
+  document.getElementById('ficheiroLogo').value='';
   mostrarLogo();
   toast('🗑 Logo removido.');
 }
