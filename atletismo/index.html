@@ -1,0 +1,1367 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARCA d'Ajuda — Atletismo/Trail</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --grad:linear-gradient(160deg,#1e3a8a 0%,#7c3aed 100%);
+  --azul:#1e3a8a; --roxo:#7c3aed; --fundo:#f1f5f9; --branco:#fff;
+  --texto:#1e293b; --cinza:#64748b; --borda:#e2e8f0;
+  --verde:#16a34a; --vermelho:#dc2626; --amarelo:#d97706;
+}
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',system-ui,sans-serif}
+body{background:var(--fundo);color:var(--texto)}
+/* ---------- LOGIN ---------- */
+#loginOverlay{position:fixed;inset:0;background:var(--grad);display:flex;align-items:center;justify-content:center;z-index:1000}
+.loginBox{background:var(--branco);padding:40px;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.3);text-align:center;width:320px}
+.loginBox h1{font-size:20px;color:var(--azul);margin-bottom:4px}
+.loginBox p{color:var(--cinza);font-size:13px;margin-bottom:20px}
+.loginBox input{width:100%;padding:12px;font-size:22px;text-align:center;letter-spacing:8px;border:2px solid var(--borda);border-radius:10px;margin-bottom:14px}
+.loginBox button{width:100%;padding:12px;background:var(--grad);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer}
+#loginErro{color:var(--vermelho);font-size:13px;margin-top:10px;display:none}
+/* ---------- LAYOUT ---------- */
+#app{display:none}
+.sidebar{position:fixed;top:0;left:0;bottom:0;width:230px;background:var(--grad);color:#fff;padding:20px 0;overflow-y:auto;z-index:100}
+.sidebar .logo{padding:0 20px 18px;border-bottom:1px solid rgba(255,255,255,.2);margin-bottom:14px}
+.sidebar .logo h1{font-size:17px}
+.sidebar .logo span{font-size:11px;opacity:.8}
+.nav-item{display:flex;align-items:center;gap:10px;padding:11px 20px;cursor:pointer;font-size:14px;opacity:.85;border-left:3px solid transparent}
+.nav-item:hover{background:rgba(255,255,255,.1);opacity:1}
+.nav-item.ativo{background:rgba(255,255,255,.15);border-left-color:#fff;opacity:1;font-weight:600}
+.main{margin-left:230px;padding:20px 24px 60px}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.topbar h2{font-size:22px;color:var(--azul)}
+.epocaSel{display:flex;align-items:center;gap:8px;background:var(--branco);padding:8px 14px;border-radius:10px;border:1px solid var(--borda)}
+.epocaSel label{font-size:13px;color:var(--cinza);font-weight:600}
+.epocaSel select{border:none;font-size:14px;font-weight:700;color:var(--azul);background:transparent;cursor:pointer}
+/* ---------- COMPONENTES ---------- */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px;margin-bottom:22px}
+.card{background:var(--branco);border-radius:12px;padding:16px;border:1px solid var(--borda)}
+.card .num{font-size:26px;font-weight:800;color:var(--azul)}
+.card .lbl{font-size:12px;color:var(--cinza);margin-top:2px}
+.card.verde .num{color:var(--verde)} .card.vermelho .num{color:var(--vermelho)} .card.roxo .num{color:var(--roxo)} .card.amarelo .num{color:var(--amarelo)}
+.painel{background:var(--branco);border-radius:12px;border:1px solid var(--borda);padding:18px;margin-bottom:20px}
+.painel h3{font-size:15px;color:var(--azul);margin-bottom:12px}
+.barraAcoes{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.barraAcoes input[type=text],.barraAcoes select{padding:9px 12px;border:1px solid var(--borda);border-radius:8px;font-size:14px}
+.barraAcoes input[type=text]{flex:1;min-width:180px}
+.btn{padding:9px 16px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;background:var(--grad);color:#fff;white-space:nowrap}
+.btn.sec{background:var(--fundo);color:var(--texto);border:1px solid var(--borda)}
+.btn.perigo{background:var(--vermelho)}
+.btn.mini{padding:5px 10px;font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{text-align:left;padding:9px 10px;background:var(--fundo);color:var(--cinza);font-size:12px;text-transform:uppercase;letter-spacing:.4px;position:sticky;top:0}
+td{padding:9px 10px;border-bottom:1px solid var(--borda)}
+tr:hover td{background:#f8fafc}
+.tabelaScroll{overflow-x:auto;max-height:65vh;overflow-y:auto}
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:700}
+.b-azul{background:#dbeafe;color:#1d4ed8}.b-roxo{background:#ede9fe;color:#6d28d9}
+.b-verde{background:#dcfce7;color:#15803d}.b-vermelho{background:#fee2e2;color:#b91c1c}
+.b-amarelo{background:#fef3c7;color:#b45309}.b-cinza{background:#f1f5f9;color:#475569}
+.chip{display:inline-block;background:#eef2ff;color:var(--azul);border:1px solid #c7d2fe;border-radius:16px;padding:3px 10px;font-size:12px;margin:2px}
+/* ---------- MODAIS ---------- */
+.modalFundo{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:flex-start;justify-content:center;z-index:500;padding:30px 14px;overflow-y:auto}
+.modalFundo.aberto{display:flex}
+.modal{background:var(--branco);border-radius:14px;width:100%;max-width:760px;padding:22px}
+.modal h3{color:var(--azul);margin-bottom:16px;font-size:17px}
+.formGrelha{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.campo{display:flex;flex-direction:column;gap:4px}
+.campo label{font-size:12px;font-weight:700;color:var(--cinza)}
+.campo input,.campo select,.campo textarea{padding:9px 10px;border:1px solid var(--borda);border-radius:8px;font-size:14px}
+.campo.full{grid-column:1/-1}
+.modalRodape{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
+.subTitulo{grid-column:1/-1;font-size:13px;font-weight:800;color:var(--roxo);border-bottom:1px solid var(--borda);padding-bottom:4px;margin-top:6px}
+/* ---------- IMPORTAR ---------- */
+.dropZona{border:2px dashed var(--roxo);border-radius:12px;padding:34px;text-align:center;color:var(--cinza);cursor:pointer;background:#faf5ff}
+.logImport{background:#0f172a;color:#a5f3fc;font-family:monospace;font-size:12.5px;border-radius:10px;padding:14px;max-height:340px;overflow-y:auto;margin-top:14px;white-space:pre-wrap;display:none}
+/* ---------- COMPARAR ---------- */
+.compGrelha{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.compCol h4{text-align:center;color:var(--roxo);margin-bottom:10px;font-size:16px}
+.linhaComp{display:flex;justify-content:space-between;padding:8px 4px;border-bottom:1px solid var(--borda);font-size:14px}
+.linhaComp b{color:var(--azul)}
+.setaDelta{font-weight:800}
+.mais{color:var(--verde)}.menos{color:var(--vermelho)}
+/* ---------- TOAST ---------- */
+#toast{position:fixed;bottom:22px;right:22px;background:#0f172a;color:#fff;padding:12px 18px;border-radius:10px;font-size:14px;display:none;z-index:900;max-width:340px}
+.vazio{text-align:center;color:var(--cinza);padding:26px;font-size:14px}
+@media(max-width:820px){
+  .sidebar{width:100%;height:auto;position:relative;padding:10px 0}
+  .sidebar .logo{padding:0 16px 10px}
+  .navLista{display:flex;overflow-x:auto}
+  .nav-item{white-space:nowrap;border-left:none;border-bottom:3px solid transparent}
+  .nav-item.ativo{border-left:none;border-bottom-color:#fff}
+  .main{margin-left:0;padding:14px}
+  .compGrelha{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginOverlay">
+  <div class="loginBox">
+    <h1>🏃 ARCA d'Ajuda</h1>
+    <p>Atletismo / Trail — Gestão por Épocas</p>
+    <input type="password" id="pinInput" maxlength="4" inputmode="numeric" placeholder="••••" onkeydown="if(event.key==='Enter')verificarPin()">
+    <button onclick="verificarPin()">Entrar</button>
+    <div id="loginErro">PIN incorreto</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="sidebar">
+    <div class="logo"><h1>🏃 Atletismo/Trail</h1><span>ARCA d'Ajuda</span></div>
+    <div class="navLista">
+      <div class="nav-item ativo" data-sec="dashboard" onclick="irPara('dashboard')">📊 Dashboard</div>
+      <div class="nav-item" data-sec="atletas" onclick="irPara('atletas')">👥 Atletas</div>
+      <div class="nav-item" data-sec="provas" onclick="irPara('provas')">🏁 Provas</div>
+      <div class="nav-item" data-sec="multas" onclick="irPara('multas')">⚠️ Multas</div>
+      <div class="nav-item" data-sec="conta" onclick="irPara('conta')">💶 Conta Secção</div>
+      <div class="nav-item" data-sec="comparar" onclick="irPara('comparar')">⚖️ Comparar Épocas</div>
+      <div class="nav-item" data-sec="epocas" onclick="irPara('epocas')">📅 Épocas</div>
+      <div class="nav-item" data-sec="importar" onclick="irPara('importar')">📥 Importar Excel</div>
+      <div class="nav-item" data-sec="ajuda" onclick="irPara('ajuda')">❓ Ajuda</div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <h2 id="tituloSeccao">Dashboard</h2>
+      <div class="epocaSel">
+        <label>Época:</label>
+        <select id="selEpoca" onchange="mudarEpoca()"></select>
+      </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div id="sec-dashboard" class="seccao">
+      <div class="cards" id="dashCards"></div>
+      <div class="painel"><h3>🏅 Top atletas da época (participações)</h3><div class="tabelaScroll" id="dashTop"></div></div>
+      <div class="painel"><h3>🏁 Últimas provas</h3><div class="tabelaScroll" id="dashProvas"></div></div>
+    </div>
+
+    <!-- ATLETAS -->
+    <div id="sec-atletas" class="seccao" style="display:none">
+      <div class="barraAcoes">
+        <input type="text" id="pesqAtleta" placeholder="🔍 Pesquisar atleta..." oninput="renderAtletas()">
+        <select id="filtroTipoAtleta" onchange="renderAtletas()">
+          <option value="">Todos</option>
+          <option value="adulto">Adultos</option>
+          <option value="formacao">Formação</option>
+        </select>
+        <select id="filtroInscrito" onchange="renderAtletas()">
+          <option value="epoca">Inscritos nesta época</option>
+          <option value="todos">Todos os atletas</option>
+        </select>
+        <button class="btn" onclick="abrirModalAtleta()">＋ Novo Atleta</button>
+      </div>
+      <div class="tabelaScroll" id="listaAtletas"></div>
+    </div>
+
+    <!-- PROVAS -->
+    <div id="sec-provas" class="seccao" style="display:none">
+      <div class="barraAcoes">
+        <input type="text" id="pesqProva" placeholder="🔍 Pesquisar prova..." oninput="renderProvas()">
+        <select id="filtroTipoProva" onchange="renderProvas()">
+          <option value="">Todos os tipos</option>
+          <option value="madeira_correr">Madeira a Correr</option>
+          <option value="trail_sprint">Trail Sprint</option>
+          <option value="trail_longo">Trail Longo</option>
+          <option value="trail_ultra">Trail Ultra</option>
+          <option value="sky">Sky</option>
+          <option value="outras">Outras</option>
+        </select>
+        <button class="btn" onclick="abrirModalProva()">＋ Nova Prova</button>
+      </div>
+      <div class="tabelaScroll" id="listaProvas"></div>
+    </div>
+
+    <!-- MULTAS -->
+    <div id="sec-multas" class="seccao" style="display:none">
+      <div class="barraAcoes">
+        <button class="btn" onclick="abrirModalMulta()">＋ Nova Multa</button>
+      </div>
+      <div class="cards" id="multasCards"></div>
+      <div class="tabelaScroll" id="listaMultas"></div>
+    </div>
+
+    <!-- CONTA -->
+    <div id="sec-conta" class="seccao" style="display:none">
+      <div class="barraAcoes">
+        <button class="btn" onclick="abrirModalMov()">＋ Novo Movimento</button>
+      </div>
+      <div class="cards" id="contaCards"></div>
+      <div class="tabelaScroll" id="listaConta"></div>
+    </div>
+
+    <!-- COMPARAR -->
+    <div id="sec-comparar" class="seccao" style="display:none">
+      <div class="barraAcoes">
+        <select id="compA"></select>
+        <span style="font-weight:800;color:var(--roxo)">vs</span>
+        <select id="compB"></select>
+        <button class="btn" onclick="compararEpocas()">⚖️ Comparar</button>
+      </div>
+      <div id="compResultado"></div>
+    </div>
+
+    <!-- ÉPOCAS -->
+    <div id="sec-epocas" class="seccao" style="display:none">
+      <div class="barraAcoes">
+        <button class="btn" onclick="novaEpoca()">＋ Nova Época (com transição de atletas)</button>
+      </div>
+      <div class="tabelaScroll" id="listaEpocas"></div>
+    </div>
+
+    <!-- IMPORTAR -->
+    <div id="sec-importar" class="seccao" style="display:none">
+      <div class="painel">
+        <h3>📥 Importar ficheiro Excel da época</h3>
+        <p style="font-size:13.5px;color:var(--cinza);margin-bottom:12px">
+          Escolhe a época de destino e carrega o ficheiro (ex.: EPOCA_25-26.xlsx). A app importa
+          atletas (Adultos + Formação), provas com resultados, multas e conta da secção.
+          Atletas repetidos não são duplicados.
+        </p>
+        <div class="barraAcoes">
+          <label style="font-size:13px;font-weight:700;color:var(--cinza)">Época destino:</label>
+          <select id="selEpocaImport"></select>
+        </div>
+        <div class="dropZona" onclick="document.getElementById('ficheiroExcel').click()">
+          📂 Clica aqui para escolher o ficheiro .xlsx
+        </div>
+        <input type="file" id="ficheiroExcel" accept=".xlsx,.xlsm" style="display:none" onchange="importarExcel(this.files[0])">
+        <div class="logImport" id="logImport"></div>
+      </div>
+    </div>
+
+    <!-- AJUDA -->
+    <div id="sec-ajuda" class="seccao" style="display:none">
+      <div class="painel">
+        <h3>❓ Como usar a app</h3>
+        <div style="font-size:14px;line-height:1.7">
+          <p><b>1. Épocas</b> — No topo escolhes a época de trabalho. Tudo o que vês (atletas inscritos, provas, multas, conta) pertence a essa época. No fim do ano, em "Épocas" clica em "Nova Época": os atletas ativos transitam automaticamente com dorsal e chip em branco.</p>
+          <p><b>2. Importar Excel</b> — Em "Importar Excel", escolhe a época de destino e carrega o ficheiro da época (EPOCA_25-26.xlsx ou EPOCA_2026-2027.xlsx). A importação pode repetir-se sem duplicar atletas.</p>
+          <p><b>3. Atletas</b> — Ficha completa de cada atleta. Os dados pessoais são únicos; dorsal, chip, escalão e camisola pertencem à inscrição da época. Clica no nome para veres a ficha com o histórico de provas (substitui as folhas individuais do Excel).</p>
+          <p><b>4. Provas</b> — Cria a prova (com tipo: Madeira a Correr, Trail Sprint/Longo/Ultra, Sky, Outras) e clica em "Resultados" para lançar as classificações dos atletas. O pódio é marcado automaticamente quando a posição no escalão é 1º, 2º ou 3º.</p>
+          <p><b>5. Comparar Épocas</b> — Escolhe duas épocas e vê lado a lado: atletas transitados/novos/saíram, provas, participações, quilómetros, pódios, multas e contas.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ATLETA -->
+<div class="modalFundo" id="modalAtleta">
+  <div class="modal">
+    <h3 id="tituloModalAtleta">Novo Atleta</h3>
+    <div class="formGrelha">
+      <div class="subTitulo">Dados pessoais</div>
+      <div class="campo full"><label>Nome completo *</label><input id="a_nome_completo"></div>
+      <div class="campo"><label>Nome desportivo</label><input id="a_nome_desportivo"></div>
+      <div class="campo"><label>Tipo</label><select id="a_tipo"><option value="adulto">Adulto</option><option value="formacao">Formação</option></select></div>
+      <div class="campo"><label>Género</label><select id="a_genero"><option value=""></option><option>Masc.</option><option>Fem.</option></select></div>
+      <div class="campo"><label>Data de nascimento</label><input type="date" id="a_data_nascimento"></div>
+      <div class="campo"><label>NIF</label><input id="a_nif"></div>
+      <div class="campo"><label>CC</label><input id="a_cc"></div>
+      <div class="campo"><label>Nº Utente</label><input id="a_utente"></div>
+      <div class="campo"><label>Email</label><input id="a_email"></div>
+      <div class="campo"><label>Telemóvel</label><input id="a_telemovel"></div>
+      <div class="campo full"><label>Morada</label><input id="a_morada"></div>
+      <div class="campo"><label>Profissão</label><input id="a_profissao"></div>
+      <div class="campo"><label>Contacto de emergência</label><input id="a_contacto_emergencia"></div>
+      <div class="campo"><label>Nº Sócio</label><input id="a_n_socio"></div>
+      <div class="subTitulo">Federação</div>
+      <div class="campo"><label>Atleta Nº (FPA)</label><input id="a_atleta_num"></div>
+      <div class="campo"><label>Pass FPA</label><input id="a_pass_fpa"></div>
+      <div class="campo"><label>FCMP</label><input id="a_fcmp"></div>
+      <div class="campo"><label>N. ITRA</label><input id="a_n_itra"></div>
+      <div class="campo full"><label>Link ITRA</label><input id="a_link_itra"></div>
+      <div class="subTitulo">Encarregado de educação (formação)</div>
+      <div class="campo"><label>Nome</label><input id="a_enc_nome"></div>
+      <div class="campo"><label>Parentesco</label><input id="a_enc_parentesco"></div>
+      <div class="campo"><label>Contacto</label><input id="a_enc_contacto"></div>
+      <div class="subTitulo">Inscrição na época <span id="lblEpocaInscricao"></span></div>
+      <div class="campo"><label>Inscrito nesta época?</label><select id="i_inscrito"><option value="sim">Sim</option><option value="nao">Não</option></select></div>
+      <div class="campo"><label>Dorsal</label><input id="i_dorsal"></div>
+      <div class="campo"><label>Chip</label><input id="i_chip"></div>
+      <div class="campo"><label>Escalão</label><input id="i_escalao" placeholder="ex.: Senior, Vet. 40"></div>
+      <div class="campo"><label>Camisola</label><input id="i_camisola" placeholder="XS/S/M/L/XL"></div>
+      <div class="campo"><label>Nº Pé</label><input id="i_num_pe"></div>
+    </div>
+    <div class="modalRodape">
+      <button class="btn perigo" id="btnApagarAtleta" style="margin-right:auto;display:none" onclick="apagarAtleta()">🗑 Apagar</button>
+      <button class="btn sec" onclick="fecharModal('modalAtleta')">Cancelar</button>
+      <button class="btn" onclick="guardarAtleta()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL FICHA ATLETA -->
+<div class="modalFundo" id="modalFicha">
+  <div class="modal" style="max-width:860px">
+    <h3 id="fichaTitulo"></h3>
+    <div id="fichaConteudo"></div>
+    <div class="modalRodape"><button class="btn sec" onclick="fecharModal('modalFicha')">Fechar</button></div>
+  </div>
+</div>
+
+<!-- MODAL PROVA -->
+<div class="modalFundo" id="modalProva">
+  <div class="modal">
+    <h3 id="tituloModalProva">Nova Prova</h3>
+    <div class="formGrelha">
+      <div class="campo full"><label>Nome da prova *</label><input id="p_nome"></div>
+      <div class="campo"><label>Data</label><input type="date" id="p_data"></div>
+      <div class="campo"><label>Tipo</label>
+        <select id="p_tipo">
+          <option value="madeira_correr">Madeira a Correr</option>
+          <option value="trail_sprint">Trail Sprint</option>
+          <option value="trail_longo">Trail Longo</option>
+          <option value="trail_ultra">Trail Ultra</option>
+          <option value="sky">Sky</option>
+          <option value="outras" selected>Outras</option>
+        </select>
+      </div>
+      <div class="campo"><label>Local</label><input id="p_local"></div>
+      <div class="campo"><label>Distância (km)</label><input type="number" step="0.1" id="p_distancia"></div>
+      <div class="campo full"><label>Observações</label><input id="p_obs"></div>
+    </div>
+    <div class="modalRodape">
+      <button class="btn perigo" id="btnApagarProva" style="margin-right:auto;display:none" onclick="apagarProva()">🗑 Apagar</button>
+      <button class="btn sec" onclick="fecharModal('modalProva')">Cancelar</button>
+      <button class="btn" onclick="guardarProva()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL RESULTADOS DA PROVA -->
+<div class="modalFundo" id="modalResultados">
+  <div class="modal" style="max-width:900px">
+    <h3 id="tituloResultados"></h3>
+    <div class="formGrelha" style="margin-bottom:14px">
+      <div class="campo"><label>Atleta</label><select id="r_atleta"></select></div>
+      <div class="campo"><label>Geral</label><input id="r_geral" placeholder="ex.: 39º"></div>
+      <div class="campo"><label>Escalão</label><input id="r_escalao" placeholder="ex.: 3º VET 45"></div>
+      <div class="campo"><label>Tempo</label><input id="r_tempo" placeholder="hh:mm:ss"></div>
+      <div class="campo"><label>Km</label><input type="number" step="0.1" id="r_km"></div>
+      <div class="campo" style="justify-content:flex-end"><button class="btn" onclick="guardarResultado()">＋ Lançar Resultado</button></div>
+    </div>
+    <div class="tabelaScroll" id="listaResultados"></div>
+    <div class="modalRodape"><button class="btn sec" onclick="fecharModal('modalResultados')">Fechar</button></div>
+  </div>
+</div>
+
+<!-- MODAL MULTA -->
+<div class="modalFundo" id="modalMulta">
+  <div class="modal" style="max-width:560px">
+    <h3>Nova Multa</h3>
+    <div class="formGrelha">
+      <div class="campo full"><label>Atleta</label><select id="m_atleta"></select></div>
+      <div class="campo full"><label>Prova / motivo</label><input id="m_prova"></div>
+      <div class="campo"><label>Valor (€)</label><input type="number" step="0.01" id="m_valor"></div>
+      <div class="campo"><label>Estado</label><select id="m_estado"><option value="deve">Deve</option><option value="pago">Pago</option></select></div>
+    </div>
+    <div class="modalRodape">
+      <button class="btn sec" onclick="fecharModal('modalMulta')">Cancelar</button>
+      <button class="btn" onclick="guardarMulta()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL MOVIMENTO -->
+<div class="modalFundo" id="modalMov">
+  <div class="modal" style="max-width:560px">
+    <h3>Novo Movimento</h3>
+    <div class="formGrelha">
+      <div class="campo full"><label>Descrição *</label><input id="mv_descricao"></div>
+      <div class="campo"><label>Data</label><input type="date" id="mv_data"></div>
+      <div class="campo"><label>Tipo</label><select id="mv_tipo"><option value="entrada">Entrada</option><option value="saida">Saída</option></select></div>
+      <div class="campo"><label>Valor (€)</label><input type="number" step="0.01" id="mv_valor"></div>
+      <div class="campo full"><label>Observações</label><input id="mv_obs"></div>
+    </div>
+    <div class="modalRodape">
+      <button class="btn sec" onclick="fecharModal('modalMov')">Cancelar</button>
+      <button class="btn" onclick="guardarMov()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ============================================================
+   CONFIGURAÇÃO
+============================================================ */
+const SUPABASE_URL = 'https://yfsyifypsrqnwkqkfrnm.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_AkzlMeHlYHDyl0HzeC7_qg__j_Y6C9W';
+const PIN = '2011';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const TIPOS_PROVA = {
+  madeira_correr: 'Madeira a Correr',
+  trail_sprint: 'Trail Sprint',
+  trail_longo: 'Trail Longo',
+  trail_ultra: 'Trail Ultra',
+  sky: 'Sky',
+  outras: 'Outras'
+};
+
+/* Estado global */
+let epocas = [];
+let epocaAtual = null;      // objeto da época selecionada
+let atletas = [];           // todos os atletas
+let inscricoes = [];        // inscrições da época atual
+let provas = [];            // provas da época atual
+let participacoes = [];     // participações das provas da época atual
+let multas = [];
+let conta = [];
+let provaAberta = null;
+let atletaEmEdicao = null;
+
+/* ============================================================
+   UTILITÁRIOS
+============================================================ */
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.display = 'block';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>{ t.style.display = 'none'; }, 3500);
+}
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function normalizar(s){
+  return String(s==null?'':s).normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+}
+function fmtData(d){
+  if(!d) return '';
+  const p = String(d).slice(0,10).split('-');
+  return p.length===3 ? p[2]+'/'+p[1]+'/'+p[0] : d;
+}
+function fmtEuro(v){ return (Number(v)||0).toFixed(2).replace('.',',')+' €'; }
+function ePodio(posEscalao){ return /^\s*[1-3]\s*º/.test(String(posEscalao||'')); }
+function somaTempos(lista){
+  let seg = 0;
+  for(const t of lista){
+    const m = String(t||'').match(/(\d+):(\d{1,2}):(\d{1,2})/);
+    if(m) seg += (+m[1])*3600 + (+m[2])*60 + (+m[3]);
+  }
+  const h = Math.floor(seg/3600), mi = Math.floor((seg%3600)/60), s = seg%60;
+  return String(h).padStart(2,'0')+':'+String(mi).padStart(2,'0')+':'+String(s).padStart(2,'0');
+}
+function fecharModal(id){ document.getElementById(id).classList.remove('aberto'); }
+function abrirModal(id){ document.getElementById(id).classList.add('aberto'); }
+async function sbErro(res, contexto){
+  if(res.error){ console.error(contexto, res.error); toast('❌ Erro: '+res.error.message); throw res.error; }
+  return res.data;
+}
+
+/* ============================================================
+   LOGIN
+============================================================ */
+function verificarPin(){
+  if(document.getElementById('pinInput').value === PIN){
+    sessionStorage.setItem('atl_pin_ok','1');
+    entrar();
+  } else {
+    document.getElementById('loginErro').style.display = 'block';
+  }
+}
+function entrar(){
+  document.getElementById('loginOverlay').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  iniciar();
+}
+if(sessionStorage.getItem('atl_pin_ok')==='1'){
+  window.addEventListener('DOMContentLoaded', entrar);
+}
+
+/* ============================================================
+   NAVEGAÇÃO
+============================================================ */
+const TITULOS = {dashboard:'Dashboard', atletas:'Atletas', provas:'Provas', multas:'Multas',
+  conta:'Conta da Secção', comparar:'Comparar Épocas', epocas:'Épocas', importar:'Importar Excel', ajuda:'Ajuda'};
+function irPara(sec){
+  document.querySelectorAll('.seccao').forEach(e=>e.style.display='none');
+  document.getElementById('sec-'+sec).style.display = 'block';
+  document.querySelectorAll('.nav-item').forEach(e=>e.classList.toggle('ativo', e.dataset.sec===sec));
+  document.getElementById('tituloSeccao').textContent = TITULOS[sec];
+}
+
+/* ============================================================
+   CARREGAMENTO DE DADOS
+============================================================ */
+async function iniciar(){
+  await carregarEpocas();
+  await carregarTudo();
+}
+async function carregarEpocas(){
+  epocas = await sbErro(await sb.from('atl_epocas').select('*').order('nome'), 'epocas');
+  if(!epocaAtual) epocaAtual = epocas.find(e=>e.ativa) || epocas[epocas.length-1] || null;
+  const sel = document.getElementById('selEpoca');
+  sel.innerHTML = epocas.map(e=>`<option value="${e.id}" ${epocaAtual&&e.id===epocaAtual.id?'selected':''}>${esc(e.nome)}</option>`).join('');
+  const selImp = document.getElementById('selEpocaImport');
+  selImp.innerHTML = epocas.map(e=>`<option value="${e.id}" ${epocaAtual&&e.id===epocaAtual.id?'selected':''}>${esc(e.nome)}</option>`).join('');
+  const opts = epocas.map(e=>`<option value="${e.id}">${esc(e.nome)}</option>`).join('');
+  document.getElementById('compA').innerHTML = opts;
+  document.getElementById('compB').innerHTML = opts;
+  if(epocas.length>=2){
+    document.getElementById('compA').value = epocas[epocas.length-2].id;
+    document.getElementById('compB').value = epocas[epocas.length-1].id;
+  }
+}
+function mudarEpoca(){
+  const id = document.getElementById('selEpoca').value;
+  epocaAtual = epocas.find(e=>e.id===id);
+  carregarTudo();
+}
+async function carregarTudo(){
+  if(!epocaAtual){ toast('Cria primeiro uma época.'); return; }
+  atletas = await sbErro(await sb.from('atl_atletas').select('*').order('nome_completo'), 'atletas');
+  inscricoes = await sbErro(await sb.from('atl_inscricoes').select('*').eq('epoca_id', epocaAtual.id), 'inscricoes');
+  provas = await sbErro(await sb.from('atl_provas').select('*').eq('epoca_id', epocaAtual.id).order('data',{ascending:true}), 'provas');
+  const ids = provas.map(p=>p.id);
+  participacoes = ids.length
+    ? await sbErro(await sb.from('atl_participacoes').select('*').in('prova_id', ids), 'participacoes')
+    : [];
+  multas = await sbErro(await sb.from('atl_multas').select('*').eq('epoca_id', epocaAtual.id).order('criado_em'), 'multas');
+  conta = await sbErro(await sb.from('atl_conta').select('*').eq('epoca_id', epocaAtual.id).order('data',{ascending:true}), 'conta');
+  renderTudo();
+}
+function renderTudo(){
+  renderDashboard(); renderAtletas(); renderProvas(); renderMultas(); renderConta(); renderEpocas();
+}
+function atletaPorId(id){ return atletas.find(a=>a.id===id); }
+function inscricaoDe(atletaId){ return inscricoes.find(i=>i.atleta_id===atletaId); }
+
+/* ============================================================
+   DASHBOARD
+============================================================ */
+function renderDashboard(){
+  const nAdultos = inscricoes.filter(i=>{const a=atletaPorId(i.atleta_id);return a&&a.tipo==='adulto';}).length;
+  const nForm = inscricoes.filter(i=>{const a=atletaPorId(i.atleta_id);return a&&a.tipo==='formacao';}).length;
+  const km = participacoes.reduce((s,p)=>s+(Number(p.distancia_km)||0),0);
+  const podios = participacoes.filter(p=>p.podio).length;
+  const multasDeve = multas.filter(m=>m.estado==='deve').reduce((s,m)=>s+(Number(m.valor)||0),0);
+  const entradas = conta.reduce((s,c)=>s+(Number(c.entrada)||0),0);
+  const saidas = conta.reduce((s,c)=>s+(Number(c.saida)||0),0);
+  document.getElementById('dashCards').innerHTML = `
+    <div class="card"><div class="num">${nAdultos}</div><div class="lbl">Adultos inscritos</div></div>
+    <div class="card roxo"><div class="num">${nForm}</div><div class="lbl">Atletas formação</div></div>
+    <div class="card"><div class="num">${provas.length}</div><div class="lbl">Provas</div></div>
+    <div class="card"><div class="num">${participacoes.length}</div><div class="lbl">Participações</div></div>
+    <div class="card verde"><div class="num">${km.toFixed(0)}</div><div class="lbl">Km percorridos</div></div>
+    <div class="card amarelo"><div class="num">${podios}</div><div class="lbl">Pódios</div></div>
+    <div class="card vermelho"><div class="num">${fmtEuro(multasDeve)}</div><div class="lbl">Multas por pagar</div></div>
+    <div class="card ${entradas-saidas>=0?'verde':'vermelho'}"><div class="num">${fmtEuro(entradas-saidas)}</div><div class="lbl">Saldo da conta</div></div>`;
+
+  // Top atletas
+  const contagem = {};
+  for(const p of participacoes){
+    if(!contagem[p.atleta_id]) contagem[p.atleta_id] = {n:0, km:0, podios:0, tempos:[]};
+    contagem[p.atleta_id].n++;
+    contagem[p.atleta_id].km += Number(p.distancia_km)||0;
+    if(p.podio) contagem[p.atleta_id].podios++;
+    if(p.tempo) contagem[p.atleta_id].tempos.push(p.tempo);
+  }
+  const top = Object.entries(contagem).map(([id,c])=>({a:atletaPorId(id), ...c}))
+    .filter(x=>x.a).sort((x,y)=>y.n-x.n).slice(0,15);
+  document.getElementById('dashTop').innerHTML = top.length ? `<table><thead><tr>
+    <th>Atleta</th><th>Provas</th><th>Km</th><th>Pódios</th><th>Tempo total</th></tr></thead><tbody>${
+    top.map(t=>`<tr><td><b>${esc(t.a.nome_desportivo||t.a.nome_completo)}</b></td>
+      <td>${t.n}</td><td>${t.km.toFixed(1)}</td><td>${t.podios?'🏅 '+t.podios:'—'}</td><td>${somaTempos(t.tempos)}</td></tr>`).join('')
+  }</tbody></table>` : '<div class="vazio">Ainda sem participações nesta época.</div>';
+
+  // Últimas provas
+  const ult = [...provas].reverse().slice(0,10);
+  document.getElementById('dashProvas').innerHTML = ult.length ? `<table><thead><tr>
+    <th>Data</th><th>Prova</th><th>Tipo</th><th>Atletas</th></tr></thead><tbody>${
+    ult.map(p=>{
+      const n = participacoes.filter(x=>x.prova_id===p.id).length;
+      return `<tr><td>${fmtData(p.data)}</td><td><b>${esc(p.nome)}</b></td>
+        <td><span class="badge b-azul">${TIPOS_PROVA[p.tipo]||p.tipo}</span></td><td>${n}</td></tr>`;
+    }).join('')
+  }</tbody></table>` : '<div class="vazio">Ainda sem provas nesta época.</div>';
+}
+
+/* ============================================================
+   ATLETAS
+============================================================ */
+function renderAtletas(){
+  const q = normalizar(document.getElementById('pesqAtleta').value);
+  const fTipo = document.getElementById('filtroTipoAtleta').value;
+  const fIns = document.getElementById('filtroInscrito').value;
+  let lista = atletas.filter(a=>{
+    if(fTipo && a.tipo!==fTipo) return false;
+    if(fIns==='epoca' && !inscricaoDe(a.id)) return false;
+    if(q && !normalizar(a.nome_completo+' '+(a.nome_desportivo||'')).includes(q)) return false;
+    return true;
+  });
+  document.getElementById('listaAtletas').innerHTML = lista.length ? `<table><thead><tr>
+    <th>Nome desportivo</th><th>Nome completo</th><th>Tipo</th><th>Escalão</th><th>Dorsal</th><th>Chip</th><th>Camisola</th><th>Telemóvel</th><th></th>
+    </tr></thead><tbody>${lista.map(a=>{
+      const i = inscricaoDe(a.id) || {};
+      return `<tr>
+        <td><b style="cursor:pointer;color:var(--azul)" onclick="abrirFicha('${a.id}')">${esc(a.nome_desportivo||'—')}</b></td>
+        <td>${esc(a.nome_completo)}</td>
+        <td><span class="badge ${a.tipo==='adulto'?'b-azul':'b-roxo'}">${a.tipo==='adulto'?'Adulto':'Formação'}</span></td>
+        <td>${esc(i.escalao||'—')}</td><td>${esc(i.dorsal||'—')}</td><td>${esc(i.chip||'—')}</td><td>${esc(i.camisola||'—')}</td>
+        <td>${esc(a.telemovel||'—')}</td>
+        <td><button class="btn mini sec" onclick="abrirModalAtleta('${a.id}')">✏️</button></td>
+      </tr>`;
+    }).join('')}</tbody></table>` : '<div class="vazio">Nenhum atleta encontrado.</div>';
+}
+
+function abrirModalAtleta(id){
+  atletaEmEdicao = id ? atletaPorId(id) : null;
+  document.getElementById('tituloModalAtleta').textContent = atletaEmEdicao ? 'Editar Atleta' : 'Novo Atleta';
+  document.getElementById('btnApagarAtleta').style.display = atletaEmEdicao ? 'inline-block' : 'none';
+  document.getElementById('lblEpocaInscricao').textContent = epocaAtual ? epocaAtual.nome : '';
+  const a = atletaEmEdicao || {};
+  const campos = {a_nome_completo:'nome_completo', a_nome_desportivo:'nome_desportivo', a_genero:'genero',
+    a_data_nascimento:'data_nascimento', a_nif:'nif', a_cc:'cc', a_utente:'utente', a_email:'email',
+    a_telemovel:'telemovel', a_morada:'morada', a_profissao:'profissao',
+    a_contacto_emergencia:'contacto_emergencia', a_n_socio:'n_socio', a_atleta_num:'atleta_num',
+    a_pass_fpa:'pass_fpa', a_fcmp:'fcmp', a_n_itra:'n_itra', a_link_itra:'link_itra',
+    a_enc_nome:'enc_educacao_nome', a_enc_parentesco:'enc_educacao_parentesco', a_enc_contacto:'enc_educacao_contacto'};
+  for(const [el,campo] of Object.entries(campos)) document.getElementById(el).value = a[campo]||'';
+  document.getElementById('a_tipo').value = a.tipo||'adulto';
+  const i = atletaEmEdicao ? (inscricaoDe(atletaEmEdicao.id)||{}) : {};
+  document.getElementById('i_inscrito').value = (atletaEmEdicao && !inscricaoDe(atletaEmEdicao.id)) ? 'nao' : 'sim';
+  document.getElementById('i_dorsal').value = i.dorsal||'';
+  document.getElementById('i_chip').value = i.chip||'';
+  document.getElementById('i_escalao').value = i.escalao||'';
+  document.getElementById('i_camisola').value = i.camisola||'';
+  document.getElementById('i_num_pe').value = i.num_pe||'';
+  abrirModal('modalAtleta');
+}
+
+async function guardarAtleta(){
+  const v = id => document.getElementById(id).value.trim() || null;
+  if(!v('a_nome_completo')){ toast('Preenche o nome completo.'); return; }
+  const dados = {
+    nome_completo:v('a_nome_completo'), nome_desportivo:v('a_nome_desportivo'), tipo:document.getElementById('a_tipo').value,
+    genero:v('a_genero'), data_nascimento:v('a_data_nascimento'), nif:v('a_nif'), cc:v('a_cc'), utente:v('a_utente'),
+    email:v('a_email'), telemovel:v('a_telemovel'), morada:v('a_morada'), profissao:v('a_profissao'),
+    contacto_emergencia:v('a_contacto_emergencia'), n_socio:v('a_n_socio'), atleta_num:v('a_atleta_num'),
+    pass_fpa:v('a_pass_fpa'), fcmp:v('a_fcmp'), n_itra:v('a_n_itra'), link_itra:v('a_link_itra'),
+    enc_educacao_nome:v('a_enc_nome'), enc_educacao_parentesco:v('a_enc_parentesco'), enc_educacao_contacto:v('a_enc_contacto')
+  };
+  let atletaId;
+  if(atletaEmEdicao){
+    await sbErro(await sb.from('atl_atletas').update(dados).eq('id', atletaEmEdicao.id), 'update atleta');
+    atletaId = atletaEmEdicao.id;
+  } else {
+    const novo = await sbErro(await sb.from('atl_atletas').insert(dados).select().single(), 'insert atleta');
+    atletaId = novo.id;
+  }
+  const inscrito = document.getElementById('i_inscrito').value === 'sim';
+  const ins = {
+    epoca_id: epocaAtual.id, atleta_id: atletaId,
+    dorsal:v('i_dorsal'), chip:v('i_chip'), escalao:v('i_escalao'),
+    camisola:v('i_camisola'), num_pe:v('i_num_pe')
+  };
+  if(inscrito){
+    await sbErro(await sb.from('atl_inscricoes').upsert(ins, {onConflict:'epoca_id,atleta_id'}), 'upsert inscricao');
+  } else {
+    await sbErro(await sb.from('atl_inscricoes').delete().eq('epoca_id',epocaAtual.id).eq('atleta_id',atletaId), 'del inscricao');
+  }
+  fecharModal('modalAtleta');
+  toast('✅ Atleta guardado.');
+  await carregarTudo();
+}
+
+async function apagarAtleta(){
+  if(!atletaEmEdicao) return;
+  if(!confirm('Apagar este atleta e todo o seu histórico (todas as épocas)?')) return;
+  await sbErro(await sb.from('atl_atletas').delete().eq('id', atletaEmEdicao.id), 'del atleta');
+  fecharModal('modalAtleta');
+  toast('🗑 Atleta apagado.');
+  await carregarTudo();
+}
+
+async function abrirFicha(atletaId){
+  const a = atletaPorId(atletaId);
+  if(!a) return;
+  document.getElementById('fichaTitulo').textContent = '🏃 ' + (a.nome_desportivo||a.nome_completo) + ' — Época ' + epocaAtual.nome;
+  const minhas = participacoes.filter(p=>p.atleta_id===atletaId)
+    .map(p=>({...p, prova:provas.find(x=>x.id===p.prova_id)}))
+    .filter(p=>p.prova)
+    .sort((x,y)=>String(x.prova.data||'').localeCompare(String(y.prova.data||'')));
+  const porTipo = {};
+  for(const t of Object.keys(TIPOS_PROVA)) porTipo[t]=0;
+  let km=0, podios=0; const tempos=[];
+  for(const p of minhas){ porTipo[p.prova.tipo]=(porTipo[p.prova.tipo]||0)+1; km+=Number(p.distancia_km)||0; if(p.podio)podios++; if(p.tempo)tempos.push(p.tempo); }
+  const i = inscricaoDe(atletaId)||{};
+  document.getElementById('fichaConteudo').innerHTML = `
+    <div class="cards" style="margin-bottom:14px">
+      <div class="card"><div class="num">${minhas.length}</div><div class="lbl">Provas</div></div>
+      <div class="card verde"><div class="num">${km.toFixed(1)}</div><div class="lbl">Km</div></div>
+      <div class="card amarelo"><div class="num">${podios}</div><div class="lbl">Pódios</div></div>
+      <div class="card"><div class="num" style="font-size:18px">${somaTempos(tempos)}</div><div class="lbl">Tempo total</div></div>
+    </div>
+    <p style="font-size:13px;color:var(--cinza);margin-bottom:12px">
+      Escalão: <b>${esc(i.escalao||'—')}</b> · Dorsal: <b>${esc(i.dorsal||'—')}</b> · Chip: <b>${esc(i.chip||'—')}</b> ·
+      Camisola: <b>${esc(i.camisola||'—')}</b> · Nº pé: <b>${esc(i.num_pe||'—')}</b><br>
+      ${Object.entries(porTipo).filter(([,n])=>n>0).map(([t,n])=>`<span class="chip">${TIPOS_PROVA[t]}: ${n}</span>`).join('')}
+    </p>
+    <div class="tabelaScroll">${minhas.length?`<table><thead><tr>
+      <th>Data</th><th>Prova</th><th>Geral</th><th>Escalão</th><th>Tempo</th><th>Km</th><th>Pódio</th></tr></thead><tbody>${
+      minhas.map(p=>`<tr><td>${fmtData(p.prova.data)}</td><td><b>${esc(p.prova.nome)}</b></td>
+        <td>${esc(p.pos_geral||'—')}</td><td>${esc(p.pos_escalao||'—')}</td><td>${esc(p.tempo||'—')}</td>
+        <td>${p.distancia_km||'—'}</td><td>${p.podio?'🏅':''}</td></tr>`).join('')
+      }</tbody></table>`:'<div class="vazio">Sem participações nesta época.</div>'}</div>`;
+  abrirModal('modalFicha');
+}
+
+/* ============================================================
+   PROVAS
+============================================================ */
+let provaEmEdicao = null;
+function renderProvas(){
+  const q = normalizar(document.getElementById('pesqProva').value);
+  const fTipo = document.getElementById('filtroTipoProva').value;
+  let lista = provas.filter(p=>{
+    if(fTipo && p.tipo!==fTipo) return false;
+    if(q && !normalizar(p.nome).includes(q)) return false;
+    return true;
+  });
+  document.getElementById('listaProvas').innerHTML = lista.length ? `<table><thead><tr>
+    <th>Data</th><th>Prova</th><th>Tipo</th><th>Km</th><th>Atletas</th><th>Pódios</th><th></th></tr></thead><tbody>${
+    lista.map(p=>{
+      const parts = participacoes.filter(x=>x.prova_id===p.id);
+      const pod = parts.filter(x=>x.podio).length;
+      return `<tr>
+        <td>${fmtData(p.data)}</td>
+        <td><b>${esc(p.nome)}</b></td>
+        <td><span class="badge b-azul">${TIPOS_PROVA[p.tipo]||p.tipo}</span></td>
+        <td>${p.distancia_km||'—'}</td>
+        <td>${parts.length}</td>
+        <td>${pod?'🏅 '+pod:'—'}</td>
+        <td style="white-space:nowrap">
+          <button class="btn mini" onclick="abrirResultados('${p.id}')">📋 Resultados</button>
+          <button class="btn mini sec" onclick="abrirModalProva('${p.id}')">✏️</button>
+        </td></tr>`;
+    }).join('')
+  }</tbody></table>` : '<div class="vazio">Nenhuma prova encontrada.</div>';
+}
+function abrirModalProva(id){
+  provaEmEdicao = id ? provas.find(p=>p.id===id) : null;
+  document.getElementById('tituloModalProva').textContent = provaEmEdicao ? 'Editar Prova' : 'Nova Prova';
+  document.getElementById('btnApagarProva').style.display = provaEmEdicao ? 'inline-block' : 'none';
+  const p = provaEmEdicao||{};
+  document.getElementById('p_nome').value = p.nome||'';
+  document.getElementById('p_data').value = p.data||'';
+  document.getElementById('p_tipo').value = p.tipo||'outras';
+  document.getElementById('p_local').value = p.local||'';
+  document.getElementById('p_distancia').value = p.distancia_km||'';
+  document.getElementById('p_obs').value = p.observacoes||'';
+  abrirModal('modalProva');
+}
+async function guardarProva(){
+  const v = id => document.getElementById(id).value.trim() || null;
+  if(!v('p_nome')){ toast('Preenche o nome da prova.'); return; }
+  const dados = { epoca_id:epocaAtual.id, nome:v('p_nome'), data:v('p_data'), tipo:document.getElementById('p_tipo').value,
+    local:v('p_local'), distancia_km:v('p_distancia'), observacoes:v('p_obs') };
+  if(provaEmEdicao) await sbErro(await sb.from('atl_provas').update(dados).eq('id',provaEmEdicao.id),'update prova');
+  else await sbErro(await sb.from('atl_provas').insert(dados),'insert prova');
+  fecharModal('modalProva'); toast('✅ Prova guardada.');
+  await carregarTudo();
+}
+async function apagarProva(){
+  if(!provaEmEdicao) return;
+  if(!confirm('Apagar esta prova e todos os resultados?')) return;
+  await sbErro(await sb.from('atl_provas').delete().eq('id',provaEmEdicao.id),'del prova');
+  fecharModal('modalProva'); toast('🗑 Prova apagada.');
+  await carregarTudo();
+}
+
+/* -------- resultados -------- */
+function abrirResultados(provaId){
+  provaAberta = provas.find(p=>p.id===provaId);
+  document.getElementById('tituloResultados').textContent = '📋 Resultados — ' + provaAberta.nome;
+  const inscritosIds = new Set(inscricoes.map(i=>i.atleta_id));
+  const opcoes = atletas.filter(a=>inscritosIds.has(a.id))
+    .map(a=>`<option value="${a.id}">${esc(a.nome_desportivo||a.nome_completo)}</option>`).join('');
+  document.getElementById('r_atleta').innerHTML = opcoes;
+  document.getElementById('r_km').value = provaAberta.distancia_km||'';
+  renderResultados();
+  abrirModal('modalResultados');
+}
+function renderResultados(){
+  const lista = participacoes.filter(p=>p.prova_id===provaAberta.id);
+  document.getElementById('listaResultados').innerHTML = lista.length ? `<table><thead><tr>
+    <th>Atleta</th><th>Geral</th><th>Escalão</th><th>Tempo</th><th>Km</th><th>Pódio</th><th></th></tr></thead><tbody>${
+    lista.map(p=>{
+      const a = atletaPorId(p.atleta_id);
+      return `<tr><td><b>${esc(a?(a.nome_desportivo||a.nome_completo):'?')}</b></td>
+        <td>${esc(p.pos_geral||'—')}</td><td>${esc(p.pos_escalao||'—')}</td>
+        <td>${esc(p.tempo||'—')}</td><td>${p.distancia_km||'—'}</td>
+        <td>${p.podio?'🏅':''}</td>
+        <td><button class="btn mini perigo" onclick="apagarResultado('${p.id}')">🗑</button></td></tr>`;
+    }).join('')
+  }</tbody></table>` : '<div class="vazio">Ainda sem resultados lançados.</div>';
+}
+async function guardarResultado(){
+  const atletaId = document.getElementById('r_atleta').value;
+  if(!atletaId){ toast('Escolhe o atleta.'); return; }
+  const escal = document.getElementById('r_escalao').value.trim();
+  const dados = {
+    prova_id: provaAberta.id, atleta_id: atletaId,
+    pos_geral: document.getElementById('r_geral').value.trim()||null,
+    pos_escalao: escal||null,
+    tempo: document.getElementById('r_tempo').value.trim()||null,
+    distancia_km: document.getElementById('r_km').value||null,
+    podio: ePodio(escal)
+  };
+  await sbErro(await sb.from('atl_participacoes').upsert(dados,{onConflict:'prova_id,atleta_id'}),'upsert resultado');
+  toast('✅ Resultado lançado.');
+  ['r_geral','r_escalao','r_tempo'].forEach(id=>document.getElementById(id).value='');
+  const ids = provas.map(p=>p.id);
+  participacoes = await sbErro(await sb.from('atl_participacoes').select('*').in('prova_id', ids),'reload part');
+  renderResultados(); renderProvas(); renderDashboard();
+}
+async function apagarResultado(id){
+  await sbErro(await sb.from('atl_participacoes').delete().eq('id',id),'del resultado');
+  participacoes = participacoes.filter(p=>p.id!==id);
+  renderResultados(); renderProvas(); renderDashboard();
+}
+
+/* ============================================================
+   MULTAS
+============================================================ */
+function renderMultas(){
+  const total = multas.reduce((s,m)=>s+(Number(m.valor)||0),0);
+  const deve = multas.filter(m=>m.estado==='deve').reduce((s,m)=>s+(Number(m.valor)||0),0);
+  document.getElementById('multasCards').innerHTML = `
+    <div class="card"><div class="num">${multas.length}</div><div class="lbl">Multas</div></div>
+    <div class="card vermelho"><div class="num">${fmtEuro(deve)}</div><div class="lbl">Por pagar</div></div>
+    <div class="card verde"><div class="num">${fmtEuro(total-deve)}</div><div class="lbl">Pago</div></div>`;
+  document.getElementById('listaMultas').innerHTML = multas.length ? `<table><thead><tr>
+    <th>Atleta</th><th>Prova / motivo</th><th>Valor</th><th>Estado</th><th></th></tr></thead><tbody>${
+    multas.map(m=>{
+      const a = m.atleta_id ? atletaPorId(m.atleta_id) : null;
+      const nome = a ? (a.nome_desportivo||a.nome_completo) : (m.atleta_nome||'—');
+      return `<tr><td><b>${esc(nome)}</b></td><td>${esc(m.prova||m.descricao||'—')}</td>
+        <td>${fmtEuro(m.valor)}</td>
+        <td><span class="badge ${m.estado==='pago'?'b-verde':'b-vermelho'}" style="cursor:pointer" onclick="alternarMulta('${m.id}','${m.estado}')">${m.estado==='pago'?'Pago':'Deve'}</span></td>
+        <td><button class="btn mini perigo" onclick="apagarMulta('${m.id}')">🗑</button></td></tr>`;
+    }).join('')
+  }</tbody></table>` : '<div class="vazio">Sem multas nesta época. 🎉</div>';
+}
+function abrirModalMulta(){
+  const inscritosIds = new Set(inscricoes.map(i=>i.atleta_id));
+  document.getElementById('m_atleta').innerHTML = atletas.filter(a=>inscritosIds.has(a.id))
+    .map(a=>`<option value="${a.id}">${esc(a.nome_desportivo||a.nome_completo)}</option>`).join('');
+  document.getElementById('m_prova').value=''; document.getElementById('m_valor').value='';
+  document.getElementById('m_estado').value='deve';
+  abrirModal('modalMulta');
+}
+async function guardarMulta(){
+  const dados = { epoca_id:epocaAtual.id, atleta_id:document.getElementById('m_atleta').value||null,
+    prova:document.getElementById('m_prova').value.trim()||null,
+    valor:Number(document.getElementById('m_valor').value)||0,
+    estado:document.getElementById('m_estado').value };
+  await sbErro(await sb.from('atl_multas').insert(dados),'insert multa');
+  fecharModal('modalMulta'); toast('✅ Multa registada.');
+  multas = await sbErro(await sb.from('atl_multas').select('*').eq('epoca_id',epocaAtual.id).order('criado_em'),'multas');
+  renderMultas(); renderDashboard();
+}
+async function alternarMulta(id, estado){
+  await sbErro(await sb.from('atl_multas').update({estado: estado==='pago'?'deve':'pago'}).eq('id',id),'toggle multa');
+  multas = await sbErro(await sb.from('atl_multas').select('*').eq('epoca_id',epocaAtual.id).order('criado_em'),'multas');
+  renderMultas(); renderDashboard();
+}
+async function apagarMulta(id){
+  if(!confirm('Apagar esta multa?')) return;
+  await sbErro(await sb.from('atl_multas').delete().eq('id',id),'del multa');
+  multas = multas.filter(m=>m.id!==id);
+  renderMultas(); renderDashboard();
+}
+
+/* ============================================================
+   CONTA DA SECÇÃO
+============================================================ */
+function renderConta(){
+  const entradas = conta.reduce((s,c)=>s+(Number(c.entrada)||0),0);
+  const saidas = conta.reduce((s,c)=>s+(Number(c.saida)||0),0);
+  document.getElementById('contaCards').innerHTML = `
+    <div class="card verde"><div class="num">${fmtEuro(entradas)}</div><div class="lbl">Entradas</div></div>
+    <div class="card vermelho"><div class="num">${fmtEuro(saidas)}</div><div class="lbl">Saídas</div></div>
+    <div class="card ${entradas-saidas>=0?'verde':'vermelho'}"><div class="num">${fmtEuro(entradas-saidas)}</div><div class="lbl">Saldo</div></div>`;
+  let acumulado = 0;
+  document.getElementById('listaConta').innerHTML = conta.length ? `<table><thead><tr>
+    <th>Data</th><th>Descrição</th><th>Entrada</th><th>Saída</th><th>Saldo</th><th>Obs</th><th></th></tr></thead><tbody>${
+    conta.map(c=>{
+      acumulado += (Number(c.entrada)||0) - (Number(c.saida)||0);
+      return `<tr><td>${fmtData(c.data)}</td><td><b>${esc(c.descricao)}</b></td>
+        <td style="color:var(--verde)">${c.entrada?fmtEuro(c.entrada):''}</td>
+        <td style="color:var(--vermelho)">${c.saida?fmtEuro(c.saida):''}</td>
+        <td><b>${fmtEuro(acumulado)}</b></td><td>${esc(c.obs||'')}</td>
+        <td><button class="btn mini perigo" onclick="apagarMov('${c.id}')">🗑</button></td></tr>`;
+    }).join('')
+  }</tbody></table>` : '<div class="vazio">Sem movimentos nesta época.</div>';
+}
+function abrirModalMov(){
+  document.getElementById('mv_descricao').value='';
+  document.getElementById('mv_data').value=new Date().toISOString().slice(0,10);
+  document.getElementById('mv_tipo').value='entrada';
+  document.getElementById('mv_valor').value='';
+  document.getElementById('mv_obs').value='';
+  abrirModal('modalMov');
+}
+async function guardarMov(){
+  const desc = document.getElementById('mv_descricao').value.trim();
+  if(!desc){ toast('Preenche a descrição.'); return; }
+  const tipo = document.getElementById('mv_tipo').value;
+  const valor = Number(document.getElementById('mv_valor').value)||0;
+  const dados = { epoca_id:epocaAtual.id, descricao:desc,
+    data:document.getElementById('mv_data').value||null,
+    entrada: tipo==='entrada'?valor:0, saida: tipo==='saida'?valor:0,
+    obs:document.getElementById('mv_obs').value.trim()||null };
+  await sbErro(await sb.from('atl_conta').insert(dados),'insert mov');
+  fecharModal('modalMov'); toast('✅ Movimento registado.');
+  conta = await sbErro(await sb.from('atl_conta').select('*').eq('epoca_id',epocaAtual.id).order('data',{ascending:true}),'conta');
+  renderConta(); renderDashboard();
+}
+async function apagarMov(id){
+  if(!confirm('Apagar este movimento?')) return;
+  await sbErro(await sb.from('atl_conta').delete().eq('id',id),'del mov');
+  conta = conta.filter(c=>c.id!==id);
+  renderConta(); renderDashboard();
+}
+
+/* ============================================================
+   ÉPOCAS
+============================================================ */
+function renderEpocas(){
+  document.getElementById('listaEpocas').innerHTML = `<table><thead><tr>
+    <th>Época</th><th>Estado</th><th></th></tr></thead><tbody>${
+    epocas.map(e=>`<tr><td><b>${esc(e.nome)}</b></td>
+      <td>${e.ativa?'<span class="badge b-verde">Ativa</span>':'<span class="badge b-cinza">—</span>'}</td>
+      <td>${e.ativa?'':`<button class="btn mini sec" onclick="ativarEpoca('${e.id}')">Tornar ativa</button>`}</td></tr>`).join('')
+  }</tbody></table>`;
+}
+async function ativarEpoca(id){
+  await sbErro(await sb.from('atl_epocas').update({ativa:false}).neq('id',id),'desativar');
+  await sbErro(await sb.from('atl_epocas').update({ativa:true}).eq('id',id),'ativar');
+  toast('✅ Época ativa atualizada.');
+  epocaAtual = null;
+  await carregarEpocas();
+  await carregarTudo();
+}
+async function novaEpoca(){
+  const sugestao = (()=>{
+    const ult = epocas[epocas.length-1];
+    const m = ult && ult.nome.match(/(\d{4})-(\d{4})/);
+    return m ? (+m[1]+1)+'-'+(+m[2]+1) : '';
+  })();
+  const nome = prompt('Nome da nova época (ex.: 2027-2028):', sugestao);
+  if(!nome) return;
+  if(epocas.some(e=>e.nome===nome.trim())){ toast('Essa época já existe.'); return; }
+  const nova = await sbErro(await sb.from('atl_epocas').insert({nome:nome.trim(), ativa:false}).select().single(),'nova epoca');
+  // transitar atletas da época atualmente selecionada
+  if(confirm('Transitar os atletas inscritos na época '+epocaAtual.nome+' para a nova época '+nome+'?\n(Dorsal e chip ficam em branco.)')){
+    const novas = inscricoes.map(i=>({
+      epoca_id: nova.id, atleta_id: i.atleta_id,
+      dorsal:null, chip:null,
+      escalao:i.escalao, camisola:i.camisola, num_pe:i.num_pe
+    }));
+    if(novas.length){
+      await sbErro(await sb.from('atl_inscricoes').upsert(novas,{onConflict:'epoca_id,atleta_id'}),'transitar');
+    }
+    toast('✅ Época '+nome+' criada com '+novas.length+' atletas transitados.');
+  } else {
+    toast('✅ Época '+nome+' criada (sem atletas).');
+  }
+  await carregarEpocas();
+  renderEpocas();
+}
+
+/* ============================================================
+   COMPARAR ÉPOCAS
+============================================================ */
+async function dadosDeEpoca(epocaId){
+  const ins = await sbErro(await sb.from('atl_inscricoes').select('*').eq('epoca_id',epocaId),'comp ins');
+  const prv = await sbErro(await sb.from('atl_provas').select('*').eq('epoca_id',epocaId),'comp prv');
+  const ids = prv.map(p=>p.id);
+  const par = ids.length ? await sbErro(await sb.from('atl_participacoes').select('*').in('prova_id',ids),'comp par') : [];
+  const mul = await sbErro(await sb.from('atl_multas').select('*').eq('epoca_id',epocaId),'comp mul');
+  const cnt = await sbErro(await sb.from('atl_conta').select('*').eq('epoca_id',epocaId),'comp cnt');
+  return {ins, prv, par, mul, cnt};
+}
+function resumo(d){
+  const adultos = d.ins.filter(i=>{const a=atletaPorId(i.atleta_id);return a&&a.tipo==='adulto';}).length;
+  const formacao = d.ins.filter(i=>{const a=atletaPorId(i.atleta_id);return a&&a.tipo==='formacao';}).length;
+  const km = d.par.reduce((s,p)=>s+(Number(p.distancia_km)||0),0);
+  const podios = d.par.filter(p=>p.podio).length;
+  const entradas = d.cnt.reduce((s,c)=>s+(Number(c.entrada)||0),0);
+  const saidas = d.cnt.reduce((s,c)=>s+(Number(c.saida)||0),0);
+  const multasTotal = d.mul.reduce((s,m)=>s+(Number(m.valor)||0),0);
+  const provasPorTipo = {};
+  for(const p of d.prv) provasPorTipo[p.tipo]=(provasPorTipo[p.tipo]||0)+1;
+  return {atletas:d.ins.length, adultos, formacao, provas:d.prv.length, provasPorTipo,
+    participacoes:d.par.length, km, podios, entradas, saidas, saldo:entradas-saidas, multasTotal};
+}
+function linhaComp(lbl, vA, vB, fmt){
+  const f = fmt || (x=>x);
+  let delta = '';
+  if(typeof vA==='number' && typeof vB==='number'){
+    const d = vB - vA;
+    if(d!==0) delta = ` <span class="setaDelta ${d>0?'mais':'menos'}">(${d>0?'+':''}${fmt===fmtEuro?fmtEuro(d):Math.round(d*10)/10})</span>`;
+  }
+  return `<div class="linhaComp"><span>${lbl}</span><span><b>${f(vA)}</b> → <b>${f(vB)}</b>${delta}</span></div>`;
+}
+async function compararEpocas(){
+  const idA = document.getElementById('compA').value;
+  const idB = document.getElementById('compB').value;
+  if(idA===idB){ toast('Escolhe duas épocas diferentes.'); return; }
+  const eA = epocas.find(e=>e.id===idA), eB = epocas.find(e=>e.id===idB);
+  document.getElementById('compResultado').innerHTML = '<div class="vazio">A carregar…</div>';
+  const [dA, dB] = [await dadosDeEpoca(idA), await dadosDeEpoca(idB)];
+  const rA = resumo(dA), rB = resumo(dB);
+  const setA = new Set(dA.ins.map(i=>i.atleta_id));
+  const setB = new Set(dB.ins.map(i=>i.atleta_id));
+  const transitaram = [...setB].filter(id=>setA.has(id));
+  const novos = [...setB].filter(id=>!setA.has(id));
+  const sairam = [...setA].filter(id=>!setB.has(id));
+  const nomes = ids => ids.map(id=>{const a=atletaPorId(id);return a?`<span class="chip">${esc(a.nome_desportivo||a.nome_completo)}</span>`:'';}).join('') || '<span style="color:var(--cinza);font-size:13px">Nenhum</span>';
+  document.getElementById('compResultado').innerHTML = `
+    <div class="cards">
+      <div class="card verde"><div class="num">${transitaram.length}</div><div class="lbl">Transitaram</div></div>
+      <div class="card roxo"><div class="num">${novos.length}</div><div class="lbl">Novos em ${esc(eB.nome)}</div></div>
+      <div class="card vermelho"><div class="num">${sairam.length}</div><div class="lbl">Saíram</div></div>
+    </div>
+    <div class="painel"><h3>📊 ${esc(eA.nome)} → ${esc(eB.nome)}</h3>
+      ${linhaComp('Atletas inscritos', rA.atletas, rB.atletas)}
+      ${linhaComp('— Adultos', rA.adultos, rB.adultos)}
+      ${linhaComp('— Formação', rA.formacao, rB.formacao)}
+      ${linhaComp('Provas', rA.provas, rB.provas)}
+      ${Object.keys(TIPOS_PROVA).map(t=>linhaComp('— '+TIPOS_PROVA[t], rA.provasPorTipo[t]||0, rB.provasPorTipo[t]||0)).join('')}
+      ${linhaComp('Participações', rA.participacoes, rB.participacoes)}
+      ${linhaComp('Km percorridos', Math.round(rA.km), Math.round(rB.km))}
+      ${linhaComp('Pódios', rA.podios, rB.podios)}
+      ${linhaComp('Multas (total)', rA.multasTotal, rB.multasTotal, fmtEuro)}
+      ${linhaComp('Conta — entradas', rA.entradas, rB.entradas, fmtEuro)}
+      ${linhaComp('Conta — saídas', rA.saidas, rB.saidas, fmtEuro)}
+      ${linhaComp('Conta — saldo', rA.saldo, rB.saldo, fmtEuro)}
+    </div>
+    <div class="compGrelha">
+      <div class="painel compCol"><h4>🆕 Novos em ${esc(eB.nome)}</h4>${nomes(novos)}</div>
+      <div class="painel compCol"><h4>👋 Saíram (estavam em ${esc(eA.nome)})</h4>${nomes(sairam)}</div>
+    </div>`;
+}
+
+/* ============================================================
+   IMPORTAR EXCEL
+============================================================ */
+const FOLHAS_SISTEMA = ['principal','adultos','atletas formacao','multas','conta seccao','total provas',
+  'exemplo provas','exemplo atletas'];
+const FOLHAS_CATEGORIA = {
+  'madeira a correr':'madeira_correr',
+  'trail sprint':'trail_sprint',
+  'trail longo':'trail_longo',
+  'trail ultra':'trail_ultra',
+  'sky':'sky',
+  'outras provas':'outras'
+};
+function logImp(msg){
+  const el = document.getElementById('logImport');
+  el.style.display = 'block';
+  el.textContent += msg + '\n';
+  el.scrollTop = el.scrollHeight;
+}
+function celData(v){
+  if(v==null || v==='') return null;
+  if(v instanceof Date) return v.toISOString().slice(0,10);
+  if(typeof v==='number' && v>10000 && v<80000){
+    const d = new Date(Math.round((v-25569)*86400*1000));
+    return d.toISOString().slice(0,10);
+  }
+  const s = String(v).trim();
+  let m = s.match(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/);
+  if(m) return m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0');
+  m = s.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return m[0];
+  return null;
+}
+function celTempo(v){
+  if(v==null || v==='') return null;
+  if(v instanceof Date){
+    return String(v.getUTCHours()).padStart(2,'0')+':'+String(v.getUTCMinutes()).padStart(2,'0')+':'+String(v.getUTCSeconds()).padStart(2,'0');
+  }
+  if(typeof v==='number' && v<3){
+    const seg = Math.round(v*86400);
+    const h=Math.floor(seg/3600), mi=Math.floor((seg%3600)/60), s=seg%60;
+    return String(h).padStart(2,'0')+':'+String(mi).padStart(2,'0')+':'+String(s).padStart(2,'0');
+  }
+  const m = String(v).match(/(\d+):(\d{1,2})(?::(\d{1,2}))?/);
+  if(m) return String(+m[1]).padStart(2,'0')+':'+m[2].padStart(2,'0')+':'+(m[3]||'00').padStart(2,'0');
+  return String(v).trim()||null;
+}
+function celTexto(v){
+  if(v==null) return null;
+  const s = String(v).trim();
+  return s===''?null:s;
+}
+
+async function importarExcel(ficheiro){
+  if(!ficheiro) return;
+  document.getElementById('logImport').textContent = '';
+  const epocaId = document.getElementById('selEpocaImport').value;
+  const epocaNome = (epocas.find(e=>e.id===epocaId)||{}).nome;
+  try{
+    logImp('📂 A ler '+ficheiro.name+' → época '+epocaNome+' …');
+    const wb = XLSX.read(await ficheiro.arrayBuffer(), {cellDates:true});
+    logImp('   '+wb.SheetNames.length+' folhas encontradas.');
+
+    /* ---------- 1. Atletas ---------- */
+    const mapaAtletas = {};   // nome normalizado -> id
+    atletas = await sbErro(await sb.from('atl_atletas').select('*'),'reload atletas');
+    for(const a of atletas){
+      mapaAtletas[normalizar(a.nome_completo)] = a.id;
+      if(a.nome_desportivo) mapaAtletas[normalizar(a.nome_desportivo)] = a.id;
+    }
+    let nAtl=0, nIns=0;
+
+    async function processarFolhaAtletas(nomeFolha, tipo){
+      const ws = wb.Sheets[wb.SheetNames.find(n=>normalizar(n)===normalizar(nomeFolha))];
+      if(!ws){ logImp('   ⚠ Folha "'+nomeFolha+'" não encontrada — ignorada.'); return; }
+      const linhas = XLSX.utils.sheet_to_json(ws, {header:1, defval:null});
+      // encontrar linha de cabeçalho
+      let hIdx = -1;
+      for(let i=0;i<Math.min(linhas.length,10);i++){
+        if((linhas[i]||[]).some(c=>normalizar(c)==='nome completo')){ hIdx=i; break; }
+      }
+      if(hIdx<0){ logImp('   ⚠ Cabeçalho não encontrado em "'+nomeFolha+'".'); return; }
+      const cab = linhas[hIdx].map(c=>normalizar(c));
+      const col = nome => cab.indexOf(nome);
+      const colDupla = (nome, oc) => { // para cabeçalhos repetidos (FPA na formação)
+        let n=0;
+        for(let i=0;i<cab.length;i++){ if(cab[i]===nome){ n++; if(n===oc) return i; } }
+        return -1;
+      };
+      const cNome = col('nome completo');
+      for(let i=hIdx+1;i<linhas.length;i++){
+        const L = linhas[i]||[];
+        const nomeCompleto = celTexto(L[cNome]);
+        if(!nomeCompleto || normalizar(nomeCompleto).length<4) continue;
+        const g = c => c>=0 ? celTexto(L[c]) : null;
+        const dados = {
+          tipo,
+          nome_completo: nomeCompleto,
+          nome_desportivo: g(col('nome desportivo')),
+          genero: g(col('genero')),
+          data_nascimento: celData(L[col('data nascimento')]),
+          nif: g(col('nif')), cc: g(col('cc')), utente: g(col('utente')),
+          email: g(col('email')), telemovel: g(col('telemovel')),
+          morada: g(col('morada')), profissao: g(col('profissao')),
+          contacto_emergencia: g(col('contacto de imergencia'))||g(col('contacto de emergencia')),
+          n_socio: g(col('no socio'))||g(col('n socio')),
+          atleta_num: tipo==='formacao' ? g(colDupla('fpa',1)) : g(col('atleta no'))||g(col('atleta n')),
+          pass_fpa: tipo==='formacao' ? g(colDupla('fpa',2)) : g(col('pass fpa')),
+          fcmp: g(col('fcmp')),
+          link_itra: g(col('link itra')), n_itra: g(col('n itra')),
+          enc_educacao_nome: g(col('nome encarregado de educacao')),
+          enc_educacao_parentesco: g(col('parentesco')),
+          enc_educacao_contacto: g(col('contacto enc educacao'))
+        };
+        const chave = normalizar(nomeCompleto);
+        let atletaId = mapaAtletas[chave];
+        if(!atletaId){
+          const novo = await sbErro(await sb.from('atl_atletas').insert(dados).select().single(),'imp atleta');
+          atletaId = novo.id;
+          mapaAtletas[chave] = atletaId;
+          if(dados.nome_desportivo) mapaAtletas[normalizar(dados.nome_desportivo)] = atletaId;
+          nAtl++;
+        } else if(dados.nome_desportivo && !mapaAtletas[normalizar(dados.nome_desportivo)]){
+          mapaAtletas[normalizar(dados.nome_desportivo)] = atletaId;
+        }
+        const ins = {
+          epoca_id: epocaId, atleta_id: atletaId,
+          dorsal: g(col('dorsal')), chip: g(col('chip')),
+          escalao: g(col('escalao')), camisola: g(col('camisola')), num_pe: g(col('no pe'))||g(col('n pe'))
+        };
+        await sbErro(await sb.from('atl_inscricoes').upsert(ins,{onConflict:'epoca_id,atleta_id'}),'imp inscricao');
+        nIns++;
+      }
+    }
+    await processarFolhaAtletas('Adultos','adulto');
+    await processarFolhaAtletas('Atletas Formação','formacao');
+    logImp('👥 Atletas: '+nAtl+' novos criados, '+nIns+' inscrições na época '+epocaNome+'.');
+
+    /* ---------- 2. Mapa de tipos (folhas de categoria) ---------- */
+    const tipoPorProva = {};   // nome de prova normalizado -> tipo
+    for(const nomeFolha of wb.SheetNames){
+      const tipo = FOLHAS_CATEGORIA[normalizar(nomeFolha)];
+      if(!tipo) continue;
+      const ws = wb.Sheets[nomeFolha];
+      const linhas = XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+      for(let i=0;i<Math.min(linhas.length,8);i++){
+        const L = linhas[i]||[];
+        if(normalizar(L[0])==='nome'){
+          for(let c=1;c<L.length;c++){
+            const nomeProva = normalizar(L[c]);
+            if(nomeProva) tipoPorProva[nomeProva] = tipo;
+          }
+          break;
+        }
+      }
+    }
+    function tipoDeProva(nome){
+      const n = normalizar(nome);
+      if(tipoPorProva[n]) return tipoPorProva[n];
+      for(const [chave,tipo] of Object.entries(tipoPorProva)){
+        if(chave && (n.includes(chave) || chave.includes(n))) return tipo;
+      }
+      return 'outras';
+    }
+
+    /* ---------- 3. Provas + resultados ---------- */
+    const provasExistentes = await sbErro(await sb.from('atl_provas').select('id,nome').eq('epoca_id',epocaId),'prv exist');
+    const mapaProvas = {};
+    for(const p of provasExistentes) mapaProvas[normalizar(p.nome)] = p.id;
+    let nProvas=0, nRes=0, semMatch=[];
+
+    for(const nomeFolha of wb.SheetNames){
+      const nNorm = normalizar(nomeFolha);
+      if(FOLHAS_SISTEMA.includes(nNorm) || FOLHAS_CATEGORIA[nNorm]) continue;
+      const ws = wb.Sheets[nomeFolha];
+      const linhas = XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+      // detetar folha de prova: cabeçalho com NOME + GERAL + TEMPO
+      let hIdx=-1, cNome=-1, cGeral=-1, cEsc=-1, cTempo=-1, cDist=-1;
+      for(let i=0;i<Math.min(linhas.length,10);i++){
+        const cab = (linhas[i]||[]).map(c=>normalizar(c));
+        if(cab.includes('nome') && cab.includes('geral') && cab.includes('tempo') && !cab.includes('data')){
+          hIdx=i; cNome=cab.indexOf('nome'); cGeral=cab.indexOf('geral');
+          cEsc=cab.indexOf('escalao'); cTempo=cab.indexOf('tempo');
+          cDist=cab.indexOf('distancia');
+          break;
+        }
+      }
+      if(hIdx<0) continue;   // não é folha de prova (ex.: folhas individuais de atletas)
+      const nomeProva = nomeFolha.trim();
+      let provaId = mapaProvas[normalizar(nomeProva)];
+      if(!provaId){
+        const nova = await sbErro(await sb.from('atl_provas').insert({
+          epoca_id: epocaId, nome: nomeProva, tipo: tipoDeProva(nomeProva)
+        }).select().single(),'imp prova');
+        provaId = nova.id;
+        mapaProvas[normalizar(nomeProva)] = provaId;
+        nProvas++;
+      }
+      for(let i=hIdx+1;i<linhas.length;i++){
+        const L = linhas[i]||[];
+        const nomeAtl = celTexto(L[cNome]);
+        if(!nomeAtl) continue;
+        const chave = normalizar(nomeAtl);
+        let atletaId = mapaAtletas[chave];
+        if(!atletaId){
+          // tentativa aproximada
+          for(const [k,id] of Object.entries(mapaAtletas)){
+            if(k.includes(chave) || chave.includes(k)){ atletaId=id; break; }
+          }
+        }
+        if(!atletaId){ if(!semMatch.includes(nomeAtl)) semMatch.push(nomeAtl); continue; }
+        const escal = celTexto(cEsc>=0?L[cEsc]:null);
+        const res = {
+          prova_id: provaId, atleta_id: atletaId,
+          pos_geral: celTexto(cGeral>=0?L[cGeral]:null),
+          pos_escalao: escal,
+          tempo: celTempo(cTempo>=0?L[cTempo]:null),
+          distancia_km: (cDist>=0 && L[cDist]!=null && !isNaN(Number(L[cDist]))) ? Number(L[cDist]) : null,
+          podio: ePodio(escal)
+        };
+        await sbErro(await sb.from('atl_participacoes').upsert(res,{onConflict:'prova_id,atleta_id'}),'imp res');
+        nRes++;
+      }
+    }
+    logImp('🏁 Provas: '+nProvas+' criadas · '+nRes+' resultados lançados.');
+    if(semMatch.length) logImp('⚠ Atletas sem correspondência (verifica manualmente): '+semMatch.join(', '));
+
+    /* ---------- 4. Multas ---------- */
+    const wsM = wb.Sheets[wb.SheetNames.find(n=>normalizar(n)==='multas')];
+    let nMultas=0;
+    if(wsM){
+      const linhas = XLSX.utils.sheet_to_json(wsM,{header:1,defval:null});
+      let hIdx=-1, cProva=-1, cAtleta=-1, cValor=-1, cEstado=-1;
+      for(let i=0;i<Math.min(linhas.length,10);i++){
+        const cab = (linhas[i]||[]).map(c=>normalizar(c));
+        if(cab.includes('prova') && cab.includes('atleta')){
+          hIdx=i; cProva=cab.indexOf('prova'); cAtleta=cab.indexOf('atleta');
+          cValor=cab.indexOf('valor'); cEstado=cab.indexOf('estado'); break;
+        }
+      }
+      if(hIdx>=0){
+        const existentes = await sbErro(await sb.from('atl_multas').select('*').eq('epoca_id',epocaId),'multas exist');
+        for(let i=hIdx+1;i<linhas.length;i++){
+          const L=linhas[i]||[];
+          const nomeAtl = celTexto(L[cAtleta]);
+          const prova = celTexto(L[cProva]);
+          if(!nomeAtl && !prova) continue;
+          const valor = Number(L[cValor])||0;
+          if(existentes.some(m=>normalizar(m.atleta_nome||'')===normalizar(nomeAtl||'') && normalizar(m.prova||'')===normalizar(prova||'') && Number(m.valor)===valor)) continue;
+          let atletaId=null;
+          const chave = normalizar(nomeAtl||'');
+          if(mapaAtletas[chave]) atletaId=mapaAtletas[chave];
+          else for(const [k,id] of Object.entries(mapaAtletas)){ if(k.includes(chave)||chave.includes(k)){atletaId=id;break;} }
+          const estadoRaw = normalizar(celTexto(cEstado>=0?L[cEstado]:null)||'deve');
+          await sbErro(await sb.from('atl_multas').insert({
+            epoca_id:epocaId, atleta_id:atletaId, atleta_nome:nomeAtl, prova,
+            valor, estado: estadoRaw.includes('pag')?'pago':'deve'
+          }),'imp multa');
+          nMultas++;
+        }
+      }
+      logImp('⚠️ Multas: '+nMultas+' importadas.');
+    }
+
+    /* ---------- 5. Conta da secção ---------- */
+    const wsC = wb.Sheets[wb.SheetNames.find(n=>normalizar(n)==='conta seccao')];
+    let nMov=0;
+    if(wsC){
+      const linhas = XLSX.utils.sheet_to_json(wsC,{header:1,defval:null});
+      let hIdx=-1, cEnt=-1, cSai=-1, cObs=-1;
+      for(let i=0;i<Math.min(linhas.length,12);i++){
+        const cab = (linhas[i]||[]).map(c=>normalizar(c));
+        if(cab.includes('entrada') && cab.includes('saida')){
+          hIdx=i; cEnt=cab.indexOf('entrada'); cSai=cab.indexOf('saida'); cObs=cab.indexOf('obs'); break;
+        }
+      }
+      if(hIdx>=0){
+        const existentes = await sbErro(await sb.from('atl_conta').select('*').eq('epoca_id',epocaId),'conta exist');
+        for(let i=hIdx+1;i<linhas.length;i++){
+          const L=linhas[i]||[];
+          const desc = celTexto(L[0]);
+          if(!desc) continue;
+          const entrada = Number(L[cEnt])||0;
+          const saida = Number(L[cSai])||0;
+          if(entrada===0 && saida===0) continue;
+          if(existentes.some(c=>normalizar(c.descricao)===normalizar(desc) && Number(c.entrada)===entrada && Number(c.saida)===saida)) continue;
+          await sbErro(await sb.from('atl_conta').insert({
+            epoca_id:epocaId, descricao:desc, entrada, saida,
+            obs: celTexto(cObs>=0?L[cObs]:null)
+          }),'imp mov');
+          nMov++;
+        }
+      }
+      logImp('💶 Conta: '+nMov+' movimentos importados.');
+    }
+
+    logImp('✅ IMPORTAÇÃO CONCLUÍDA!');
+    toast('✅ Importação concluída!');
+    document.getElementById('ficheiroExcel').value = '';
+    await carregarTudo();
+  }catch(e){
+    console.error(e);
+    logImp('❌ ERRO: '+(e.message||e));
+    toast('❌ Erro na importação — vê o registo.');
+  }
+}
+</script>
+</body>
+</html>
