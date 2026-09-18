@@ -50,10 +50,17 @@ body{background:var(--fundo);color:var(--texto)}
 .barraAcoes{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
 .barraAcoes input[type=text],.barraAcoes select{padding:9px 12px;border:1px solid var(--borda);border-radius:8px;font-size:14px}
 .barraAcoes input[type=text]{flex:1;min-width:180px}
-.btn{padding:9px 16px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;background:var(--grad);color:#fff;white-space:nowrap}
-.btn.sec{background:var(--fundo);color:var(--texto);border:1px solid var(--borda)}
-.btn.perigo{background:var(--vermelho)}
-.btn.mini{padding:5px 10px;font-size:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:9px 16px;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;background:var(--grad);color:#fff;white-space:nowrap;box-shadow:0 2px 8px rgba(30,58,138,.28);transition:transform .12s ease, box-shadow .12s ease, background .12s ease}
+.btn:hover{transform:translateY(-1px);box-shadow:0 5px 14px rgba(30,58,138,.35)}
+.btn:active{transform:translateY(0)}
+.btn.sec{background:var(--branco);color:var(--texto);border:1px solid var(--borda);box-shadow:0 1px 3px rgba(15,23,42,.08)}
+.btn.sec:hover{background:var(--fundo);box-shadow:0 3px 8px rgba(15,23,42,.12)}
+.btn.perigo{background:linear-gradient(160deg,#ef4444,#b91c1c);box-shadow:0 2px 8px rgba(220,38,38,.3)}
+.btn.perigo:hover{box-shadow:0 5px 14px rgba(220,38,38,.4)}
+.btn.mini{padding:6px 9px;font-size:12px;border-radius:8px;gap:5px}
+.ico{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-3px}
+.btn.mini .ico{width:14px;height:14px}
+.nav-item .ico{width:17px;height:17px}
 table{width:100%;border-collapse:collapse;font-size:13.5px}
 th{text-align:left;padding:9px 10px;background:var(--fundo);color:var(--cinza);font-size:12px;text-transform:uppercase;letter-spacing:.4px;position:sticky;top:0}
 td{padding:9px 10px;border-bottom:1px solid var(--borda)}
@@ -89,6 +96,9 @@ tr:hover td{background:#f8fafc}
 /* ---------- TOAST ---------- */
 #toast{position:fixed;bottom:22px;right:22px;background:#0f172a;color:#fff;padding:12px 18px;border-radius:10px;font-size:14px;display:none;z-index:900;max-width:340px}
 .vazio{text-align:center;color:var(--cinza);padding:26px;font-size:14px}
+.btnIcone{width:42px;height:42px;border-radius:10px;border:1px solid var(--borda);background:var(--branco);cursor:pointer;font-size:18px;line-height:1}
+.btnIcone:hover{background:var(--fundo)}
+.btnAjudaFlutuante{position:fixed;bottom:20px;right:20px;width:48px;height:48px;border-radius:50%;background:var(--grad);color:#fff;font-size:21px;border:none;cursor:pointer;box-shadow:0 5px 16px rgba(0,0,0,.3);z-index:300}
 /* ---------- RECIBO (impressão) ---------- */
 #reciboPrint{display:none}
 @media print{
@@ -120,6 +130,30 @@ tr:hover td{background:#f8fafc}
 </style>
 </head>
 <body>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+<symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+<symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+<symbol id="i-flag" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+<symbol id="i-wallet" viewBox="0 0 24 24"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></symbol>
+<symbol id="i-scale" viewBox="0 0 24 24"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></symbol>
+<symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></symbol>
+<symbol id="i-import" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></symbol>
+<symbol id="i-gear" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
+<symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+<symbol id="i-pencil" viewBox="0 0 24 24"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+<symbol id="i-receipt" viewBox="0 0 24 24"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M8 7h8"/><path d="M8 11h8"/><path d="M8 15h5"/></symbol>
+<symbol id="i-clip" viewBox="0 0 24 24"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></symbol>
+<symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></symbol>
+<symbol id="i-save" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></symbol>
+<symbol id="i-cloud" viewBox="0 0 24 24"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></symbol>
+<symbol id="i-down" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
+<symbol id="i-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></symbol>
+<symbol id="i-clipboard" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M8 11h8"/><path d="M8 16h8"/></symbol>
+<symbol id="i-restore" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol>
+</svg>
 
 <!-- LOGIN -->
 <div id="loginOverlay">
@@ -135,30 +169,32 @@ tr:hover td{background:#f8fafc}
 <!-- APP -->
 <div id="app">
   <div class="sidebar">
-    <div class="logo" style="display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center">
+    <div class="logo" style="display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center">
       <div id="logoSidebar"></div>
-      <div><h1>Atletismo/Trail</h1><span>ARCA d'Ajuda</span></div>
+      <div><h1>ARCA d'Ajuda</h1></div>
     </div>
+    <div id="tituloPersonalizado" style="display:none;text-align:center;font-size:14px;font-weight:800;letter-spacing:.5px;padding:10px 14px;margin:0 12px 8px;border-bottom:1px solid rgba(255,255,255,.25)"></div>
     <div class="navLista">
-      <div class="nav-item ativo" data-sec="dashboard" onclick="irPara('dashboard')">📊 Dashboard</div>
-      <div class="nav-item" data-sec="atletas" onclick="irPara('atletas')">👥 Atletas</div>
-      <div class="nav-item" data-sec="provas" onclick="irPara('provas')">🏁 Provas</div>
-      <div class="nav-item" data-sec="multas" onclick="irPara('multas')">⚠️ Multas</div>
-      <div class="nav-item" data-sec="conta" onclick="irPara('conta')">💶 Conta Secção</div>
-      <div class="nav-item" data-sec="comparar" onclick="irPara('comparar')">⚖️ Comparar Épocas</div>
-      <div class="nav-item" data-sec="epocas" onclick="irPara('epocas')">📅 Épocas</div>
-      <div class="nav-item" data-sec="importar" onclick="irPara('importar')">📥 Importar Excel</div>
-      <div class="nav-item" data-sec="config" onclick="irPara('config')">⚙️ Configurações</div>
-      <div class="nav-item" data-sec="ajuda" onclick="irPara('ajuda')">❓ Ajuda</div>
+      <div class="nav-item ativo" data-sec="dashboard" onclick="irPara('dashboard')"><svg class="ico"><use href="#i-grid"/></svg> Dashboard</div>
+      <div class="nav-item" data-sec="atletas" onclick="irPara('atletas')"><svg class="ico"><use href="#i-users"/></svg> Atletas</div>
+      <div class="nav-item" data-sec="provas" onclick="irPara('provas')"><svg class="ico"><use href="#i-flag"/></svg> Provas</div>
+      <div class="nav-item" data-sec="multas" onclick="irPara('multas')"><svg class="ico"><use href="#i-alert"/></svg> Multas</div>
+      <div class="nav-item" data-sec="conta" onclick="irPara('conta')"><svg class="ico"><use href="#i-wallet"/></svg> Conta Secção</div>
+      <div class="nav-item" data-sec="comparar" onclick="irPara('comparar')"><svg class="ico"><use href="#i-scale"/></svg> Comparar Épocas</div>
+      <div class="nav-item" data-sec="epocas" onclick="irPara('epocas')"><svg class="ico"><use href="#i-calendar"/></svg> Épocas</div>
+      <div class="nav-item" data-sec="importar" onclick="irPara('importar')"><svg class="ico"><use href="#i-import"/></svg> Importar Excel</div>
     </div>
   </div>
 
   <div class="main">
     <div class="topbar">
       <h2 id="tituloSeccao">Dashboard</h2>
-      <div class="epocaSel">
-        <label>Época:</label>
-        <select id="selEpoca" onchange="mudarEpoca()"></select>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="epocaSel">
+          <label>Época:</label>
+          <select id="selEpoca" onchange="mudarEpoca()"></select>
+        </div>
+        <button class="btnIcone" title="Configurações" onclick="irPara('config')"><svg class="ico" style="width:20px;height:20px"><use href="#i-gear"/></svg></button>
       </div>
     </div>
 
@@ -182,7 +218,7 @@ tr:hover td{background:#f8fafc}
           <option value="epoca">Inscritos nesta época</option>
           <option value="todos">Todos os atletas</option>
         </select>
-        <button class="btn" onclick="abrirModalAtleta()">＋ Novo Atleta</button>
+        <button class="btn" onclick="abrirModalAtleta()"><svg class="ico"><use href="#i-plus"/></svg> Novo Atleta</button>
       </div>
       <div class="tabelaScroll" id="listaAtletas"></div>
     </div>
@@ -200,7 +236,7 @@ tr:hover td{background:#f8fafc}
           <option value="sky">Sky</option>
           <option value="outras">Outras</option>
         </select>
-        <button class="btn" onclick="abrirModalProva()">＋ Nova Prova</button>
+        <button class="btn" onclick="abrirModalProva()"><svg class="ico"><use href="#i-plus"/></svg> Nova Prova</button>
       </div>
       <div class="tabelaScroll" id="listaProvas"></div>
     </div>
@@ -208,7 +244,7 @@ tr:hover td{background:#f8fafc}
     <!-- MULTAS -->
     <div id="sec-multas" class="seccao" style="display:none">
       <div class="barraAcoes">
-        <button class="btn" onclick="abrirModalMulta()">＋ Nova Multa</button>
+        <button class="btn" onclick="abrirModalMulta()"><svg class="ico"><use href="#i-plus"/></svg> Nova Multa</button>
       </div>
       <div class="cards" id="multasCards"></div>
       <div class="tabelaScroll" id="listaMultas"></div>
@@ -217,7 +253,7 @@ tr:hover td{background:#f8fafc}
     <!-- CONTA -->
     <div id="sec-conta" class="seccao" style="display:none">
       <div class="barraAcoes">
-        <button class="btn" onclick="abrirModalMov()">＋ Novo Movimento</button>
+        <button class="btn" onclick="abrirModalMov()"><svg class="ico"><use href="#i-plus"/></svg> Novo Movimento</button>
       </div>
       <div class="cards" id="contaCards"></div>
       <div class="tabelaScroll" id="listaConta"></div>
@@ -229,7 +265,7 @@ tr:hover td{background:#f8fafc}
         <select id="compA"></select>
         <span style="font-weight:800;color:var(--roxo)">vs</span>
         <select id="compB"></select>
-        <button class="btn" onclick="compararEpocas()">⚖️ Comparar</button>
+        <button class="btn" onclick="compararEpocas()"><svg class="ico"><use href="#i-scale"/></svg> Comparar</button>
       </div>
       <div id="compResultado"></div>
     </div>
@@ -237,7 +273,7 @@ tr:hover td{background:#f8fafc}
     <!-- ÉPOCAS -->
     <div id="sec-epocas" class="seccao" style="display:none">
       <div class="barraAcoes">
-        <button class="btn" onclick="novaEpoca()">＋ Nova Época (com transição de atletas)</button>
+        <button class="btn" onclick="novaEpoca()"><svg class="ico"><use href="#i-plus"/></svg> Nova Época (com transição de atletas)</button>
       </div>
       <div class="tabelaScroll" id="listaEpocas"></div>
     </div>
@@ -266,6 +302,17 @@ tr:hover td{background:#f8fafc}
     <!-- CONFIGURAÇÕES -->
     <div id="sec-config" class="seccao" style="display:none">
       <div class="painel">
+        <h3>📝 Título na barra lateral</h3>
+        <p style="font-size:13.5px;color:var(--cinza);margin-bottom:12px">
+          Este título aparece na barra lateral, por cima do Dashboard (ex.: "Secção de Atletismo/Trail").
+          Deixa vazio para não mostrar nada.
+        </p>
+        <div class="barraAcoes">
+          <input type="text" id="cfg_titulo" placeholder="ex.: Secção de Atletismo/Trail" style="max-width:340px">
+          <button class="btn" onclick="guardarTitulo()"><svg class="ico"><use href="#i-save"/></svg> Guardar título</button>
+        </div>
+      </div>
+      <div class="painel">
         <h3>🖼 Logo da ARCA (usado nos recibos)</h3>
         <p style="font-size:13.5px;color:var(--cinza);margin-bottom:12px">
           Carrega aqui o logo da associação. Nos recibos aparece <b>dentro de um círculo branco</b>,
@@ -274,8 +321,8 @@ tr:hover td{background:#f8fafc}
         </p>
         <div class="barraAcoes">
           <input type="file" id="ficheiroLogo" accept="image/*" onchange="prepararLogo(this.files[0])">
-          <button class="btn" onclick="guardarLogoBtn()">💾 Guardar logo</button>
-          <button class="btn sec" onclick="removerLogo()">🗑 Remover logo</button>
+          <button class="btn" onclick="guardarLogoBtn()"><svg class="ico"><use href="#i-save"/></svg> Guardar logo</button>
+          <button class="btn sec" onclick="removerLogo()"><svg class="ico"><use href="#i-trash"/></svg> Remover logo</button>
         </div>
         <div id="logoPreview" style="margin-top:8px"></div>
       </div>
@@ -292,9 +339,9 @@ tr:hover td{background:#f8fafc}
           </div>
         </div>
         <div class="barraAcoes">
-          <button class="btn sec" onclick="guardarEmailBackup()">💾 Guardar email</button>
-          <button class="btn" onclick="backupDrive()">☁️ Backup para o Drive agora</button>
-          <button class="btn sec" onclick="backupLocal()">⬇️ Descarregar backup (.json)</button>
+          <button class="btn sec" onclick="guardarEmailBackup()"><svg class="ico"><use href="#i-save"/></svg> Guardar email</button>
+          <button class="btn" onclick="backupDrive()"><svg class="ico"><use href="#i-cloud"/></svg> Backup para o Drive agora</button>
+          <button class="btn sec" onclick="backupLocal()"><svg class="ico"><use href="#i-down"/></svg> Descarregar backup (.json)</button>
         </div>
         <div class="barraAcoes" style="margin-top:6px">
           <label style="font-size:13px;font-weight:700;color:var(--cinza)">Restaurar backup:</label>
@@ -311,7 +358,7 @@ tr:hover td{background:#f8fafc}
         </p>
         <div class="barraAcoes">
           <select id="cfgEpoca"></select>
-          <button class="btn perigo" onclick="limparEpoca()">🧹 Limpar esta época</button>
+          <button class="btn perigo" onclick="limparEpoca()"><svg class="ico"><use href="#i-restore"/></svg> Limpar esta época</button>
         </div>
       </div>
       <div class="painel" style="border-color:#fca5a5">
@@ -320,7 +367,7 @@ tr:hover td{background:#f8fafc}
           Apaga <b>tudo</b> em todas as épocas: atletas, inscrições, provas, resultados, multas e conta.
           As épocas em si (2025-2026, 2026-2027…) mantêm-se, mas vazias. Não há volta atrás!
         </p>
-        <button class="btn perigo" onclick="eliminarTudo()">💣 Eliminar todos os dados</button>
+        <button class="btn perigo" onclick="eliminarTudo()"><svg class="ico"><use href="#i-alert"/></svg> Eliminar todos os dados</button>
       </div>
     </div>
 
@@ -336,7 +383,9 @@ tr:hover td{background:#f8fafc}
           Tudo fica guardado na cloud (Supabase): podes abrir a app em qualquer computador ou telemóvel,
           entrar com o PIN, e está lá tudo. Nada fica preso a um só computador.</p>
 
-          <p><b>🔑 Entrar</b> — Abre a app e escreve o PIN da secção. A sessão fica válida até fechares o browser.</p>
+          <p><b>🔑 Entrar</b> — Abre a app e escreve o PIN da secção. A sessão fica válida até fechares o browser.
+          Dois botões estão sempre à mão em qualquer página: a <b>rodinha ⚙️ no canto superior direito</b>
+          (ao lado da época) abre as Configurações, e o <b>botão ❓ no canto inferior direito</b> abre este manual.</p>
 
           <p><b>📅 1. Épocas — a base de tudo</b> — No canto superior direito escolhes a época de trabalho
           (ex.: 2026-2027). <u>Tudo o que vês em todas as páginas pertence a essa época</u>: atletas inscritos,
@@ -363,26 +412,26 @@ tr:hover td{background:#f8fafc}
           Se ele já tiver resultados lançados nessa época, a app avisa antes de os apagar.<br>
           • <b>Volta ao clube:</b> muda o filtro para "Todos os atletas" (ou pesquisa o nome), abre-o com ✏️
           e marca "Inscrito nesta época? <b>Sim</b>" — recupera a ficha completa com todo o histórico.<br>
-          • <b>Novo atleta:</b> botão "＋ Novo Atleta".<br>
+          • <b>Novo atleta:</b> botão "<svg class="ico"><use href="#i-plus"/></svg> Novo Atleta".<br>
           • <b>🗑 Apagar (dentro do ✏️):</b> SÓ para registos duplicados ou criados por engano — apaga a
           ficha e TODO o histórico de todas as épocas, sem volta atrás.<br>
           • <b>Pesquisa:</b> quando escreves um nome, a app procura em TODOS os atletas, mesmo fora da
           época — esses aparecem marcados com "🚫 Não está em [época]".</p>
 
-          <p><b>🏁 3. Provas e resultados</b> — Cria a prova com "＋ Nova Prova": nome, data, tipo
+          <p><b>🏁 3. Provas e resultados</b> — Cria a prova com "<svg class="ico"><use href="#i-plus"/></svg> Nova Prova": nome, data, tipo
           (Madeira a Correr, Trail Sprint, Trail Longo, Trail Ultra, Sky, Outras), local e distância.
           Depois clica em <b>📋 Resultados</b> para lançar as classificações: escolhes o atleta, posição geral,
-          posição no escalão, tempo e km, e "＋ Lançar Resultado". O <b>pódio 🏅 é marcado automaticamente</b>
+          posição no escalão, tempo e km, e "<svg class="ico"><use href="#i-plus"/></svg> Lançar Resultado". O <b>pódio 🏅 é marcado automaticamente</b>
           quando a posição no escalão começa por 1º, 2º ou 3º. Para corrigir um resultado, clica no ✏️ da
           linha — os valores sobem para o formulário, corriges e voltas a lançar (substitui o anterior).
           O ✏️ da prova edita os dados dela; o 🗑 dentro do ✏️ apaga a prova e todos os resultados.</p>
 
-          <p><b>⚠️ 4. Multas</b> — Regista multas com "＋ Nova Multa": atleta (da lista ou nome em texto
+          <p><b>⚠️ 4. Multas</b> — Regista multas com "<svg class="ico"><use href="#i-plus"/></svg> Nova Multa": atleta (da lista ou nome em texto
           livre), prova/motivo, valor e estado. Na lista, <b>clica no estado (Deve/Pago)</b> para o alternar
           num clique. Os cartões no topo mostram o total por pagar e o já pago. Tudo editável com ✏️.</p>
 
           <p><b>💶 5. Conta da Secção</b> — Movimentos de entradas e saídas, com o saldo acumulado
-          calculado linha a linha (como no Excel). "＋ Novo Movimento" para registar; ✏️ para editar;
+          calculado linha a linha (como no Excel). "<svg class="ico"><use href="#i-plus"/></svg> Novo Movimento" para registar; ✏️ para editar;
           🗑 para apagar. Os cartões mostram entradas, saídas e saldo da época.</p>
 
           <p><b>🧾 6. Faturas, comprovativos e recibos</b> — Nas listas de Multas e da Conta:<br>
@@ -411,7 +460,10 @@ tr:hover td{background:#f8fafc}
           <i>Se importares o ficheiro errado para uma época, usa "🧹 Limpar dados de uma época" nas Configurações
           e importa de novo.</i></p>
 
-          <p><b>⚙️ 9. Configurações</b> —<br>
+          <p><b>⚙️ 9. Configurações</b> (abre-se na rodinha ⚙️ do canto superior direito) —<br>
+          • <b>📝 Título na barra lateral</b> — escreve o título que quiseres mostrar na barra lateral, por
+          cima do Dashboard (ex.: "Secção de Atletismo/Trail"), e clica em "💾 Guardar título". Deixa vazio
+          para não mostrar nada.<br>
           • <b>🖼 Logo da ARCA</b> — escolhe a imagem e vê a pré-visualização dentro do círculo branco
           (o logo preenche o círculo por completo); depois clica em <b>💾 Guardar logo</b>. Fica na cloud e
           aparece no canto superior esquerdo da app e no topo dos recibos. O ideal é uma imagem
@@ -487,9 +539,9 @@ tr:hover td{background:#f8fafc}
       <div class="campo"><label>Nº Pé</label><input id="i_num_pe"></div>
     </div>
     <div class="modalRodape">
-      <button class="btn perigo" id="btnApagarAtleta" style="margin-right:auto;display:none" onclick="apagarAtleta()">🗑 Apagar</button>
+      <button class="btn perigo" id="btnApagarAtleta" style="margin-right:auto;display:none" onclick="apagarAtleta()"><svg class="ico"><use href="#i-trash"/></svg> Apagar</button>
       <button class="btn sec" onclick="fecharModal('modalAtleta')">Cancelar</button>
-      <button class="btn" onclick="guardarAtleta()">💾 Guardar</button>
+      <button class="btn" onclick="guardarAtleta()"><svg class="ico"><use href="#i-save"/></svg> Guardar</button>
     </div>
   </div>
 </div>
@@ -525,9 +577,9 @@ tr:hover td{background:#f8fafc}
       <div class="campo full"><label>Observações</label><input id="p_obs"></div>
     </div>
     <div class="modalRodape">
-      <button class="btn perigo" id="btnApagarProva" style="margin-right:auto;display:none" onclick="apagarProva()">🗑 Apagar</button>
+      <button class="btn perigo" id="btnApagarProva" style="margin-right:auto;display:none" onclick="apagarProva()"><svg class="ico"><use href="#i-trash"/></svg> Apagar</button>
       <button class="btn sec" onclick="fecharModal('modalProva')">Cancelar</button>
-      <button class="btn" onclick="guardarProva()">💾 Guardar</button>
+      <button class="btn" onclick="guardarProva()"><svg class="ico"><use href="#i-save"/></svg> Guardar</button>
     </div>
   </div>
 </div>
@@ -542,7 +594,7 @@ tr:hover td{background:#f8fafc}
       <div class="campo"><label>Escalão</label><input id="r_escalao" placeholder="ex.: 3º VET 45"></div>
       <div class="campo"><label>Tempo</label><input id="r_tempo" placeholder="hh:mm:ss"></div>
       <div class="campo"><label>Km</label><input type="number" step="0.1" id="r_km"></div>
-      <div class="campo" style="justify-content:flex-end"><button class="btn" onclick="guardarResultado()">＋ Lançar Resultado</button></div>
+      <div class="campo" style="justify-content:flex-end"><button class="btn" onclick="guardarResultado()"><svg class="ico"><use href="#i-plus"/></svg> Lançar Resultado</button></div>
     </div>
     <div class="tabelaScroll" id="listaResultados"></div>
     <div class="modalRodape"><button class="btn sec" onclick="fecharModal('modalResultados')">Fechar</button></div>
@@ -562,7 +614,7 @@ tr:hover td{background:#f8fafc}
     </div>
     <div class="modalRodape">
       <button class="btn sec" onclick="fecharModal('modalMulta')">Cancelar</button>
-      <button class="btn" onclick="guardarMulta()">💾 Guardar</button>
+      <button class="btn" onclick="guardarMulta()"><svg class="ico"><use href="#i-save"/></svg> Guardar</button>
     </div>
   </div>
 </div>
@@ -580,12 +632,13 @@ tr:hover td{background:#f8fafc}
     </div>
     <div class="modalRodape">
       <button class="btn sec" onclick="fecharModal('modalMov')">Cancelar</button>
-      <button class="btn" onclick="guardarMov()">💾 Guardar</button>
+      <button class="btn" onclick="guardarMov()"><svg class="ico"><use href="#i-save"/></svg> Guardar</button>
     </div>
   </div>
 </div>
 
 <div id="toast"></div>
+<button class="btnAjudaFlutuante" title="Ajuda / Manual" onclick="irPara('ajuda')"><svg class="ico" style="width:22px;height:22px"><use href="#i-help"/></svg></button>
 <div id="reciboPrint"></div>
 <input type="file" id="ficheiroAnexo" accept="image/*,.pdf" style="display:none" onchange="enviarAnexo(this.files[0])">
 
@@ -814,8 +867,8 @@ function renderAtletas(){
         <td>${esc(i.escalao||'—')}</td><td>${esc(i.dorsal||'—')}</td><td>${esc(i.chip||'—')}</td><td>${esc(i.camisola||'—')}</td>
         <td>${esc(a.telemovel||'—')}</td>
         <td style="white-space:nowrap">
-          <button class="btn mini sec" onclick="abrirModalAtleta('${a.id}')">✏️</button>
-          ${inscricaoDe(a.id)?`<button class="btn mini perigo" title="Remover desta época (mantém o histórico das outras)" onclick="removerDaEpoca('${a.id}')">🚫</button>`:''}
+          <button class="btn mini sec" onclick="abrirModalAtleta('${a.id}')"><svg class="ico"><use href="#i-pencil"/></svg></button>
+          ${inscricaoDe(a.id)?`<button class="btn mini perigo" title="Remover desta época (mantém o histórico das outras)" onclick="removerDaEpoca('${a.id}')"><svg class="ico"><use href="#i-ban"/></svg></button>`:''}
         </td>
       </tr>`;
     }).join('')}</tbody></table>` : '<div class="vazio">Nenhum atleta encontrado.</div>';
@@ -974,8 +1027,8 @@ function renderProvas(){
         <td>${parts.length}</td>
         <td>${pod?'🏅 '+pod:'—'}</td>
         <td style="white-space:nowrap">
-          <button class="btn mini" onclick="abrirResultados('${p.id}')">📋 Resultados</button>
-          <button class="btn mini sec" onclick="abrirModalProva('${p.id}')">✏️</button>
+          <button class="btn mini" onclick="abrirResultados('${p.id}')"><svg class="ico"><use href="#i-clipboard"/></svg> Resultados</button>
+          <button class="btn mini sec" onclick="abrirModalProva('${p.id}')"><svg class="ico"><use href="#i-pencil"/></svg></button>
         </td></tr>`;
     }).join('')
   }</tbody></table>` : '<div class="vazio">Nenhuma prova encontrada.</div>';
@@ -1034,8 +1087,8 @@ function renderResultados(){
         <td>${esc(p.tempo||'—')}</td><td>${p.distancia_km||'—'}</td>
         <td>${p.podio?'🏅':''}</td>
         <td style="white-space:nowrap">
-          <button class="btn mini sec" onclick="editarResultado('${p.id}')">✏️</button>
-          <button class="btn mini perigo" onclick="apagarResultado('${p.id}')">🗑</button></td></tr>`;
+          <button class="btn mini sec" onclick="editarResultado('${p.id}')"><svg class="ico"><use href="#i-pencil"/></svg></button>
+          <button class="btn mini perigo" onclick="apagarResultado('${p.id}')"><svg class="ico"><use href="#i-trash"/></svg></button></td></tr>`;
     }).join('')
   }</tbody></table>` : '<div class="vazio">Ainda sem resultados lançados.</div>';
 }
@@ -1093,11 +1146,11 @@ function renderMultas(){
         <td>${fmtEuro(m.valor)}</td>
         <td><span class="badge ${m.estado==='pago'?'b-verde':'b-vermelho'}" style="cursor:pointer" onclick="alternarMulta('${m.id}','${m.estado}')">${m.estado==='pago'?'Pago':'Deve'}</span></td>
         <td style="white-space:nowrap">
-          ${m.anexo_url?`<button class="btn mini sec" title="Ver fatura/comprovativo" onclick="window.open('${m.anexo_url}','_blank')">📄</button>`:''}
-          <button class="btn mini sec" title="${m.anexo_url?'Substituir':'Anexar'} fatura/comprovativo" onclick="pedirAnexo('atl_multas','${m.id}')">📎</button>
-          ${m.estado==='pago'?`<button class="btn mini" title="Gerar recibo (duplicado)" onclick="gerarRecibo('multa','${m.id}')">🧾</button>`:''}
-          <button class="btn mini sec" onclick="abrirModalMulta('${m.id}')">✏️</button>
-          <button class="btn mini perigo" onclick="apagarMulta('${m.id}')">🗑</button></td></tr>`;
+          ${m.anexo_url?`<button class="btn mini sec" title="Ver fatura/comprovativo" onclick="window.open('${m.anexo_url}','_blank')"><svg class="ico"><use href="#i-file"/></svg></button>`:''}
+          <button class="btn mini sec" title="${m.anexo_url?'Substituir':'Anexar'} fatura/comprovativo" onclick="pedirAnexo('atl_multas','${m.id}')"><svg class="ico"><use href="#i-clip"/></svg></button>
+          ${m.estado==='pago'?`<button class="btn mini" title="Gerar recibo (duplicado)" onclick="gerarRecibo('multa','${m.id}')"><svg class="ico"><use href="#i-receipt"/></svg></button>`:''}
+          <button class="btn mini sec" onclick="abrirModalMulta('${m.id}')"><svg class="ico"><use href="#i-pencil"/></svg></button>
+          <button class="btn mini perigo" onclick="apagarMulta('${m.id}')"><svg class="ico"><use href="#i-trash"/></svg></button></td></tr>`;
     }).join('')
   }</tbody></table>` : '<div class="vazio">Sem multas nesta época. 🎉</div>';
 }
@@ -1161,11 +1214,11 @@ function renderConta(){
         <td style="color:var(--vermelho)">${c.saida?fmtEuro(c.saida):''}</td>
         <td><b>${fmtEuro(acumulado)}</b></td><td>${esc(c.obs||'')}</td>
         <td style="white-space:nowrap">
-          ${c.anexo_url?`<button class="btn mini sec" title="Ver fatura/comprovativo" onclick="window.open('${c.anexo_url}','_blank')">📄</button>`:''}
-          <button class="btn mini sec" title="${c.anexo_url?'Substituir':'Anexar'} fatura/comprovativo" onclick="pedirAnexo('atl_conta','${c.id}')">📎</button>
-          ${Number(c.entrada)>0?`<button class="btn mini" title="Gerar recibo (duplicado)" onclick="gerarRecibo('conta','${c.id}')">🧾</button>`:''}
-          <button class="btn mini sec" onclick="abrirModalMov('${c.id}')">✏️</button>
-          <button class="btn mini perigo" onclick="apagarMov('${c.id}')">🗑</button></td></tr>`;
+          ${c.anexo_url?`<button class="btn mini sec" title="Ver fatura/comprovativo" onclick="window.open('${c.anexo_url}','_blank')"><svg class="ico"><use href="#i-file"/></svg></button>`:''}
+          <button class="btn mini sec" title="${c.anexo_url?'Substituir':'Anexar'} fatura/comprovativo" onclick="pedirAnexo('atl_conta','${c.id}')"><svg class="ico"><use href="#i-clip"/></svg></button>
+          ${Number(c.entrada)>0?`<button class="btn mini" title="Gerar recibo (duplicado)" onclick="gerarRecibo('conta','${c.id}')"><svg class="ico"><use href="#i-receipt"/></svg></button>`:''}
+          <button class="btn mini sec" onclick="abrirModalMov('${c.id}')"><svg class="ico"><use href="#i-pencil"/></svg></button>
+          <button class="btn mini perigo" onclick="apagarMov('${c.id}')"><svg class="ico"><use href="#i-trash"/></svg></button></td></tr>`;
     }).join('')
   }</tbody></table>` : '<div class="vazio">Sem movimentos nesta época.</div>';
 }
@@ -1390,8 +1443,13 @@ function estadoBackup(msg){ document.getElementById('estadoBackup').textContent 
 
 async function carregarConfig(){
   try{
-    const r = await sb.from('atl_config').select('*').eq('chave','backup_email').maybeSingle();
-    if(!r.error && r.data) document.getElementById('cfg_email_backup').value = r.data.valor||'';
+    const r = await sb.from('atl_config').select('*').in('chave',['backup_email','titulo_app']);
+    if(!r.error && r.data){
+      for(const c of r.data){
+        if(c.chave==='backup_email') document.getElementById('cfg_email_backup').value = c.valor||'';
+        if(c.chave==='titulo_app'){ document.getElementById('cfg_titulo').value = c.valor||''; aplicarTitulo(c.valor); }
+      }
+    }
   }catch(e){ console.warn('config', e); }
 }
 async function guardarEmailBackup(){
@@ -1536,7 +1594,18 @@ function mostrarLogo(){
        </div>`
     : '<span style="font-size:13px;color:var(--cinza)">Ainda sem logo carregado.</span>';
   document.getElementById('logoSidebar').innerHTML = logoDataUrl
-    ? `<div class="logoCirculo" style="width:150px;height:150px;min-width:150px"><img src="${logoDataUrl}"></div>` : '';
+    ? `<div class="logoCirculo" style="width:110px;height:110px;min-width:110px"><img src="${logoDataUrl}"></div>` : '';
+}
+function aplicarTitulo(t){
+  const el = document.getElementById('tituloPersonalizado');
+  el.textContent = t||'';
+  el.style.display = t ? 'block' : 'none';
+}
+async function guardarTitulo(){
+  const t = document.getElementById('cfg_titulo').value.trim();
+  await sbErro(await sb.from('atl_config').upsert({chave:'titulo_app', valor:t},{onConflict:'chave'}),'guardar titulo');
+  aplicarTitulo(t);
+  toast('✅ Título guardado.');
 }
 function prepararLogo(ficheiro){
   if(!ficheiro) return;
