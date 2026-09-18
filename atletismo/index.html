@@ -6,6 +6,7 @@
 <title>ARCA d'Ajuda — Atletismo/Trail</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 :root{
   --grad:linear-gradient(160deg,#1e3a8a 0%,#7c3aed 100%);
@@ -125,6 +126,7 @@ tr:hover td{background:#f8fafc}
       <div class="nav-item" data-sec="comparar" onclick="irPara('comparar')">⚖️ Comparar Épocas</div>
       <div class="nav-item" data-sec="epocas" onclick="irPara('epocas')">📅 Épocas</div>
       <div class="nav-item" data-sec="importar" onclick="irPara('importar')">📥 Importar Excel</div>
+      <div class="nav-item" data-sec="config" onclick="irPara('config')">⚙️ Configurações</div>
       <div class="nav-item" data-sec="ajuda" onclick="irPara('ajuda')">❓ Ajuda</div>
     </div>
   </div>
@@ -236,6 +238,53 @@ tr:hover td{background:#f8fafc}
         </div>
         <input type="file" id="ficheiroExcel" accept=".xlsx,.xlsm" style="display:none" onchange="importarExcel(this.files[0])">
         <div class="logImport" id="logImport"></div>
+      </div>
+    </div>
+
+    <!-- CONFIGURAÇÕES -->
+    <div id="sec-config" class="seccao" style="display:none">
+      <div class="painel">
+        <h3>☁️ Backup Google Drive</h3>
+        <p style="font-size:13.5px;color:var(--cinza);margin-bottom:12px">
+          Os dados vivem no Supabase (cloud). Aqui podes gravar uma cópia de segurança extra
+          no Google Drive da conta que escolheres, ou descarregar um ficheiro para o computador.
+        </p>
+        <div class="formGrelha" style="margin-bottom:12px;max-width:520px">
+          <div class="campo full">
+            <label>Email da conta Google para o backup (podes editar)</label>
+            <input id="cfg_email_backup" type="email" placeholder="ex.: arcadesporto@gmail.com">
+          </div>
+        </div>
+        <div class="barraAcoes">
+          <button class="btn sec" onclick="guardarEmailBackup()">💾 Guardar email</button>
+          <button class="btn" onclick="backupDrive()">☁️ Backup para o Drive agora</button>
+          <button class="btn sec" onclick="backupLocal()">⬇️ Descarregar backup (.json)</button>
+        </div>
+        <div class="barraAcoes" style="margin-top:6px">
+          <label style="font-size:13px;font-weight:700;color:var(--cinza)">Restaurar backup:</label>
+          <input type="file" id="ficheiroRestauro" accept=".json" onchange="restaurarBackup(this.files[0])">
+        </div>
+        <div id="estadoBackup" style="font-size:13px;color:var(--cinza);margin-top:8px"></div>
+      </div>
+      <div class="painel" style="border-color:#fca5a5">
+        <h3 style="color:var(--vermelho)">🧹 Limpar dados de uma época</h3>
+        <p style="font-size:13.5px;color:var(--cinza);margin-bottom:12px">
+          Apaga <b>desta época</b>: inscrições, provas, resultados, multas e conta.
+          Os atletas (fichas pessoais) e as outras épocas não são afetados.
+          Útil quando importaste o ficheiro errado para uma época.
+        </p>
+        <div class="barraAcoes">
+          <select id="cfgEpoca"></select>
+          <button class="btn perigo" onclick="limparEpoca()">🧹 Limpar esta época</button>
+        </div>
+      </div>
+      <div class="painel" style="border-color:#fca5a5">
+        <h3 style="color:var(--vermelho)">💣 Eliminar TODOS os dados</h3>
+        <p style="font-size:13.5px;color:var(--cinza);margin-bottom:12px">
+          Apaga <b>tudo</b> em todas as épocas: atletas, inscrições, provas, resultados, multas e conta.
+          As épocas em si (2025-2026, 2026-2027…) mantêm-se, mas vazias. Não há volta atrás!
+        </p>
+        <button class="btn perigo" onclick="eliminarTudo()">💣 Eliminar todos os dados</button>
       </div>
     </div>
 
@@ -359,9 +408,10 @@ tr:hover td{background:#f8fafc}
 <!-- MODAL MULTA -->
 <div class="modalFundo" id="modalMulta">
   <div class="modal" style="max-width:560px">
-    <h3>Nova Multa</h3>
+    <h3 id="tituloModalMulta">Nova Multa</h3>
     <div class="formGrelha">
       <div class="campo full"><label>Atleta</label><select id="m_atleta"></select></div>
+      <div class="campo full"><label>Nome do atleta (texto livre, se não estiver na lista)</label><input id="m_atleta_nome"></div>
       <div class="campo full"><label>Prova / motivo</label><input id="m_prova"></div>
       <div class="campo"><label>Valor (€)</label><input type="number" step="0.01" id="m_valor"></div>
       <div class="campo"><label>Estado</label><select id="m_estado"><option value="deve">Deve</option><option value="pago">Pago</option></select></div>
@@ -376,7 +426,7 @@ tr:hover td{background:#f8fafc}
 <!-- MODAL MOVIMENTO -->
 <div class="modalFundo" id="modalMov">
   <div class="modal" style="max-width:560px">
-    <h3>Novo Movimento</h3>
+    <h3 id="tituloModalMov">Novo Movimento</h3>
     <div class="formGrelha">
       <div class="campo full"><label>Descrição *</label><input id="mv_descricao"></div>
       <div class="campo"><label>Data</label><input type="date" id="mv_data"></div>
@@ -484,7 +534,7 @@ if(sessionStorage.getItem('atl_pin_ok')==='1'){
    NAVEGAÇÃO
 ============================================================ */
 const TITULOS = {dashboard:'Dashboard', atletas:'Atletas', provas:'Provas', multas:'Multas',
-  conta:'Conta da Secção', comparar:'Comparar Épocas', epocas:'Épocas', importar:'Importar Excel', ajuda:'Ajuda'};
+  conta:'Conta da Secção', comparar:'Comparar Épocas', epocas:'Épocas', importar:'Importar Excel', config:'Configurações', ajuda:'Ajuda'};
 function irPara(sec){
   document.querySelectorAll('.seccao').forEach(e=>e.style.display='none');
   document.getElementById('sec-'+sec).style.display = 'block';
@@ -498,6 +548,7 @@ function irPara(sec){
 async function iniciar(){
   await carregarEpocas();
   await carregarTudo();
+  carregarConfig();
 }
 async function carregarEpocas(){
   epocas = await sbErro(await sb.from('atl_epocas').select('*').order('nome'), 'epocas');
@@ -506,6 +557,7 @@ async function carregarEpocas(){
   sel.innerHTML = epocas.map(e=>`<option value="${e.id}" ${epocaAtual&&e.id===epocaAtual.id?'selected':''}>${esc(e.nome)}</option>`).join('');
   const selImp = document.getElementById('selEpocaImport');
   selImp.innerHTML = epocas.map(e=>`<option value="${e.id}" ${epocaAtual&&e.id===epocaAtual.id?'selected':''}>${esc(e.nome)}</option>`).join('');
+  document.getElementById('cfgEpoca').innerHTML = epocas.map(e=>`<option value="${e.id}" ${epocaAtual&&e.id===epocaAtual.id?'selected':''}>${esc(e.nome)}</option>`).join('');
   const opts = epocas.map(e=>`<option value="${e.id}">${esc(e.nome)}</option>`).join('');
   document.getElementById('compA').innerHTML = opts;
   document.getElementById('compB').innerHTML = opts;
@@ -802,9 +854,21 @@ function renderResultados(){
         <td>${esc(p.pos_geral||'—')}</td><td>${esc(p.pos_escalao||'—')}</td>
         <td>${esc(p.tempo||'—')}</td><td>${p.distancia_km||'—'}</td>
         <td>${p.podio?'🏅':''}</td>
-        <td><button class="btn mini perigo" onclick="apagarResultado('${p.id}')">🗑</button></td></tr>`;
+        <td style="white-space:nowrap">
+          <button class="btn mini sec" onclick="editarResultado('${p.id}')">✏️</button>
+          <button class="btn mini perigo" onclick="apagarResultado('${p.id}')">🗑</button></td></tr>`;
     }).join('')
   }</tbody></table>` : '<div class="vazio">Ainda sem resultados lançados.</div>';
+}
+function editarResultado(id){
+  const p = participacoes.find(x=>x.id===id);
+  if(!p) return;
+  document.getElementById('r_atleta').value = p.atleta_id;
+  document.getElementById('r_geral').value = p.pos_geral||'';
+  document.getElementById('r_escalao').value = p.pos_escalao||'';
+  document.getElementById('r_tempo').value = p.tempo||'';
+  document.getElementById('r_km').value = p.distancia_km||'';
+  toast('✏️ Corrige os campos em cima e clica em "Lançar Resultado" para guardar.');
 }
 async function guardarResultado(){
   const atletaId = document.getElementById('r_atleta').value;
@@ -849,25 +913,37 @@ function renderMultas(){
       return `<tr><td><b>${esc(nome)}</b></td><td>${esc(m.prova||m.descricao||'—')}</td>
         <td>${fmtEuro(m.valor)}</td>
         <td><span class="badge ${m.estado==='pago'?'b-verde':'b-vermelho'}" style="cursor:pointer" onclick="alternarMulta('${m.id}','${m.estado}')">${m.estado==='pago'?'Pago':'Deve'}</span></td>
-        <td><button class="btn mini perigo" onclick="apagarMulta('${m.id}')">🗑</button></td></tr>`;
+        <td style="white-space:nowrap">
+          <button class="btn mini sec" onclick="abrirModalMulta('${m.id}')">✏️</button>
+          <button class="btn mini perigo" onclick="apagarMulta('${m.id}')">🗑</button></td></tr>`;
     }).join('')
   }</tbody></table>` : '<div class="vazio">Sem multas nesta época. 🎉</div>';
 }
-function abrirModalMulta(){
+let multaEmEdicao = null;
+function abrirModalMulta(id){
+  multaEmEdicao = id ? multas.find(m=>m.id===id) : null;
+  document.getElementById('tituloModalMulta').textContent = multaEmEdicao ? 'Editar Multa' : 'Nova Multa';
   const inscritosIds = new Set(inscricoes.map(i=>i.atleta_id));
-  document.getElementById('m_atleta').innerHTML = atletas.filter(a=>inscritosIds.has(a.id))
+  document.getElementById('m_atleta').innerHTML = '<option value="">— sem atleta associado —</option>' +
+    atletas.filter(a=>inscritosIds.has(a.id))
     .map(a=>`<option value="${a.id}">${esc(a.nome_desportivo||a.nome_completo)}</option>`).join('');
-  document.getElementById('m_prova').value=''; document.getElementById('m_valor').value='';
-  document.getElementById('m_estado').value='deve';
+  const m = multaEmEdicao||{};
+  document.getElementById('m_atleta').value = m.atleta_id||'';
+  document.getElementById('m_atleta_nome').value = m.atleta_nome||'';
+  document.getElementById('m_prova').value = m.prova||'';
+  document.getElementById('m_valor').value = m.valor!=null?m.valor:'';
+  document.getElementById('m_estado').value = m.estado||'deve';
   abrirModal('modalMulta');
 }
 async function guardarMulta(){
   const dados = { epoca_id:epocaAtual.id, atleta_id:document.getElementById('m_atleta').value||null,
+    atleta_nome:document.getElementById('m_atleta_nome').value.trim()||null,
     prova:document.getElementById('m_prova').value.trim()||null,
     valor:Number(document.getElementById('m_valor').value)||0,
     estado:document.getElementById('m_estado').value };
-  await sbErro(await sb.from('atl_multas').insert(dados),'insert multa');
-  fecharModal('modalMulta'); toast('✅ Multa registada.');
+  if(multaEmEdicao) await sbErro(await sb.from('atl_multas').update(dados).eq('id',multaEmEdicao.id),'update multa');
+  else await sbErro(await sb.from('atl_multas').insert(dados),'insert multa');
+  fecharModal('modalMulta'); toast('✅ Multa guardada.');
   multas = await sbErro(await sb.from('atl_multas').select('*').eq('epoca_id',epocaAtual.id).order('criado_em'),'multas');
   renderMultas(); renderDashboard();
 }
@@ -902,16 +978,22 @@ function renderConta(){
         <td style="color:var(--verde)">${c.entrada?fmtEuro(c.entrada):''}</td>
         <td style="color:var(--vermelho)">${c.saida?fmtEuro(c.saida):''}</td>
         <td><b>${fmtEuro(acumulado)}</b></td><td>${esc(c.obs||'')}</td>
-        <td><button class="btn mini perigo" onclick="apagarMov('${c.id}')">🗑</button></td></tr>`;
+        <td style="white-space:nowrap">
+          <button class="btn mini sec" onclick="abrirModalMov('${c.id}')">✏️</button>
+          <button class="btn mini perigo" onclick="apagarMov('${c.id}')">🗑</button></td></tr>`;
     }).join('')
   }</tbody></table>` : '<div class="vazio">Sem movimentos nesta época.</div>';
 }
-function abrirModalMov(){
-  document.getElementById('mv_descricao').value='';
-  document.getElementById('mv_data').value=new Date().toISOString().slice(0,10);
-  document.getElementById('mv_tipo').value='entrada';
-  document.getElementById('mv_valor').value='';
-  document.getElementById('mv_obs').value='';
+let movEmEdicao = null;
+function abrirModalMov(id){
+  movEmEdicao = id ? conta.find(c=>c.id===id) : null;
+  document.getElementById('tituloModalMov').textContent = movEmEdicao ? 'Editar Movimento' : 'Novo Movimento';
+  const c = movEmEdicao||{};
+  document.getElementById('mv_descricao').value = c.descricao||'';
+  document.getElementById('mv_data').value = c.data || new Date().toISOString().slice(0,10);
+  document.getElementById('mv_tipo').value = (Number(c.saida)>0)?'saida':'entrada';
+  document.getElementById('mv_valor').value = movEmEdicao ? (Number(c.saida)>0?c.saida:c.entrada) : '';
+  document.getElementById('mv_obs').value = c.obs||'';
   abrirModal('modalMov');
 }
 async function guardarMov(){
@@ -923,8 +1005,9 @@ async function guardarMov(){
     data:document.getElementById('mv_data').value||null,
     entrada: tipo==='entrada'?valor:0, saida: tipo==='saida'?valor:0,
     obs:document.getElementById('mv_obs').value.trim()||null };
-  await sbErro(await sb.from('atl_conta').insert(dados),'insert mov');
-  fecharModal('modalMov'); toast('✅ Movimento registado.');
+  if(movEmEdicao) await sbErro(await sb.from('atl_conta').update(dados).eq('id',movEmEdicao.id),'update mov');
+  else await sbErro(await sb.from('atl_conta').insert(dados),'insert mov');
+  fecharModal('modalMov'); toast('✅ Movimento guardado.');
   conta = await sbErro(await sb.from('atl_conta').select('*').eq('epoca_id',epocaAtual.id).order('data',{ascending:true}),'conta');
   renderConta(); renderDashboard();
 }
@@ -1054,6 +1137,170 @@ async function compararEpocas(){
       <div class="painel compCol"><h4>🆕 Novos em ${esc(eB.nome)}</h4>${nomes(novos)}</div>
       <div class="painel compCol"><h4>👋 Saíram (estavam em ${esc(eA.nome)})</h4>${nomes(sairam)}</div>
     </div>`;
+}
+
+/* ============================================================
+   CONFIGURAÇÕES — LIMPEZA DE DADOS
+============================================================ */
+async function limparEpoca(){
+  const epocaId = document.getElementById('cfgEpoca').value;
+  const nome = (epocas.find(e=>e.id===epocaId)||{}).nome;
+  if(!confirm('Limpar TODOS os dados da época '+nome+'?\n\nApaga: inscrições, provas, resultados, multas e conta desta época.\nOs atletas e as outras épocas não são afetados.')) return;
+  const conf = prompt('Para confirmar, escreve LIMPAR:');
+  if(conf!=='LIMPAR'){ toast('Cancelado.'); return; }
+  toast('🧹 A limpar a época '+nome+'…');
+  // apagar provas apaga também os resultados (cascade)
+  await sbErro(await sb.from('atl_provas').delete().eq('epoca_id',epocaId),'limpar provas');
+  await sbErro(await sb.from('atl_inscricoes').delete().eq('epoca_id',epocaId),'limpar inscricoes');
+  await sbErro(await sb.from('atl_multas').delete().eq('epoca_id',epocaId),'limpar multas');
+  await sbErro(await sb.from('atl_conta').delete().eq('epoca_id',epocaId),'limpar conta');
+  toast('✅ Época '+nome+' limpa. Já podes importar de novo.');
+  await carregarTudo();
+}
+async function eliminarTudo(){
+  if(!confirm('⚠️ ELIMINAR TODOS OS DADOS?\n\nApaga atletas, inscrições, provas, resultados, multas e conta de TODAS as épocas.\nNão há volta atrás!')) return;
+  const conf = prompt('Para confirmar, escreve ELIMINAR:');
+  if(conf!=='ELIMINAR'){ toast('Cancelado.'); return; }
+  toast('💣 A eliminar todos os dados…');
+  const zero = '00000000-0000-0000-0000-000000000000';
+  // a ordem importa por causa das referências; provas apaga resultados em cascata
+  await sbErro(await sb.from('atl_provas').delete().neq('id',zero),'del provas');
+  await sbErro(await sb.from('atl_inscricoes').delete().neq('id',zero),'del inscricoes');
+  await sbErro(await sb.from('atl_multas').delete().neq('id',zero),'del multas');
+  await sbErro(await sb.from('atl_conta').delete().neq('id',zero),'del conta');
+  await sbErro(await sb.from('atl_atletas').delete().neq('id',zero),'del atletas');
+  toast('✅ Todos os dados eliminados. Base limpa para recomeçar.');
+  await carregarTudo();
+}
+
+/* ============================================================
+   BACKUP GOOGLE DRIVE / FICHEIRO
+============================================================ */
+const GOOGLE_CLIENT_ID = '853058400861-ih32rr8mhqah7b59tgv3tfjkme1s6plg.apps.googleusercontent.com';
+function estadoBackup(msg){ document.getElementById('estadoBackup').textContent = msg; }
+
+async function carregarConfig(){
+  try{
+    const r = await sb.from('atl_config').select('*').eq('chave','backup_email').maybeSingle();
+    if(!r.error && r.data) document.getElementById('cfg_email_backup').value = r.data.valor||'';
+  }catch(e){ console.warn('config', e); }
+}
+async function guardarEmailBackup(){
+  const email = document.getElementById('cfg_email_backup').value.trim();
+  await sbErro(await sb.from('atl_config').upsert({chave:'backup_email', valor:email},{onConflict:'chave'}),'guardar email');
+  toast('✅ Email de backup guardado.');
+}
+async function dadosCompletos(){
+  const t = {};
+  t.epocas = await sbErro(await sb.from('atl_epocas').select('*'),'bk epocas');
+  t.atletas = await sbErro(await sb.from('atl_atletas').select('*'),'bk atletas');
+  t.inscricoes = await sbErro(await sb.from('atl_inscricoes').select('*'),'bk ins');
+  t.provas = await sbErro(await sb.from('atl_provas').select('*'),'bk prv');
+  t.participacoes = await sbErro(await sb.from('atl_participacoes').select('*'),'bk par');
+  t.multas = await sbErro(await sb.from('atl_multas').select('*'),'bk mul');
+  t.conta = await sbErro(await sb.from('atl_conta').select('*'),'bk cnt');
+  return {app:'atletismo-arca', versao:1, data:new Date().toISOString(), tabelas:t};
+}
+function nomeBackup(){
+  const d = new Date();
+  const p = n => String(n).padStart(2,'0');
+  return 'atletismo_backup_'+d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'_'+p(d.getHours())+p(d.getMinutes())+'.json';
+}
+async function backupLocal(){
+  estadoBackup('A preparar o ficheiro…');
+  const dados = await dadosCompletos();
+  const blob = new Blob([JSON.stringify(dados)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = nomeBackup();
+  a.click();
+  URL.revokeObjectURL(a.href);
+  estadoBackup('✅ Ficheiro descarregado: '+a.download);
+}
+function pedirTokenGoogle(){
+  return new Promise((resolve, reject)=>{
+    if(typeof google==='undefined' || !google.accounts){ reject(new Error('Google ainda a carregar — tenta outra vez em 2 segundos.')); return; }
+    const email = document.getElementById('cfg_email_backup').value.trim();
+    const tc = google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_CLIENT_ID,
+      scope: 'https://www.googleapis.com/auth/drive.file',
+      hint: email || undefined,
+      callback: resp => resp.access_token ? resolve(resp.access_token) : reject(new Error('Autorização recusada.'))
+    });
+    tc.requestAccessToken();
+  });
+}
+async function backupDrive(){
+  try{
+    estadoBackup('A pedir autorização ao Google…');
+    const token = await pedirTokenGoogle();
+    estadoBackup('A preparar os dados…');
+    const dados = await dadosCompletos();
+    const nome = nomeBackup();
+    const metadata = {name:nome, mimeType:'application/json'};
+    const limite = '-------314159265358979323846';
+    const corpo =
+      '--'+limite+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+
+      JSON.stringify(metadata)+'\r\n'+
+      '--'+limite+'\r\nContent-Type: application/json\r\n\r\n'+
+      JSON.stringify(dados)+'\r\n'+
+      '--'+limite+'--';
+    estadoBackup('A enviar para o Google Drive…');
+    const r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+token,'Content-Type':'multipart/related; boundary='+limite},
+      body: corpo
+    });
+    if(!r.ok) throw new Error('Drive respondeu '+r.status);
+    estadoBackup('✅ Backup gravado no Google Drive: '+nome);
+    toast('☁️ Backup no Drive concluído!');
+  }catch(e){
+    console.error(e);
+    estadoBackup('❌ '+(e.message||e));
+    toast('❌ Erro no backup — vê a mensagem em baixo.');
+  }
+}
+async function restaurarBackup(ficheiro){
+  if(!ficheiro) return;
+  try{
+    const dados = JSON.parse(await ficheiro.text());
+    if(!dados.tabelas || dados.app!=='atletismo-arca'){ toast('❌ Ficheiro de backup inválido.'); return; }
+    const t = dados.tabelas;
+    if(!confirm('Restaurar backup de '+fmtData(String(dados.data).slice(0,10))+'?\n\nATENÇÃO: substitui TODOS os dados atuais pelos do backup.')) return;
+    const conf = prompt('Para confirmar, escreve RESTAURAR:');
+    if(conf!=='RESTAURAR'){ toast('Cancelado.'); return; }
+    estadoBackup('A apagar dados atuais…');
+    const zero = '00000000-0000-0000-0000-000000000000';
+    await sbErro(await sb.from('atl_provas').delete().neq('id',zero),'rst del prv');
+    await sbErro(await sb.from('atl_inscricoes').delete().neq('id',zero),'rst del ins');
+    await sbErro(await sb.from('atl_multas').delete().neq('id',zero),'rst del mul');
+    await sbErro(await sb.from('atl_conta').delete().neq('id',zero),'rst del cnt');
+    await sbErro(await sb.from('atl_atletas').delete().neq('id',zero),'rst del atl');
+    estadoBackup('A repor dados do backup…');
+    async function inserir(tabela, linhas){
+      if(!linhas || !linhas.length) return;
+      for(let i=0;i<linhas.length;i+=200){
+        await sbErro(await sb.from(tabela).upsert(linhas.slice(i,i+200),{onConflict:'id'}),'rst '+tabela);
+      }
+    }
+    await inserir('atl_epocas', t.epocas);
+    await inserir('atl_atletas', t.atletas);
+    await inserir('atl_inscricoes', t.inscricoes);
+    await inserir('atl_provas', t.provas);
+    await inserir('atl_participacoes', t.participacoes);
+    await inserir('atl_multas', t.multas);
+    await inserir('atl_conta', t.conta);
+    estadoBackup('✅ Backup restaurado com sucesso!');
+    toast('✅ Dados restaurados.');
+    document.getElementById('ficheiroRestauro').value='';
+    epocaAtual = null;
+    await carregarEpocas();
+    await carregarTudo();
+  }catch(e){
+    console.error(e);
+    estadoBackup('❌ '+(e.message||e));
+    toast('❌ Erro ao restaurar.');
+  }
 }
 
 /* ============================================================
