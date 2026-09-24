@@ -488,7 +488,8 @@
       <li><b>+ Novo contacto</b> – nome (ex.: Contabilista), nº de WhatsApp e email.</li>
       <li><b>Editar</b> – muda o número ou o email quando for preciso. <b>Apagar</b> – remove o contacto.</li>
       <li><b>★ Principal</b> – o contacto que aparece escolhido por defeito no relatório.</li>
-      <li>Os contactos ficam guardados no Supabase: são os mesmos no telemóvel e no computador.</li></ul>`],
+      <li>Os contactos ficam guardados no Supabase: são os mesmos no telemóvel e no computador.</li></ul>
+      <p><b>Pessoas com acesso:</b> em <b>+ Dar acesso a uma pessoa</b> escreva o nome, o email e uma password criada por si – a pessoa passa logo a poder entrar na app com esse email e essa password. Pode <b>mudar a password</b> ou <b>remover o acesso</b> a qualquer momento. Se o email já tiver conta na ARCA (ex.: backoffice do site), só é dado o acesso e a pessoa usa a password que já tem.</p>`],
     ['excel', 'Excel (exportar e importar)', `
       <ul><li><b>Menu → Excel</b> descarrega o ano no mesmo formato da folha original (uma folha por trimestre).</li>
       <li><b>Menu → Importar Excel</b> acrescenta faturas de uma folha com as mesmas colunas. As que já existem são ignoradas automaticamente; a app mostra quantas vai acrescentar antes de gravar.</li></ul>`],
@@ -789,4 +790,72 @@
   };
   $('#fab').onclick = () => abrirForm(null);
   if (typeof TODAS !== 'undefined' && TODAS.length) guardarCache();
+
+  /* ---------- DEFINIÇÕES: pessoas com acesso à app ---------- */
+  const cssAc = document.createElement('style');
+  cssAc.textContent = `
+  .ac-sep{border:0;border-top:2px dashed var(--line);margin:22px 0 14px}
+  .ac{background:#fff;border:1px solid var(--line);border-left:6px solid var(--arca);border-radius:var(--r-s);padding:12px 14px;margin-bottom:8px}
+  .ac.eu{border-left-color:var(--t2)}
+  .ac b{display:block;word-break:break-all}
+  .ac small{display:block;color:var(--ink2);font-size:.84rem;margin-top:2px}
+  .ac .linha-btns{margin-top:10px}
+  .pw-linha{display:flex;gap:8px}
+  .pw-linha input{flex:1}
+  .pw-linha button{flex:none;border:1.5px solid var(--line);background:#fff;border-radius:var(--r-s);padding:0 12px;font-weight:700}`;
+  document.head.appendChild(cssAc);
+  let ACESSOS = [], FORM_AC = false, EU = '';
+  async function carregarAcessos() {
+    const [{ data }, u] = await Promise.all([sb.rpc('faturas_utilizadores'), sb.auth.getUser()]);
+    ACESSOS = data || []; EU = (u.data.user?.email || '').toLowerCase();
+  }
+  const dataCurta = d => d ? new Date(d).toLocaleString('pt-PT', { dateStyle: 'short', timeStyle: 'short' }) : 'nunca';
+  function pintarAcessos() {
+    const box = document.createElement('div');
+    box.id = 'ac-box';
+    box.innerHTML = `<hr class="ac-sep"><p class="def-sub">Pessoas com acesso à app</p>
+      ${FORM_AC ? `<div class="ct-form">
+        <label class="fld"><span>Nome</span><input id="ac-nome" placeholder="Ex.: Tesoureiro"></label>
+        <label class="fld"><span>Email (é com este email que a pessoa entra)</span><input id="ac-email" type="email" autocomplete="off"></label>
+        <label class="fld"><span>Password criada por si (mínimo 8 caracteres)</span><span class="pw-linha"><input id="ac-pass" type="password" autocomplete="new-password"><button type="button" id="ac-ver">Ver</button></span></label>
+        <p class="meta" style="margin:-4px 0 12px">Se o email já tiver conta na ARCA (por exemplo, do backoffice do site), só é dado o acesso: a pessoa entra com a password que já usa.</p>
+        <div class="acoes" style="margin-bottom:10px"><button class="btn ghost" id="ac-cancel">Cancelar</button><button class="btn" id="ac-save">Dar acesso</button></div>
+      </div>` : `<button class="btn full" id="ac-novo" style="margin-bottom:12px">+ Dar acesso a uma pessoa</button>`}
+      ${ACESSOS.map(a => { const eu = a.email.toLowerCase() === EU; return `<div class="ac ${eu ? 'eu' : ''}"><b>${esc(a.nome || a.email)}${eu ? ' (você)' : ''}</b>
+        <small>${esc(a.email)}</small>
+        <small>${a.tem_conta ? 'Último acesso: ' + dataCurta(a.ultimo_acesso) : 'Ainda sem conta criada'}</small>
+        <div class="linha-btns">${a.pode_mudar_password && a.tem_conta ? `<button class="btn ghost small" data-acpw="${esc(a.email)}">Mudar password</button>` : ''}${eu ? '' : `<button class="btn ghost small" data-acdel="${esc(a.email)}" style="color:var(--bad)">Remover acesso</button>`}</div></div>`; }).join('')}`;
+    const velho = $('#ac-box'); if (velho) velho.remove();
+    $('#def-corpo').appendChild(box);
+    const nv = $('#ac-novo'); if (nv) nv.onclick = () => { FORM_AC = true; pintarDef(); setTimeout(() => { const n = $('#ac-nome'); if (n) { n.scrollIntoView({ block: 'center' }); n.focus(); } }, 60); };
+    const cc = $('#ac-cancel'); if (cc) cc.onclick = () => { FORM_AC = false; pintarDef(); };
+    const vr = $('#ac-ver'); if (vr) vr.onclick = () => { const p = $('#ac-pass'); p.type = p.type === 'password' ? 'text' : 'password'; vr.textContent = p.type === 'password' ? 'Ver' : 'Ocultar'; };
+    const sv = $('#ac-save'); if (sv) sv.onclick = async () => {
+      const nome = $('#ac-nome').value.trim(), email = $('#ac-email').value.trim().toLowerCase(), pass = $('#ac-pass').value;
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast('Escreva um email válido.');
+      if (ACESSOS.some(a => a.email.toLowerCase() === email)) return toast('Esta pessoa já tem acesso.');
+      sv.disabled = true;
+      const { data, error } = await sb.rpc('faturas_dar_acesso', { p_email: email, p_nome: nome, p_password: pass });
+      sv.disabled = false;
+      if (error) return toast('Não foi possível: ' + error.message, 6000);
+      toast(data === 'criado' ? `Acesso criado. ${email} já pode entrar com a password que escolheu.` : `Acesso dado. ${email} já tinha conta e entra com a password que já usa.`, 6000);
+      FORM_AC = false; await carregarAcessos(); pintarDef();
+    };
+    $('#def-corpo').querySelectorAll('[data-acpw]').forEach(b => b.onclick = async () => {
+      const p = prompt(`Nova password para ${b.dataset.acpw} (mínimo 8 caracteres):`); if (!p) return;
+      if (p.length < 8) return toast('A password tem de ter pelo menos 8 caracteres.');
+      const { error } = await sb.rpc('faturas_mudar_password', { p_email: b.dataset.acpw, p_password: p });
+      toast(error ? 'Não foi possível: ' + error.message : 'Password alterada.', 5000);
+    });
+    $('#def-corpo').querySelectorAll('[data-acdel]').forEach(b => b.onclick = async () => {
+      if (!confirm(`Retirar o acesso de ${b.dataset.acdel} à app das faturas?`)) return;
+      const { error } = await sb.rpc('faturas_remover_acesso', { p_email: b.dataset.acdel });
+      if (error) return toast('Não foi possível: ' + error.message, 5000);
+      toast('Acesso removido.'); await carregarAcessos(); pintarDef();
+    });
+  }
+  const pintarDefOriginal = pintarDef;
+  pintarDef = function () { pintarDefOriginal(); pintarAcessos(); };
+  const abrirDefOriginal = window.abrirDefinicoes;
+  window.abrirDefinicoes = async function () { FORM_AC = false; await carregarAcessos(); return abrirDefOriginal(); };
 })();
