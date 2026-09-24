@@ -1,0 +1,18 @@
+{
+  "id": "faturas.html",
+  "name": "Faturas ARCA d'Ajuda",
+  "short_name": "Faturas ARCA",
+  "description": "Registo de faturas e despesas da ARCA d'Ajuda",
+  "lang": "pt-PT",
+  "start_url": "faturas.html",
+  "scope": "faturas",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F3F6FA",
+  "theme_color": "#1E4FB8",
+  "icons": [
+    { "src": "faturas-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "faturas-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "faturas-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
