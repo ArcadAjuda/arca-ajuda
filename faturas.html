@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="UTF-8">
+<script>
+/* Atualizações remotas: se existir uma versão mais recente guardada no Supabase (tabela app_ficheiros), usa-a. */
+(function () {
+  if (window.__FATURAS_REMOTO) return;
+  try {
+    var x = new XMLHttpRequest();
+    x.open('GET', 'https://yfsyifypsrqnwkqkfrnm.supabase.co/rest/v1/app_ficheiros?select=nome,conteudo&nome=in.(faturas.html,faturas-relatorio.js)', false);
+    x.setRequestHeader('apikey', 'sb_publishable_AkzlMeHlYHDyl0HzeC7_qg__j_Y6C9W');
+    var m = null;
+    try {
+      x.send();
+      if (x.status === 200) { m = {}; JSON.parse(x.responseText).forEach(function (r) { m[r.nome] = r.conteudo; }); try { localStorage.setItem('faturas_codigo', JSON.stringify(m)); } catch (e) {} }
+    } catch (e) {}
+    if (!m) { try { m = JSON.parse(localStorage.getItem('faturas_codigo') || 'null'); } catch (e) {} }
+    if (!m) return;
+    if (m['faturas-relatorio.js']) window.__FATURAS_JS_REMOTO = m['faturas-relatorio.js'];
+    if (m['faturas.html']) {
+      var h = m['faturas.html'];
+      window.__FATURAS_REMOTO = true;
+      document.write('<plaintext style="display:none">'); /* ignora o resto deste ficheiro */
+      window.addEventListener('load', function () { setTimeout(function () { document.open(); document.write(h); document.close(); }, 0); });
+    }
+  } catch (e) { /* sem ligação: usa a versão deste ficheiro */ }
+})();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Faturas ARCA d'Ajuda</title>
+<meta name="theme-color" content="#1E4FB8">
+<link rel="manifest" href="faturas-manifest.json">
+<link rel="icon" href="faturas-icon-192.png">
+<link rel="apple-touch-icon" href="faturas-icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+:root{
+  --ink:#16213E; --ink2:#4A5675; --line:#DCE3EE; --paper:#F3F6FA; --card:#FFFFFF;
+  --arca:#1E4FB8; --arca-d:#163B8C;
+  --t1:#12A4D9; --t2:#22B573; --t3:#F5A623; --t4:#E6457A;
+  --ok:#139A5B; --warn:#C77800; --bad:#D13A5C;
+  --r-s:8px; --r-m:14px; --r-l:22px;
+  --disp:'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+  --body:'Figtree', 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font-family:var(--body);color:var(--ink);background:var(--paper);font-size:15px;line-height:1.45;-webkit-tap-highlight-color:transparent}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--t3);outline-offset:2px}
+.hidden{display:none!important}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ---------- Login ---------- */
+#login{min-height:100%;display:flex;flex-direction:column;justify-content:center;padding:calc(24px + env(safe-area-inset-top)) 22px 24px;background:
+  linear-gradient(var(--t1) 0 25%, var(--t2) 25% 50%, var(--t3) 50% 75%, var(--t4) 75% 100%) left/10px 100% no-repeat, var(--paper)}
+.login-box{max-width:380px;width:100%;margin:0 auto}
+.login-box h1{font-family:var(--disp);font-weight:800;font-size:2.4rem;line-height:1.02;margin:0 0 6px;letter-spacing:-.02em}
+.login-box p.sub{color:var(--ink2);margin:0 0 26px}
+.fld{display:block;margin-bottom:14px}
+.fld span{display:block;font-weight:600;font-size:.86rem;margin-bottom:5px;color:var(--ink2)}
+.fld input,.fld select,.fld textarea{width:100%;padding:12px 13px;border:1.5px solid var(--line);border-radius:var(--r-s);background:#fff;font-size:16px}
+.fld input:focus,.fld select:focus,.fld textarea:focus{border-color:var(--arca);outline:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:var(--r-s);padding:12px 18px;font-weight:700;background:var(--arca);color:#fff;min-height:46px}
+.btn:active{transform:translateY(1px)}
+.btn.full{width:100%}
+.btn.ghost{background:transparent;color:var(--arca);border:1.5px solid var(--line)}
+.btn.red{background:var(--bad)}
+.btn.small{min-height:36px;padding:7px 12px;font-size:.9rem}
+.btn[disabled]{opacity:.55}
+.link{background:none;border:0;color:var(--arca);font-weight:600;padding:10px 0;text-decoration:underline;text-underline-offset:3px}
+.msg{padding:11px 13px;border-radius:var(--r-s);margin:0 0 14px;font-size:.93rem}
+.msg.err{background:#FDE8EE;color:#8E1D3A}
+.msg.ok{background:#E3F6EC;color:#0D6B3F}
+
+/* ---------- App shell ---------- */
+#app{min-height:100%;padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+body{overflow-x:hidden}
+header.top{position:sticky;top:0;z-index:20;background:var(--arca);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;gap:10px}
+header.top h1{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--disp);font-weight:800;font-size:1.25rem;margin:0;flex:1;letter-spacing:-.01em}
+header.top select{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:var(--r-s);padding:6px 8px;font-weight:700}
+header.top select option{color:var(--ink)}
+.chips-sync{display:flex;gap:6px}
+.sync{font-size:.74rem;font-weight:700;padding:4px 8px;border-radius:99px;background:rgba(255,255,255,.16);border:0;color:#fff;white-space:nowrap}
+.sync.ok{background:#DDF7EA;color:#0D6B3F}
+.sync.warn{background:#FFF1D6;color:#7A4A00}
+.sync.bad{background:#FFE0E8;color:#8E1D3A}
+.bands{height:5px;background:linear-gradient(90deg,var(--t1) 0 25%,var(--t2) 25% 50%,var(--t3) 50% 75%,var(--t4) 75%)}
+main{max-width:760px;margin:0 auto;padding:16px 16px 90px}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;background:#fff;border-top:1px solid var(--line);display:flex;padding:6px 6px calc(6px + env(safe-area-inset-bottom))}
+nav.tabs button{flex:1;background:none;border:0;padding:6px 2px;border-radius:var(--r-s);font-size:.78rem;font-weight:700;color:var(--ink2);display:flex;flex-direction:column;align-items:center;gap:2px}
+nav.tabs button svg{width:24px;height:24px}
+nav.tabs button[aria-selected=true]{color:var(--arca);background:#E9EFFB}
+
+/* ---------- Painel ---------- */
+.hero{margin:4px 0 18px}
+.hero .lbl{color:var(--ink2);font-weight:600;font-size:.9rem}
+.hero .big{font-family:var(--disp);font-weight:800;font-size:clamp(2.3rem,10vw,3.4rem);line-height:1;letter-spacing:-.03em;margin:4px 0 14px}
+.fita{display:flex;height:74px;border-radius:var(--r-m);overflow:hidden;gap:3px;background:var(--paper)}
+.fita button{border:0;color:#fff;text-align:left;padding:8px;min-width:34px;display:flex;align-items:flex-end;transition:flex-grow .5s ease;overflow:hidden}
+.fita button small{font-weight:800;font-size:.78rem;white-space:nowrap}
+.fita .q1{background:var(--t1)}.fita .q2{background:var(--t2)}.fita .q3{background:var(--t3);color:#3A2600}.fita .q4{background:var(--t4)}
+.fita-legenda{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:8px}
+.fita-legenda button{all:unset;cursor:pointer;border-top:4px solid var(--c);padding-top:5px}
+.fita-legenda button:focus-visible{outline:3px solid var(--t3)}
+.fita-legenda small{display:block;font-size:.74rem;color:var(--ink2);font-weight:700}
+.fita-legenda b{font-family:var(--disp);font-size:.98rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0}
+.kpi{background:var(--card);border-radius:var(--r-m);padding:12px;border:1px solid var(--line)}
+.kpi b{display:block;font-family:var(--disp);font-size:1.4rem;line-height:1.1}
+.kpi span{font-size:.8rem;color:var(--ink2);font-weight:600}
+.kpi.alert b{color:var(--bad)}
+section.bloco{background:var(--card);border:1px solid var(--line);border-radius:var(--r-m);padding:16px;margin-bottom:14px}
+section.bloco h2{font-family:var(--disp);font-size:1.12rem;margin:0 0 12px;font-weight:700}
+.meses{display:flex;align-items:flex-end;gap:5px;height:130px}
+.meses div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px}
+.meses i{display:block;width:100%;border-radius:5px 5px 2px 2px;min-height:2px}
+.meses span{font-size:.68rem;color:var(--ink2);font-weight:700}
+.barras .linha{display:grid;grid-template-columns:1fr auto;gap:2px 10px;margin-bottom:10px;font-size:.9rem}
+.barras .linha .n{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.barras .linha .v{font-weight:700;font-variant-numeric:tabular-nums}
+.barras .linha .b{grid-column:1/-1;height:8px;background:var(--paper);border-radius:99px;overflow:hidden}
+.barras .linha .b i{display:block;height:100%;border-radius:99px}
+.barras button.linha{all:unset;display:grid;grid-template-columns:1fr auto;gap:2px 10px;margin-bottom:10px;font-size:.9rem;width:100%;cursor:pointer;box-sizing:border-box}
+.barras button.linha:focus-visible{outline:3px solid var(--t3);outline-offset:2px}
+
+/* ---------- Lista ---------- */
+.trims{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px;scrollbar-width:none}
+.trims button{flex:none;border:2px solid var(--line);background:#fff;border-radius:99px;padding:7px 14px;font-weight:700;font-size:.88rem}
+.trims button[aria-pressed=true]{color:#fff;border-color:transparent;background:var(--c,var(--ink))}
+.pesq{display:flex;gap:8px;margin-bottom:10px}
+.pesq>*{min-width:0}
+.pesq input{flex:1;padding:11px 12px;border:1.5px solid var(--line);border-radius:var(--r-s);font-size:16px;background:#fff}
+.pesq select{max-width:40%;padding:10px 8px;border:1.5px solid var(--line);border-radius:var(--r-s);background:#fff}
+.resumo{display:flex;justify-content:space-between;align-items:baseline;margin:6px 2px 10px;font-size:.9rem;color:var(--ink2);font-weight:600}
+.resumo b{font-family:var(--disp);font-size:1.15rem;color:var(--ink)}
+.fatura{display:grid;grid-template-columns:6px 1fr auto;gap:0 12px;background:var(--card);border:1px solid var(--line);border-radius:var(--r-s);margin-bottom:8px;overflow:hidden;width:100%;text-align:left;padding:0}
+.fatura .cor{background:var(--dc)}
+.fatura .mid{padding:10px 0;min-width:0;display:block}
+.fatura .mid>span{display:block}
+.fatura .forn{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fatura .det{font-size:.84rem;color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fatura .dir{padding:10px 12px 10px 0;min-width:0;max-width:40vw;text-align:right;display:flex;flex-direction:column;justify-content:space-between;gap:4px}
+.fatura .val{font-family:var(--disp);font-weight:700;font-size:1.05rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tag{display:inline-block;font-size:.7rem;font-weight:800;padding:2px 6px;border-radius:5px;color:#fff;background:var(--dc);margin-right:6px;vertical-align:1px}
+.pg{font-size:.72rem;font-weight:700;white-space:nowrap}
+.pg.ok{color:var(--ok)}.pg.obs{color:var(--ink2);max-width:120px;overflow:hidden;text-overflow:ellipsis}.pg.no{color:var(--bad)}
+.vazio{text-align:center;color:var(--ink2);padding:40px 16px}
+.fab{position:fixed;right:18px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:25;width:60px;height:60px;border-radius:20px;border:0;background:var(--t4);color:#fff;box-shadow:0 6px 18px rgba(230,69,122,.4);display:flex;align-items:center;justify-content:center}
+.fab svg{width:30px;height:30px}
+
+/* ---------- Formulário (folha) ---------- */
+.sheet{position:fixed;inset:0;z-index:50;background:rgba(22,33,62,.45);display:flex;align-items:flex-end;justify-content:center}
+.sheet .pane{background:var(--paper);width:100%;max-width:640px;max-height:94%;overflow:auto;border-radius:var(--r-l) var(--r-l) 0 0;padding:0 18px calc(18px + env(safe-area-inset-bottom));animation:sobe .22s ease-out}
+@keyframes sobe{from{transform:translateY(30px);opacity:.6}to{transform:none;opacity:1}}
+.pane-head{position:sticky;top:0;background:var(--paper);display:flex;align-items:center;gap:10px;padding:16px 0 10px;z-index:2}
+.pane-head h2{flex:1;margin:0;font-family:var(--disp);font-size:1.3rem}
+.x{border:0;background:#fff;border-radius:99px;width:40px;height:40px;font-size:1.3rem;border:1px solid var(--line)}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 12px}
+.grid2>*{min-width:0}
+.fld input[type=date]{min-width:0;-webkit-appearance:none;appearance:none;min-height:48px}
+.trim-pick{display:flex;gap:6px;margin-bottom:14px}
+.trim-pick button{flex:1;border:2px solid var(--line);background:#fff;border-radius:var(--r-s);padding:9px 0;font-weight:800}
+.trim-pick button[aria-pressed=true]{background:var(--c);border-color:transparent;color:#fff}
+.hint{font-size:.78rem;color:var(--warn);font-weight:600;margin-top:4px}
+.acoes{display:flex;gap:10px;margin-top:8px}
+.acoes .btn{flex:1}
+.pag-box{background:#fff;border:1px solid var(--line);border-radius:var(--r-s);padding:12px 12px 0;margin-bottom:14px}
+.pag-box h3{margin:0 0 10px;font-size:.95rem}
+.meta{font-size:.78rem;color:var(--ink2);margin-top:12px}
+
+/* ---------- Mais ---------- */
+.opcao{display:flex;gap:12px;align-items:flex-start}
+.opcao p{margin:2px 0 10px;color:var(--ink2);font-size:.9rem}
+.linha-btns{display:flex;flex-wrap:wrap;gap:8px}
+.toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:#fff;padding:11px 16px;border-radius:var(--r-s);font-weight:600;z-index:60;max-width:90%;font-size:.92rem}
+.loading{display:flex;align-items:center;justify-content:center;min-height:60vh;color:var(--ink2);font-weight:600}
+@media (min-width:700px){
+  .kpis{grid-template-columns:repeat(3,1fr)}
+  .sheet{align-items:center}
+  .sheet .pane{border-radius:var(--r-l);max-height:90%}
+}
+</style>
+</head>
+<body>
+
+<!-- ========== LOGIN ========== -->
+<div id="login" class="hidden">
+  <div class="login-box">
+    <h1>Faturas<br>ARCA d'Ajuda</h1>
+    <p class="sub" id="login-sub">Entre com o email e a password da associação.</p>
+    <div id="login-msg"></div>
+
+    <form id="f-login" autocomplete="on">
+      <label class="fld"><span>Email</span><input type="email" id="l-email" value="arcadajuda@gmail.com" autocomplete="username" required></label>
+      <label class="fld"><span>Password</span><input type="password" id="l-pass" autocomplete="current-password" required></label>
+      <button class="btn full" type="submit" id="b-entrar">Entrar</button>
+      <button class="link" type="button" id="b-esqueci">Esqueci-me da password</button>
+    </form>
+
+    <form id="f-nova" class="hidden">
+      <label class="fld"><span>Nova password (mínimo 8 caracteres)</span><input type="password" id="n-pass1" minlength="8" autocomplete="new-password" required></label>
+      <label class="fld"><span>Repetir nova password</span><input type="password" id="n-pass2" minlength="8" autocomplete="new-password" required></label>
+      <button class="btn full" type="submit">Guardar nova password</button>
+    </form>
+  </div>
+</div>
+
+<!-- ========== APP ========== -->
+<div id="app" class="hidden">
+  <header class="top">
+    <h1>Faturas</h1>
+    <div class="chips-sync">
+      <button class="sync" id="st-sb" title="Estado da base de dados">Dados</button>
+      <button class="sync" id="st-dr" title="Estado da cópia no Google Drive">Drive</button>
+    </div>
+    <select id="sel-ano" aria-label="Ano"></select>
+  </header>
+  <div class="bands"></div>
+
+  <main>
+    <div id="v-painel"></div>
+    <div id="v-lista" class="hidden">
+      <div class="trims" id="trims"></div>
+      <div class="pesq">
+        <input type="search" id="q" placeholder="Pesquisar fornecedor, NIF, nº, descrição…" aria-label="Pesquisar">
+        <select id="f-tipo" aria-label="Tipo de documento"></select>
+      </div>
+      <div class="pesq">
+        <select id="f-desp" aria-label="Tipo de despesa" style="max-width:none;flex:1"></select>
+        <select id="f-pag" aria-label="Pagamento" style="max-width:none;flex:1">
+          <option value="">Todos os pagamentos</option>
+          <option value="sem">Sem pagamento registado</option>
+          <option value="com">Com pagamento registado</option>
+        </select>
+      </div>
+      <div class="resumo"><span id="res-n"></span><b id="res-v"></b></div>
+      <div id="lista"></div>
+    </div>
+    <div id="v-fornec" class="hidden"></div>
+    <div id="v-mais" class="hidden"></div>
+  </main>
+
+  <button class="fab" id="fab" aria-label="Nova fatura">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+  </button>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-v="painel" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Painel</button>
+    <button role="tab" data-v="lista" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>Faturas</button>
+    <button role="tab" data-v="fornec" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V9l7-5 7 5v12"/><path d="M9 21v-6h6v6"/></svg>Fornecedores</button>
+    <button role="tab" data-v="mais" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Menu</button>
+  </nav>
+</div>
+
+<div id="boot" class="loading">A abrir…</div>
+
+<!-- ========== FORMULÁRIO ========== -->
+<div class="sheet hidden" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-title">
+  <div class="pane">
+    <div class="pane-head"><h2 id="sh-title">Nova fatura</h2><button class="x" id="sh-x" aria-label="Fechar">×</button></div>
+    <form id="f-fat" autocomplete="off">
+      <div class="trim-pick" id="trim-pick"></div>
+      <div class="grid2">
+        <label class="fld"><span>Tipo de documento</span><input id="c-tipo_doc" list="dl-tipo" placeholder="FT, FR, FS…"></label>
+        <label class="fld"><span>Nº do documento</span><input id="c-numero_doc"></label>
+        <label class="fld"><span>Data do documento</span><input type="date" id="c-data_doc"></label>
+        <label class="fld"><span>Data de vencimento</span><input type="date" id="c-data_vencimento"></label>
+        <label class="fld"><span>NIF do fornecedor</span><input id="c-nif_fornecedor" inputmode="numeric" list="dl-nif"><div class="hint hidden" id="nif-hint">NIF com formato invulgar</div></label>
+        <label class="fld"><span>Valor (€)</span><input id="c-valor_doc" inputmode="decimal" placeholder="0,00"></label>
+      </div>
+      <label class="fld"><span>Nome do fornecedor</span><input id="c-nome_fornecedor" list="dl-forn"></label>
+      <label class="fld"><span>Tipo de despesa</span><input id="c-tipo_despesa" list="dl-desp"></label>
+      <label class="fld"><span>Descrição</span><input id="c-descricao" list="dl-descr"></label>
+      <div class="pag-box">
+        <h3>Pagamento</h3>
+        <div class="grid2">
+          <label class="fld"><span>Data de pagamento</span><input type="date" id="c-data_pagamento"></label>
+          <label class="fld"><span>Forma / observação</span><input id="c-obs_pagamento" list="dl-obs" placeholder="Débito direto, numerário…"></label>
+        </div>
+      </div>
+      <label class="fld"><span>Notas</span><textarea id="c-notas" rows="2"></textarea></label>
+      <div class="acoes">
+        <button class="btn red hidden" type="button" id="b-apagar">Apagar</button>
+        <button class="btn" type="submit" id="b-guardar">Guardar</button>
+      </div>
+      <div class="meta" id="sh-meta"></div>
+    </form>
+  </div>
+</div>
+
+<datalist id="dl-tipo"></datalist><datalist id="dl-forn"></datalist><datalist id="dl-nif"></datalist>
+<datalist id="dl-desp"></datalist><datalist id="dl-descr"></datalist><datalist id="dl-obs"></datalist>
+<input type="file" id="file-imp" accept=".xlsx,.xls" class="hidden">
+
+<script>
+/* =========================================================
+   CONFIGURAÇÃO
+   ========================================================= */
+const SB_URL = 'https://yfsyifypsrqnwkqkfrnm.supabase.co';
+const SB_KEY = 'sb_publishable_AkzlMeHlYHDyl0HzeC7_qg__j_Y6C9W';
+const EMAIL_ARCA = 'arcadajuda@gmail.com';
+const G_CLIENT = '853058400861-ih32rr8mhqah7b59tgv3tfjkme1s6plg.apps.googleusercontent.com';
+const G_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+const DRIVE_PASTA = 'ARCA Faturas (cópia automática)';
+const TRIM_NOMES = ['janeiro a Março', 'Abril a Junho', 'Julho, Agosto e Setembro', 'Outubro a Dezembro'];
+const TRIM_CURTO = ['Jan–Mar', 'Abr–Jun', 'Jul–Set', 'Out–Dez'];
+const TRIM_COR = ['var(--t1)', 'var(--t2)', 'var(--t3)', 'var(--t4)'];
+const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const TIPOS_DOC = {
+  FT:['Fatura','#1E4FB8'], FR:['Fatura-recibo','#139A5B'], FS:['Fatura simplificada','#E08E0B'],
+  R:['Recibo','#7C4DDB'], REC:['Recibo','#7C4DDB'], RC:['Recibo','#7C4DDB'],
+  NC:['Nota de crédito','#D13A5C'], DEV:['Devolução','#D13A5C'],
+  PE:['Pagamento ao Estado','#0E8E8C'], RV:['Recibo de vencimento','#EF6C22'],
+  CA:['Cartão alimentação','#C43FC9'], FA:['Fatura (FA)','#51607A']
+};
+const corTipo = t => (TIPOS_DOC[(t||'').toUpperCase()]||[,'#8A95AA'])[1];
+const CAMPOS = ['tipo_doc','numero_doc','data_doc','data_vencimento','nif_fornecedor','nome_fornecedor','tipo_despesa','descricao','valor_doc','data_pagamento','obs_pagamento','notas'];
+
+let VEIO_RECUP = /type=recovery/.test(location.hash);
+const sb = supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'implicit' } });
+
+/* =========================================================
+   ESTADO
+   ========================================================= */
+let TODAS = [];            // todas as faturas (todos os anos)
+let ANO = new Date().getFullYear();
+let VISTA = 'painel';
+let FILTRO = { trim: 0, q: '', tipo: '', desp: '', pag: '' };
+let EDITAR = null;         // registo em edição
+let TRIM_FORM = 1, trimManual = false;
+let emRecuperacao = false;
+let deferredInstall = null;
+
+/* =========================================================
+   UTILITÁRIOS
+   ========================================================= */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const eur = v => (Number(v)||0).toLocaleString('pt-PT', { style:'currency', currency:'EUR' });
+const eurC = v => { const n = Number(v)||0; return n >= 10000 ? (n/1000).toLocaleString('pt-PT',{maximumFractionDigits:1})+' mil €' : eur(n); };
+const dPT = iso => iso ? iso.split('-').reverse().join('/') : '';
+const norm = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+const temPag = f => !!(f.data_pagamento || (f.obs_pagamento && f.obs_pagamento.trim()));
+function toast(t, ms = 2600){ const d = document.createElement('div'); d.className = 'toast'; d.textContent = t; d.setAttribute('role','status'); document.body.appendChild(d); setTimeout(() => d.remove(), ms); }
+function msgLogin(t, tipo = 'err'){ $('#login-msg').innerHTML = t ? `<div class="msg ${tipo}">${esc(t)}</div>` : ''; }
+function nifValido(n){
+  const s = String(n||'').replace(/\D/g,'');
+  if (s.length !== 9) return false;
+  let soma = 0; for (let i = 0; i < 8; i++) soma += (+s[i]) * (9 - i);
+  let c = 11 - (soma % 11); if (c >= 10) c = 0;
+  return c === +s[8];
+}
+function paraNumero(v){
+  if (v === '' || v == null) return null;
+  const n = parseFloat(String(v).replace(/\s|€/g,'').replace(/\.(?=\d{3}(\D|$))/g,'').replace(',','.'));
+  return isNaN(n) ? null : Math.round(n*100)/100;
+}
+
+/* =========================================================
+   AUTENTICAÇÃO
+   ========================================================= */
+sb.auth.onAuthStateChange((ev, sess) => {
+  if (ev === 'PASSWORD_RECOVERY') { emRecuperacao = true; mostrarNovaPassword(); }
+  if (ev === 'SIGNED_OUT') mostrarLogin();
+});
+
+function mostrarLogin(){
+  $('#boot').classList.add('hidden'); $('#app').classList.add('hidden'); $('#login').classList.remove('hidden');
+  $('#f-login').classList.remove('hidden'); $('#f-nova').classList.add('hidden');
+  $('#login-sub').textContent = 'Entre com o email e a password da associação.';
+}
+function mostrarNovaPassword(){
+  $('#boot').classList.add('hidden'); $('#app').classList.add('hidden'); $('#login').classList.remove('hidden');
+  $('#f-login').classList.add('hidden'); $('#f-nova').classList.remove('hidden');
+  $('#login-sub').textContent = 'Escolha uma nova password para entrar na aplicação.';
+  msgLogin('');
+}
+
+$('#f-login').addEventListener('submit', async e => {
+  e.preventDefault(); msgLogin('');
+  const b = $('#b-entrar'); b.disabled = true; b.textContent = 'A entrar…';
+  const { error } = await sb.auth.signInWithPassword({ email: $('#l-email').value.trim(), password: $('#l-pass').value });
+  b.disabled = false; b.textContent = 'Entrar';
+  if (error) { msgLogin(/invalid/i.test(error.message) ? 'Email ou password errados.' : 'Não foi possível entrar: ' + error.message); return; }
+  arrancar();
+});
+
+$('#b-esqueci').addEventListener('click', async () => {
+  const email = $('#l-email').value.trim() || EMAIL_ARCA;
+  if (!confirm(`Enviar um email para ${email} com o link para criar uma nova password?`)) return;
+  const destino = location.origin + location.pathname;
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: destino });
+  if (error) msgLogin('Não foi possível enviar o email: ' + error.message);
+  else msgLogin(`Email enviado para ${email}. Abra o link recebido neste aparelho para definir a nova password.`, 'ok');
+});
+
+$('#f-nova').addEventListener('submit', async e => {
+  e.preventDefault();
+  const p1 = $('#n-pass1').value, p2 = $('#n-pass2').value;
+  if (p1.length < 8) return msgLogin('A password tem de ter pelo menos 8 caracteres.');
+  if (p1 !== p2) return msgLogin('As duas passwords não são iguais.');
+  const { error } = await sb.auth.updateUser({ password: p1 });
+  if (error) return msgLogin('Não foi possível guardar: ' + error.message);
+  emRecuperacao = false; VEIO_RECUP = false; history.replaceState(null, '', location.pathname);
+  toast('Password alterada.'); arrancar();
+});
+
+async function arrancar(){
+  const { data: { session } } = await sb.auth.getSession();
+  if (emRecuperacao || VEIO_RECUP) { emRecuperacao = true; return mostrarNovaPassword(); }
+  if (!session) return mostrarLogin();
+  const { data: ok, error } = await sb.rpc('faturas_tem_acesso');
+  if (error || !ok) {
+    mostrarLogin();
+    msgLogin(`A conta ${session.user.email} não tem acesso a esta aplicação.`);
+    await sb.auth.signOut({ scope: 'local' });
+    return;
+  }
+  $('#login').classList.add('hidden'); $('#boot').classList.add('hidden'); $('#app').classList.remove('hidden');
+  await carregar();
+  driveIniciar();
+}
+
+/* =========================================================
+   DADOS (SUPABASE)
+   ========================================================= */
+function estadoSB(t, cls){ const b = $('#st-sb'); b.textContent = t; b.className = 'sync ' + (cls||''); }
+
+async function carregar(silencioso){
+  if (!silencioso) estadoSB('Dados…', 'warn');
+  const todas = []; let de = 0;
+  while (true) {
+    const { data, error } = await sb.from('faturas').select('*').order('ano').order('trimestre').order('ordem').order('criado_em').range(de, de + 999);
+    if (error) { estadoSB('Dados: erro', 'bad'); toast('Erro ao carregar: ' + error.message, 5000); return; }
+    todas.push(...data); if (data.length < 1000) break; de += 1000;
+  }
+  TODAS = todas;
+  estadoSB('Dados ✓', 'ok');
+  montarAnos(); montarListas(); render();
+}
+
+function doAno(){ return TODAS.filter(f => f.ano === ANO); }
+
+function montarAnos(){
+  const anos = new Set(TODAS.map(f => f.ano)); anos.add(new Date().getFullYear()); anos.add(ANO);
+  const s = $('#sel-ano');
+  s.innerHTML = [...anos].sort().map(a => `<option ${a===ANO?'selected':''}>${a}</option>`).join('');
+}
+$('#sel-ano').addEventListener('change', e => { ANO = +e.target.value; FILTRO.trim = 0; montarListas(); render(); });
+
+function unicos(campo, lista = TODAS){
+  const m = new Map();
+  lista.forEach(f => { const v = (f[campo]||'').trim(); if (v) { const k = norm(v); m.set(k, (m.get(k)||{v, n:0})); m.get(k).n++; } });
+  return [...m.values()].sort((a,b) => b.n - a.n).map(x => x.v);
+}
+function montarListas(){
+  const opt = arr => arr.map(v => `<option value="${esc(v)}">`).join('');
+  const tipos = [...new Set([...Object.keys(TIPOS_DOC), ...unicos('tipo_doc').map(t => t.toUpperCase())])];
+  $('#dl-tipo').innerHTML = tipos.map(t => `<option value="${esc(t)}">${esc((TIPOS_DOC[t]||[''])[0])}</option>`).join('');
+  $('#dl-forn').innerHTML = opt(unicos('nome_fornecedor'));
+  $('#dl-nif').innerHTML = opt(unicos('nif_fornecedor'));
+  $('#dl-desp').innerHTML = opt(unicos('tipo_despesa'));
+  $('#dl-descr').innerHTML = opt(unicos('descricao').slice(0, 300));
+  $('#dl-obs').innerHTML = opt(unicos('obs_pagamento').slice(0, 80));
+  const ano = doAno();
+  $('#f-tipo').innerHTML = '<option value="">Todos os tipos</option>' + [...new Set(ano.map(f => (f.tipo_doc||'').toUpperCase()).filter(Boolean))].sort().map(t => `<option ${FILTRO.tipo===t?'selected':''} value="${esc(t)}">${esc(t)}${TIPOS_DOC[t]?' – '+TIPOS_DOC[t][0]:''}</option>`).join('');
+  $('#f-desp').innerHTML = '<option value="">Todas as despesas</option>' + unicos('tipo_despesa', ano).sort((a,b)=>a.localeCompare(b,'pt')).map(t => `<option ${norm(FILTRO.desp)===norm(t)?'selected':''} value="${esc(t)}">${esc(t)}</option>`).join('');
+}
+
+async function guardarRegisto(reg, id){
+  estadoSB('A gravar…', 'warn');
+  let res;
+  if (id) res = await sb.from('faturas').update(reg).eq('id', id).select().single();
+  else res = await sb.from('faturas').insert(reg).select().single();
+  if (res.error) { estadoSB('Dados: erro', 'bad'); throw res.error; }
+  const i = TODAS.findIndex(f => f.id === res.data.id);
+  if (i >= 0) TODAS[i] = res.data; else TODAS.push(res.data);
+  estadoSB('Dados ✓', 'ok');
+  alterado();
+  return res.data;
+}
+async function apagarRegisto(id){
+  estadoSB('A apagar…', 'warn');
+  const { error } = await sb.from('faturas').delete().eq('id', id);
+  if (error) { estadoSB('Dados: erro', 'bad'); throw error; }
+  TODAS = TODAS.filter(f => f.id !== id);
+  estadoSB('Dados ✓', 'ok');
+  alterado();
+}
+function alterado(){ montarAnos(); montarListas(); render(); driveAgendar(); }
+
+/* =========================================================
+   VISTAS
+   ========================================================= */
+document.querySelectorAll('nav.tabs button').forEach(b => b.addEventListener('click', () => irPara(b.dataset.v)));
+function irPara(v){
+  VISTA = v;
+  document.querySelectorAll('nav.tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.v === v));
+  ['painel','lista','fornec','mais'].forEach(x => $('#v-'+x).classList.toggle('hidden', x !== v));
+  $('#fab').classList.toggle('hidden', v === 'mais');
+  render(); window.scrollTo(0, 0);
+}
+function render(){
+  if (VISTA === 'painel') renderPainel();
+  else if (VISTA === 'lista') renderLista();
+  else if (VISTA === 'fornec') renderFornec();
+  else renderMais();
+}
+
+/* ---------- Painel ---------- */
+function renderPainel(){
+  const ano = doAno();
+  const total = ano.reduce((s,f) => s + (+f.valor_doc||0), 0);
+  const porTrim = [1,2,3,4].map(t => ano.filter(f => f.trimestre === t).reduce((s,f) => s + (+f.valor_doc||0), 0));
+  const maxT = Math.max(...porTrim, 1);
+  const semPag = ano.filter(f => !temPag(f) && (+f.valor_doc||0) > 0);
+  const hoje = new Date().toISOString().slice(0,10);
+  const vencidas = semPag.filter(f => f.data_vencimento && f.data_vencimento < hoje);
+
+  const porMes = Array(12).fill(0);
+  ano.forEach(f => { if (f.data_doc && +f.data_doc.slice(0,4) === ANO) porMes[+f.data_doc.slice(5,7)-1] += (+f.valor_doc||0); });
+  const maxM = Math.max(...porMes, 1);
+
+  const agrupar = campo => {
+    const m = new Map();
+    ano.forEach(f => { const v = (f[campo]||'').trim(); if (!v) return; const k = norm(v); const o = m.get(k) || { nome: v, v: 0, n: 0 }; o.v += (+f.valor_doc||0); o.n++; m.set(k, o); });
+    return [...m.values()].sort((a,b) => b.v - a.v);
+  };
+  const desp = agrupar('tipo_despesa').slice(0, 8), dMax = desp[0]?.v || 1;
+  const forn = agrupar('nome_fornecedor').slice(0, 6), fMax = forn[0]?.v || 1;
+  const cores = ['var(--t1)','var(--t2)','var(--t3)','var(--t4)','var(--arca)','#7C4DDB','#0E8E8C','#EF6C22'];
+
+  $('#v-painel').innerHTML = `
+    <div class="hero">
+      <div class="lbl">Valor total dos documentos de ${ANO}</div>
+      <div class="big">${eur(total)}</div>
+      <div class="fita" role="group" aria-label="Valor por trimestre">
+        ${porTrim.map((v,i) => `<button class="q${i+1}" style="flex:${Math.max(v/maxT, .14)} 1 0" data-t="${i+1}" aria-label="${TRIM_CURTO[i]}: ${eur(v)}"><small>T${i+1}</small></button>`).join('')}
+      </div>
+      <div class="fita-legenda">${porTrim.map((v,i) => `<button data-t="${i+1}" style="--c:${TRIM_COR[i]}"><small>${TRIM_CURTO[i]}</small><b>${eurC(v)}</b></button>`).join('')}</div>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><b>${ano.length}</b><span>documentos</span></div>
+      <div class="kpi ${semPag.length?'alert':''}"><b>${semPag.length}</b><span>sem pagamento registado</span></div>
+      <div class="kpi ${vencidas.length?'alert':''}"><b>${vencidas.length}</b><span>já vencidos por pagar</span></div>
+    </div>
+    <section class="bloco">
+      <h2>Por mês (data do documento)</h2>
+      <div class="meses">${porMes.map((v,i) => `<div title="${MESES[i]}: ${eur(v)}"><i style="height:${Math.round(v/maxM*100)}%;background:${TRIM_COR[Math.floor(i/3)]}"></i><span>${MESES[i]}</span></div>`).join('')}</div>
+    </section>
+    <section class="bloco barras">
+      <h2>Tipos de despesa com mais valor</h2>
+      ${desp.length ? desp.map((d,i) => `<button class="linha" data-desp="${esc(d.nome)}"><span class="n">${esc(d.nome)} <small style="color:var(--ink2)">(${d.n})</small></span><span class="v">${eur(d.v)}</span><span class="b"><i style="width:${Math.max(d.v/dMax*100,2)}%;background:${cores[i%cores.length]}"></i></span></button>`).join('') : '<p class="vazio">Ainda não há faturas neste ano.</p>'}
+    </section>
+    <section class="bloco barras">
+      <h2>Fornecedores com mais valor</h2>
+      ${forn.map((d,i) => `<div class="linha"><span class="n">${esc(d.nome)}</span><span class="v">${eur(d.v)}</span><span class="b"><i style="width:${Math.max(d.v/fMax*100,2)}%;background:${cores[(i+2)%cores.length]}"></i></span></div>`).join('')}
+    </section>`;
+  $('#v-painel').querySelectorAll('.fita button, .fita-legenda button').forEach(b => b.onclick = () => { FILTRO = { trim:+b.dataset.t, q:'', tipo:'', desp:'', pag:'' }; limparFiltrosUI(); irPara('lista'); });
+  $('#v-painel').querySelectorAll('[data-desp]').forEach(b => b.onclick = () => { FILTRO = { trim:0, q:'', tipo:'', desp:b.dataset.desp, pag:'' }; limparFiltrosUI(); montarListas(); irPara('lista'); });
+}
+function limparFiltrosUI(){ $('#q').value = FILTRO.q; $('#f-pag').value = FILTRO.pag; montarListas(); }
+
+/* ---------- Lista ---------- */
+function filtradas(){
+  const q = norm(FILTRO.q);
+  return doAno().filter(f =>
+    (!FILTRO.trim || f.trimestre === FILTRO.trim) &&
+    (!FILTRO.tipo || (f.tipo_doc||'').toUpperCase() === FILTRO.tipo) &&
+    (!FILTRO.desp || norm(f.tipo_despesa) === norm(FILTRO.desp)) &&
+    (!FILTRO.pag || (FILTRO.pag === 'sem' ? !temPag(f) : temPag(f))) &&
+    (!q || norm([f.nome_fornecedor, f.nif_fornecedor, f.numero_doc, f.descricao, f.tipo_despesa, f.obs_pagamento, f.notas, f.tipo_doc, String(f.valor_doc??'').replace('.',',')].join(' ')).includes(q))
+  );
+}
+function renderLista(){
+  $('#trims').innerHTML = [0,1,2,3,4].map(t => `<button data-t="${t}" aria-pressed="${FILTRO.trim===t}" style="--c:${t?TRIM_COR[t-1]:'var(--ink)'}">${t ? TRIM_CURTO[t-1] : 'Todo o ano'}</button>`).join('');
+  $('#trims').querySelectorAll('button').forEach(b => b.onclick = () => { FILTRO.trim = +b.dataset.t; renderLista(); });
+  const lista = filtradas().sort((a,b) => (a.trimestre - b.trimestre) || ((a.ordem||0) - (b.ordem||0)) || String(a.criado_em).localeCompare(String(b.criado_em)));
+  $('#res-n').textContent = `${lista.length} ${lista.length === 1 ? 'documento' : 'documentos'}`;
+  $('#res-v').textContent = eur(lista.reduce((s,f) => s + (+f.valor_doc||0), 0));
+  if (!lista.length) { $('#lista').innerHTML = `<div class="vazio">Nenhuma fatura corresponde a estes filtros.<br><br><button class="btn ghost small" id="b-limpa">Limpar filtros</button></div>`; $('#b-limpa').onclick = () => { FILTRO = { trim:0,q:'',tipo:'',desp:'',pag:'' }; limparFiltrosUI(); renderLista(); }; return; }
+  const hoje = new Date().toISOString().slice(0,10);
+  $('#lista').innerHTML = lista.map(f => {
+    let pg;
+    if (f.data_pagamento) pg = `<span class="pg ok">Pago ${dPT(f.data_pagamento).slice(0,5)}</span>`;
+    else if (f.obs_pagamento) pg = `<span class="pg obs" title="${esc(f.obs_pagamento)}">${esc(f.obs_pagamento)}</span>`;
+    else pg = `<span class="pg no">${f.data_vencimento && f.data_vencimento < hoje ? 'Vencida' : 'Sem pagamento'}</span>`;
+    return `<button class="fatura" data-id="${f.id}" style="--dc:${corTipo(f.tipo_doc)}">
+      <span class="cor"></span>
+      <span class="mid">
+        <span class="forn">${esc(f.nome_fornecedor || '(sem fornecedor)')}</span>
+        <span class="det"><span class="tag">${esc(f.tipo_doc || '—')}</span>${esc(f.numero_doc || 's/ nº')} · ${dPT(f.data_doc) || 'sem data'}</span>
+        <span class="det">${esc([f.tipo_despesa, f.descricao].filter(Boolean).join(' – ') || '—')}${f.notas ? ' 📝' : ''}</span>
+      </span>
+      <span class="dir"><span class="val">${f.valor_doc == null ? '—' : eur(f.valor_doc)}</span>${pg}</span>
+    </button>`;
+  }).join('');
+  $('#lista').querySelectorAll('.fatura').forEach(b => b.onclick = () => abrirForm(TODAS.find(f => f.id === b.dataset.id)));
+}
+$('#q').addEventListener('input', e => { FILTRO.q = e.target.value; renderLista(); });
+$('#f-tipo').addEventListener('change', e => { FILTRO.tipo = e.target.value; renderLista(); });
+$('#f-desp').addEventListener('change', e => { FILTRO.desp = e.target.value; renderLista(); });
+$('#f-pag').addEventListener('change', e => { FILTRO.pag = e.target.value; renderLista(); });
+
+/* ---------- Fornecedores ---------- */
+function renderFornec(){
+  const m = new Map();
+  doAno().forEach(f => {
+    const nome = (f.nome_fornecedor||'').trim(); if (!nome) return;
+    const k = (f.nif_fornecedor||'').replace(/\D/g,'').slice(-9) || norm(nome);
+    const o = m.get(k) || { nome, nif: f.nif_fornecedor, v: 0, n: 0, semPag: 0 };
+    o.v += (+f.valor_doc||0); o.n++; if (!temPag(f)) o.semPag++; m.set(k, o);
+  });
+  const arr = [...m.values()].sort((a,b) => b.v - a.v);
+  $('#v-fornec').innerHTML = `<div class="resumo"><span>${arr.length} fornecedores em ${ANO}</span></div>` + arr.map(o =>
+    `<button class="fatura" data-q="${esc(o.nif || o.nome)}" style="--dc:var(--arca)"><span class="cor"></span>
+      <span class="mid"><span class="forn">${esc(o.nome)}</span><span class="det">NIF ${esc(o.nif || '—')} · ${o.n} ${o.n===1?'documento':'documentos'}</span></span>
+      <span class="dir"><span class="val">${eur(o.v)}</span>${o.semPag ? `<span class="pg no">${o.semPag} sem pagamento</span>` : '<span class="pg ok">tudo registado</span>'}</span></button>`).join('');
+  $('#v-fornec').querySelectorAll('[data-q]').forEach(b => b.onclick = () => { FILTRO = { trim:0, q:b.dataset.q, tipo:'', desp:'', pag:'' }; limparFiltrosUI(); irPara('lista'); });
+}
+
+/* ---------- Mais ---------- */
+function renderMais(){
+  const tok = driveTokenValido();
+  const ult = localStorage.getItem('faturas_drive_ultima');
+  $('#v-mais').innerHTML = `
+    <section class="bloco"><h2>Cópia no Google Drive</h2>
+      <p style="margin:0 0 10px;color:var(--ink2)">Depois de cada alteração, a app grava um Excel atualizado na pasta “${esc(DRIVE_PASTA)}” da conta ${EMAIL_ARCA}.</p>
+      <p style="margin:0 0 12px"><b>${tok ? 'Drive ligado.' : 'Drive por ligar.'}</b> ${ult ? 'Última cópia: ' + esc(ult) : 'Ainda sem cópias feitas neste aparelho.'}</p>
+      <div class="linha-btns"><button class="btn small" id="m-drive">${tok ? 'Gravar cópia agora' : 'Ligar Google Drive'}</button></div>
+    </section>
+    <section class="bloco"><h2>Excel</h2>
+      <p style="margin:0 0 12px;color:var(--ink2)">Exporta o ano ${ANO} no mesmo formato da folha original, com uma folha por trimestre.</p>
+      <div class="linha-btns"><button class="btn small" id="m-exp">Descarregar Excel ${ANO}</button><button class="btn ghost small" id="m-imp">Importar Excel</button></div>
+    </section>
+    <section class="bloco"><h2>Aplicação no telemóvel</h2>
+      <p style="margin:0 0 12px;color:var(--ink2)">Instala a app no ecrã principal do Android, com ícone próprio.</p>
+      <div class="linha-btns"><button class="btn small" id="m-inst" ${deferredInstall ? '' : 'disabled'}>${deferredInstall ? 'Instalar app' : 'Já instalada ou use o menu ⋮ → Instalar app'}</button></div>
+    </section>
+    <section class="bloco"><h2>Conta</h2>
+      <p style="margin:0 0 12px;color:var(--ink2)" id="m-user"></p>
+      <div class="linha-btns"><button class="btn ghost small" id="m-pass">Alterar password</button><button class="btn ghost small" id="m-rec">Recarregar dados</button><button class="btn red small" id="m-sair">Terminar sessão</button></div>
+    </section>`;
+  sb.auth.getUser().then(({ data }) => { const el = $('#m-user'); if (el) el.textContent = 'Sessão iniciada com ' + (data.user?.email || ''); });
+  $('#m-drive').onclick = () => driveGravarAgora(true);
+  $('#m-exp').onclick = () => { const wb = construirExcel(ANO); XLSX.writeFile(wb, `Faturas_${ANO}_ARCA.xlsx`); };
+  $('#m-imp').onclick = () => $('#file-imp').click();
+  $('#m-inst').onclick = async () => { if (!deferredInstall) return; deferredInstall.prompt(); await deferredInstall.userChoice; deferredInstall = null; renderMais(); };
+  $('#m-pass').onclick = async () => {
+    const p = prompt('Nova password (mínimo 8 caracteres):'); if (!p) return;
+    if (p.length < 8) return toast('A password tem de ter pelo menos 8 caracteres.');
+    const { error } = await sb.auth.updateUser({ password: p });
+    toast(error ? 'Erro: ' + error.message : 'Password alterada.');
+  };
+  $('#m-rec').onclick = () => carregar();
+  $('#m-sair').onclick = async () => { if (confirm('Terminar sessão neste aparelho?')) { await sb.auth.signOut(); localStorage.removeItem('faturas_drive_tok'); } };
+}
+
+/* =========================================================
+   FORMULÁRIO
+   ========================================================= */
+function pintarTrimPick(){
+  $('#trim-pick').innerHTML = [1,2,3,4].map(t => `<button type="button" data-t="${t}" aria-pressed="${TRIM_FORM===t}" style="--c:${TRIM_COR[t-1]}" title="${TRIM_NOMES[t-1]}">${TRIM_CURTO[t-1]}</button>`).join('');
+  $('#trim-pick').querySelectorAll('button').forEach(b => b.onclick = () => { TRIM_FORM = +b.dataset.t; trimManual = true; pintarTrimPick(); });
+}
+function abrirForm(f){
+  EDITAR = f || null; trimManual = !!f;
+  $('#sh-title').textContent = f ? 'Editar fatura' : 'Nova fatura';
+  $('#b-apagar').classList.toggle('hidden', !f);
+  const hojeISO = new Date().toISOString().slice(0,10);
+  CAMPOS.forEach(c => {
+    let v = f ? f[c] : '';
+    if (c === 'valor_doc' && v != null && v !== '') v = String(v).replace('.', ',');
+    $('#c-'+c).value = v ?? '';
+  });
+  if (!f) {
+    $('#c-data_doc').value = ANO === +hojeISO.slice(0,4) ? hojeISO : '';
+    TRIM_FORM = FILTRO.trim || (ANO === +hojeISO.slice(0,4) ? Math.ceil((new Date().getMonth()+1)/3) : 1);
+  } else TRIM_FORM = f.trimestre;
+  pintarTrimPick(); verNif();
+  $('#sh-meta').textContent = f ? `Última alteração: ${new Date(f.atualizado_em).toLocaleString('pt-PT')}${f.atualizado_por ? ' por ' + f.atualizado_por : ''}` : '';
+  $('#sheet').classList.remove('hidden'); document.body.style.overflow = 'hidden';
+  setTimeout(() => (f ? $('#b-guardar') : $('#c-tipo_doc')).focus(), 60);
+}
+function fecharForm(){ $('#sheet').classList.add('hidden'); document.body.style.overflow = ''; EDITAR = null; }
+$('#sh-x').onclick = fecharForm;
+$('#sheet').addEventListener('click', e => { if (e.target.id === 'sheet') fecharForm(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#sheet').classList.contains('hidden')) fecharForm(); });
+$('#fab').onclick = () => abrirForm(null);
+
+$('#c-data_doc').addEventListener('change', e => {
+  if (trimManual || !e.target.value) return;
+  TRIM_FORM = Math.ceil((+e.target.value.slice(5,7))/3); pintarTrimPick();
+});
+function verNif(){ const v = $('#c-nif_fornecedor').value.trim(); $('#nif-hint').classList.toggle('hidden', !v || nifValido(v)); }
+$('#c-nif_fornecedor').addEventListener('input', verNif);
+$('#c-nif_fornecedor').addEventListener('change', e => {
+  const nif = e.target.value.trim(); if (!nif || $('#c-nome_fornecedor').value.trim()) return;
+  const r = [...TODAS].reverse().find(f => (f.nif_fornecedor||'').trim() === nif);
+  if (r) { $('#c-nome_fornecedor').value = r.nome_fornecedor || ''; if (!$('#c-tipo_despesa').value) $('#c-tipo_despesa').value = r.tipo_despesa || ''; }
+});
+$('#c-nome_fornecedor').addEventListener('change', e => {
+  const nome = norm(e.target.value); if (!nome || $('#c-nif_fornecedor').value.trim()) return;
+  const r = [...TODAS].reverse().find(f => norm(f.nome_fornecedor) === nome && f.nif_fornecedor);
+  if (r) { $('#c-nif_fornecedor').value = r.nif_fornecedor; verNif(); if (!$('#c-tipo_despesa').value) $('#c-tipo_despesa').value = r.tipo_despesa || ''; }
+});
+$('#c-tipo_doc').addEventListener('blur', e => { e.target.value = e.target.value.trim().toUpperCase(); });
+
+$('#f-fat').addEventListener('submit', async e => {
+  e.preventDefault();
+  driveGarantirToken(); // pede o acesso ao Drive dentro do toque (evita bloqueio do popup)
+  const reg = { ano: ANO, trimestre: TRIM_FORM };
+  CAMPOS.forEach(c => { const v = $('#c-'+c).value.trim(); reg[c] = v === '' ? null : v; });
+  reg.valor_doc = paraNumero($('#c-valor_doc').value);
+  if ($('#c-valor_doc').value.trim() && reg.valor_doc == null) return toast('O valor não é um número válido.');
+  if (!reg.nome_fornecedor && !reg.numero_doc) return toast('Preencha pelo menos o nº do documento ou o fornecedor.');
+  if (EDITAR) { reg.ano = EDITAR.ano; }
+  else {
+    const doTrim = TODAS.filter(f => f.ano === reg.ano && f.trimestre === reg.trimestre);
+    reg.ordem = doTrim.reduce((m,f) => Math.max(m, f.ordem||0), 0) + 1;
+    const dup = TODAS.find(f => f.ano === reg.ano && reg.numero_doc && norm(f.numero_doc) === norm(reg.numero_doc) && norm(f.nif_fornecedor) === norm(reg.nif_fornecedor));
+    if (dup && !confirm(`Já existe o documento ${reg.numero_doc} deste fornecedor (${eur(dup.valor_doc)}). Guardar mesmo assim?`)) return;
+  }
+  const b = $('#b-guardar'); b.disabled = true; b.textContent = 'A guardar…';
+  try { await guardarRegisto(reg, EDITAR?.id); fecharForm(); toast('Fatura guardada.'); }
+  catch (err) { toast('Não foi possível guardar: ' + err.message, 5000); }
+  finally { b.disabled = false; b.textContent = 'Guardar'; }
+});
+$('#b-apagar').onclick = async () => {
+  if (!EDITAR) return;
+  if (!confirm(`Apagar o documento ${EDITAR.numero_doc || ''} de ${EDITAR.nome_fornecedor || ''}? Esta ação não se pode desfazer.`)) return;
+  driveGarantirToken();
+  try { await apagarRegisto(EDITAR.id); fecharForm(); toast('Fatura apagada.'); }
+  catch (err) { toast('Não foi possível apagar: ' + err.message, 5000); }
+};
+
+/* =========================================================
+   EXCEL (exportar / importar)
+   ========================================================= */
+function construirExcel(ano){
+  const wb = XLSX.utils.book_new();
+  const cab = ['TipoDoc','NumeroDoc','DataDoc','DataVencimento','NifFornecedor','NomeFornecedor','TipoDespesa','Descricao','ValorDoc','Data Pagamento','Notas'];
+  const dt = iso => iso ? new Date(iso + 'T00:00:00') : null;
+  [1,2,3,4].forEach(t => {
+    const regs = TODAS.filter(f => f.ano === ano && f.trimestre === t).sort((a,b) => (a.ordem||0) - (b.ordem||0));
+    if (t === 4 && !regs.length) return;
+    const linhas = regs.map(f => {
+      let pag = f.data_pagamento ? dt(f.data_pagamento) : (f.obs_pagamento || null);
+      const notas = [f.data_pagamento && f.obs_pagamento ? f.obs_pagamento : null, f.notas].filter(Boolean).join(' | ') || null;
+      return [f.tipo_doc, f.numero_doc, dt(f.data_doc), dt(f.data_vencimento), f.nif_fornecedor, f.nome_fornecedor, f.tipo_despesa, f.descricao, f.valor_doc == null ? null : +f.valor_doc, pag, notas];
+    });
+    const tot = regs.reduce((s,f) => s + (+f.valor_doc||0), 0);
+    const ws = XLSX.utils.aoa_to_sheet([cab, ...linhas, [], [null,null,null,null,null,null,null,'TOTAL', Math.round(tot*100)/100]], { cellDates: true, dateNF: 'dd/mm/yyyy' });
+    ws['!cols'] = [6,20,11,14,13,32,24,28,11,24,40].map(w => ({ wch: w }));
+    Object.keys(ws).forEach(k => { if (k[0] === '!') return; const c = ws[k]; if (c.t === 'd') c.z = 'dd/mm/yyyy'; if (c.t === 'n' && /^I\d+$/.test(k)) c.z = '#,##0.00 €'; });
+    XLSX.utils.book_append_sheet(wb, ws, TRIM_NOMES[t-1].slice(0,31));
+  });
+  if (!wb.SheetNames.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([cab]), TRIM_NOMES[0]);
+  return wb;
+}
+
+$('#file-imp').addEventListener('change', async e => {
+  const file = e.target.files[0]; e.target.value = ''; if (!file) return;
+  try {
+    const wb = XLSX.read(await file.arrayBuffer(), { cellDates: true });
+    const novos = [];
+    const iso = v => {
+      if (v instanceof Date && !isNaN(v)) { const d = new Date(v.getTime() - v.getTimezoneOffset()*60000); return d.toISOString().slice(0,10); }
+      if (typeof v === 'string') { const m = v.trim().match(/^(\d{1,2})\/(\d{1,2})\/+(\d{4})$/); if (m) { const d = new Date(+m[3], m[2]-1, +m[1]); if (d.getMonth() === m[2]-1) return `${m[3]}-${String(m[2]).padStart(2,'0')}-${String(m[1]).padStart(2,'0')}`; } }
+      return null;
+    };
+    const txt = v => { if (v == null) return null; if (typeof v === 'number' && Number.isInteger(v)) return String(v); const s = String(v).trim(); return s || null; };
+    wb.SheetNames.slice(0, 4).forEach((nome, idx) => {
+      const n = norm(nome);
+      let t = idx + 1;
+      if (/jan|mar/.test(n)) t = 1; else if (/abr|jun/.test(n)) t = 2; else if (/jul|ago|set/.test(n)) t = 3; else if (/out|nov|dez/.test(n)) t = 4;
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[nome], { header: 1, raw: true, defval: null }).slice(1);
+      const notas = {}; const dados = [];
+      rows.forEach(r => {
+        if (!r.some(x => x != null && x !== '')) return;
+        if (typeof r[0] === 'string' && r[0].trim().startsWith('*')) { const m = r[0].trim().match(/^(\*+)/); notas[m[1]] = r[0].trim().replace(/^\*+/, '').trim(); return; }
+        if (norm(r[7]) === 'total' && r[0] == null) return;
+        dados.push(r);
+      });
+      dados.forEach((r, i) => {
+        const pagD = r[9] instanceof Date ? iso(r[9]) : null;
+        const obs = pagD ? null : txt(r[9]);
+        const venc = iso(r[3]);
+        const extra = [];
+        if (r[3] != null && !venc) extra.push('Vencimento original: ' + txt(r[3] instanceof Date ? r[3].toLocaleDateString('pt-PT') : r[3]));
+        const mk = obs && obs.match(/(\*+)\s*$/); if (mk && notas[mk[1]]) extra.push(notas[mk[1]]);
+        if (r[10]) extra.push(txt(r[10]));
+        novos.push({ ano: ANO, trimestre: t, tipo_doc: txt(r[0]), numero_doc: txt(r[1]), data_doc: iso(r[2]), data_vencimento: venc,
+          nif_fornecedor: txt(r[4]), nome_fornecedor: txt(r[5]), tipo_despesa: txt(r[6]), descricao: txt(r[7]),
+          valor_doc: typeof r[8] === 'number' ? Math.round(r[8]*100)/100 : paraNumero(r[8]), data_pagamento: pagD, obs_pagamento: obs, notas: extra.join(' | ') || null });
+      });
+    });
+    const chave = f => [norm(f.numero_doc), norm(f.nif_fornecedor), Number(f.valor_doc||0).toFixed(2), f.data_doc||''].join('|');
+    const existentes = new Set(TODAS.filter(f => f.ano === ANO).map(chave));
+    const aInserir = novos.filter(f => !existentes.has(chave(f)));
+    if (!aInserir.length) return toast(`Nada a importar: os ${novos.length} registos já existem em ${ANO}.`, 4000);
+    if (!confirm(`Encontrados ${novos.length} registos. ${novos.length - aInserir.length} já existem. Acrescentar ${aInserir.length} novos ao ano ${ANO}?`)) return;
+    driveGarantirToken();
+    const porTrim = {}; TODAS.filter(f => f.ano === ANO).forEach(f => porTrim[f.trimestre] = Math.max(porTrim[f.trimestre]||0, f.ordem||0));
+    aInserir.forEach(f => { porTrim[f.trimestre] = (porTrim[f.trimestre]||0) + 1; f.ordem = porTrim[f.trimestre]; });
+    estadoSB('A importar…', 'warn');
+    for (let i = 0; i < aInserir.length; i += 200) {
+      const { error } = await sb.from('faturas').insert(aInserir.slice(i, i + 200));
+      if (error) throw error;
+    }
+    toast(`${aInserir.length} faturas importadas.`);
+    await carregar(true); driveAgendar();
+  } catch (err) { estadoSB('Dados: erro', 'bad'); toast('Erro na importação: ' + err.message, 6000); }
+});
+
+/* =========================================================
+   GOOGLE DRIVE (cópia automática)
+   ========================================================= */
+let tokenClient = null, driveTimer = null, drivePendente = false, driveOcupado = false;
+function estadoDR(t, cls){ const b = $('#st-dr'); b.textContent = t; b.className = 'sync ' + (cls||''); }
+function driveTokenValido(){
+  try { const o = JSON.parse(localStorage.getItem('faturas_drive_tok') || 'null'); return o && o.exp > Date.now() + 60000 ? o.t : null; } catch { return null; }
+}
+function driveIniciar(){
+  if (!window.google?.accounts?.oauth2) { setTimeout(driveIniciar, 500); return; }
+  if (tokenClient) return;
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: G_CLIENT, scope: G_SCOPE, login_hint: EMAIL_ARCA,
+    callback: r => {
+      if (r.error) { estadoDR('Drive: ligar', 'bad'); toast('O Google Drive não foi ligado.'); return; }
+      localStorage.setItem('faturas_drive_tok', JSON.stringify({ t: r.access_token, exp: Date.now() + (r.expires_in||3600)*1000 }));
+      localStorage.setItem('faturas_drive_consent', '1');
+      estadoDR('Drive ✓', 'ok');
+      if (drivePendente) driveAgendar(300);
+      if (VISTA === 'mais') renderMais();
+    },
+    error_callback: () => estadoDR('Drive: ligar', 'bad')
+  });
+  estadoDR(driveTokenValido() ? 'Drive ✓' : 'Drive: ligar', driveTokenValido() ? 'ok' : 'warn');
+}
+function driveGarantirToken(){
+  if (driveTokenValido() || !tokenClient) return;
+  tokenClient.requestAccessToken({ prompt: localStorage.getItem('faturas_drive_consent') ? '' : 'consent' });
+}
+$('#st-dr').onclick = () => { if (driveTokenValido()) driveGravarAgora(true); else { drivePendente = true; driveGarantirToken(); } };
+$('#st-sb').onclick = () => carregar();
+
+function driveAgendar(ms = 2500){
+  drivePendente = true;
+  if (!driveTokenValido()) { estadoDR('Drive: ligar', 'warn'); return; }
+  estadoDR('Drive…', 'warn');
+  clearTimeout(driveTimer); driveTimer = setTimeout(() => driveGravarAgora(false), ms);
+}
+async function driveGravarAgora(manual){
+  const tok = driveTokenValido();
+  if (!tok) { drivePendente = true; driveGarantirToken(); return; }
+  if (driveOcupado) { driveAgendar(2000); return; }
+  driveOcupado = true; drivePendente = false; estadoDR('Drive ↑', 'warn');
+  try {
+    const pasta = await driveObterPasta(tok);
+    const anos = [...new Set(TODAS.map(f => f.ano))];
+    for (const ano of anos) {
+      const out = XLSX.write(construirExcel(ano), { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      await driveGuardarFicheiro(tok, pasta, `ARCA_Faturas_${ano}.xlsx`, blob);
+    }
+    const agora = new Date().toLocaleString('pt-PT');
+    localStorage.setItem('faturas_drive_ultima', agora);
+    estadoDR('Drive ✓', 'ok'); if (manual) toast('Cópia gravada no Google Drive.');
+    if (VISTA === 'mais') renderMais();
+  } catch (err) {
+    if (err.status === 401) { localStorage.removeItem('faturas_drive_tok'); drivePendente = true; estadoDR('Drive: ligar', 'warn'); }
+    else { estadoDR('Drive: erro', 'bad'); drivePendente = true; }
+    if (manual) toast('Erro no Google Drive: ' + err.message, 5000);
+  } finally { driveOcupado = false; }
+}
+async function gapi(tok, url, opt = {}){
+  const r = await fetch(url, { ...opt, headers: { Authorization: 'Bearer ' + tok, ...(opt.headers||{}) } });
+  if (!r.ok) { const e = new Error('Google respondeu ' + r.status); e.status = r.status; throw e; }
+  return r.json();
+}
+async function driveObterPasta(tok){
+  let id = localStorage.getItem('faturas_drive_pasta');
+  if (id) { try { const f = await gapi(tok, `https://www.googleapis.com/drive/v3/files/${id}?fields=id,trashed`); if (!f.trashed) return id; } catch (e) { if (e.status === 401) throw e; } }
+  const q = encodeURIComponent(`name='${DRIVE_PASTA.replace(/'/g,"\\'")}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+  const l = await gapi(tok, `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)`);
+  if (l.files?.length) id = l.files[0].id;
+  else id = (await gapi(tok, 'https://www.googleapis.com/drive/v3/files', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: DRIVE_PASTA, mimeType: 'application/vnd.google-apps.folder' }) })).id;
+  localStorage.setItem('faturas_drive_pasta', id);
+  return id;
+}
+async function driveGuardarFicheiro(tok, pasta, nome, blob){
+  const q = encodeURIComponent(`name='${nome}' and '${pasta}' in parents and trashed=false`);
+  const l = await gapi(tok, `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)`);
+  if (l.files?.length) {
+    return gapi(tok, `https://www.googleapis.com/upload/drive/v3/files/${l.files[0].id}?uploadType=media`, { method: 'PATCH', body: blob });
+  }
+  const fd = new FormData();
+  fd.append('metadata', new Blob([JSON.stringify({ name: nome, parents: [pasta] })], { type: 'application/json' }));
+  fd.append('file', blob);
+  return gapi(tok, 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', { method: 'POST', body: fd });
+}
+
+/* =========================================================
+   ARRANQUE, PWA E ATUALIZAÇÃO
+   ========================================================= */
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstall = e; if (VISTA === 'mais') renderMais(); });
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('faturas-sw.js', { scope: './faturas' }).catch(() => {});
+document.addEventListener('visibilitychange', () => { if (!document.hidden && !$('#app').classList.contains('hidden') && $('#sheet').classList.contains('hidden')) carregar(true); });
+window.addEventListener('offline', () => estadoSB('Sem internet', 'bad'));
+window.addEventListener('online', () => carregar(true));
+if (/error_description=/.test(location.hash)) {
+  const p = new URLSearchParams(location.hash.slice(1));
+  setTimeout(() => { mostrarLogin(); msgLogin('O link expirou ou já foi usado. Peça um novo em “Esqueci-me da password”.'); }, 300);
+  history.replaceState(null, '', location.pathname);
+} else {
+  setTimeout(arrancar, 150);
+}
+</script>
+<script>(function(){var c=window.__FATURAS_JS_REMOTO;if(c){var s=document.createElement('script');s.text=c;document.body.appendChild(s);}else{document.write('<script src="faturas-relatorio.js"><\/script>');}})();</script>
+</body>
+</html>
