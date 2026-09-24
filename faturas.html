@@ -418,16 +418,26 @@ async function arrancar(){
   if (emRecuperacao || VEIO_RECUP) { emRecuperacao = true; return mostrarNovaPassword(); }
   if (!session) return mostrarLogin();
   const { data: ok, error } = await sb.rpc('faturas_tem_acesso');
-  if (error || !ok) {
-    mostrarLogin();
-    msgLogin(`A conta ${session.user.email} não tem acesso a esta aplicação.`);
-    await sb.auth.signOut({ scope: 'local' });
-    return;
-  }
+  if (!error && !ok) return semAcesso(session.user.email); /* sem rede: continua com a cópia local */
   $('#login').classList.add('hidden'); $('#boot').classList.add('hidden'); $('#app').classList.remove('hidden');
   await carregar();
   driveIniciar();
 }
+
+/* Acesso retirado: limpa os dados guardados neste aparelho e termina a sessão */
+function semAcesso(email){
+  ['faturas_cache_v1','faturas_fila_v1','faturas_rascunho_v1','faturas_drive_tok'].forEach(k => { try { localStorage.removeItem(k); } catch (e) {} });
+  TODAS = [];
+  mostrarLogin();
+  msgLogin(`A conta ${email} não tem acesso a esta aplicação.`);
+  sb.auth.signOut({ scope: 'local' });
+}
+setInterval(async () => {
+  if ($('#app').classList.contains('hidden') || !navigator.onLine) return;
+  const { data: { session } } = await sb.auth.getSession(); if (!session) return;
+  const { data: ok, error } = await sb.rpc('faturas_tem_acesso');
+  if (!error && !ok) semAcesso(session.user.email);
+}, 120000);
 
 /* =========================================================
    DADOS (SUPABASE)
